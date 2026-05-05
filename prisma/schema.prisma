@@ -1,0 +1,105 @@
+// VisionOne portal — podatkovni model (faza 1)
+// Generator + datasource
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  address   String   @default("")
+  contact   String   @default("")
+  email     String   @default("")
+  health    String   @default("ok")
+  packageId String?
+  package   SubscriptionPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  cameras   ClientCamera[]
+  recorders ClientRecorder[]
+  switches  ClientSwitch[]
+  disks     ClientDisk[]
+  reminders MaintenanceReminder[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([packageId])
+}
+
+model ClientCamera {
+  id       String  @id @default(cuid())
+  clientId String
+  name     String
+  ip       String  @default("")
+  model    String  @default("")
+  status   String  @default("online")
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model ClientRecorder {
+  id       String  @id @default(cuid())
+  clientId String
+  name     String
+  ip       String  @default("")
+  model    String  @default("")
+  status   String  @default("online")
+  diskTb   Float   @default(0)
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model ClientSwitch {
+  id       String  @id @default(cuid())
+  clientId String
+  name     String
+  ip       String  @default("")
+  model    String  @default("")
+  status   String  @default("online")
+  ports    Int     @default(0)
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model ClientDisk {
+  id          String  @id @default(cuid())
+  clientId    String
+  label       String
+  sizeTb      Float   @default(0)
+  installedAt String  @default("")
+  health      String  @default("ok")
+  client      Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model SubscriptionPackage {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  price       Float    @default(0)
+  description String   @default("")
+  clients     Client[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MaintenanceReminder {
+  id        String   @id @default(cuid())
+  clientId  String
+  title     String
+  dueDate   String
+  kind      String   @default("drugo")
+  completed Boolean  @default(false)
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+}

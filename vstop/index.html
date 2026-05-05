@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VisionOne - Vstop v portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="/style.css?v=20260504">
+  <script src="/script.js?v=20260504" defer></script>
+</head>
+<body class="vstop-page">
+  <header class="header" id="top">
+    <div class="container">
+      <a class="brand" href="/" aria-label="VisionOne">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-text">Vision<span>One</span></span>
+      </a>
+
+      <button class="nav-toggle" type="button" data-nav-toggle aria-label="Meni">
+        <span class="nav-toggle-lines" aria-hidden="true"><span></span></span>
+      </button>
+
+      <nav class="nav" data-nav>
+        <a href="/">Domov</a>
+        <a href="/storitve/">Storitve</a>
+        <a href="/paketi/">Paketi</a>
+        <a href="/trgovina/">Trgovina</a>
+        <a href="/kontakt/">Kontakt</a>
+        <a href="/vstop/">Vstop v portal</a>
+        <a href="/portal/">Demo portal</a>
+      </nav>
+
+      <div class="header-actions">
+        <div id="auth-area" class="auth-area">
+          <div id="clerk-user-button"></div>
+          <button id="clerk-sign-in-btn" class="cta-btn" type="button" style="display: none;">Prijava</button>
+        </div>
+        <a class="cta-btn" href="/downloads/VisionOne.exe" download="VisionOne.exe">Prenesi VisionOne</a>
+        <a class="cta-btn cta-btn-ghost" href="/portal/">Spletni demo</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="vstop-main">
+    <div class="vstop-split">
+      <div class="vstop-panel">
+        <div class="vstop-inner">
+          <h1 class="vstop-hero-title">Vstop v portal</h1>
+          <p class="vstop-lead">Ista vizualna logika kot namizna aplikacija VisionOne: temna zasnova, jasna tipografija in neposreden dostop do orodij za monterje.</p>
+          <div class="vstop-actions">
+            <a class="cta-btn" href="/downloads/VisionOne.exe" download="VisionOne.exe">Prenesi VisionOne (Windows)</a>
+            <a class="cta-btn cta-btn-ghost" href="/portal/">Odpri spletni portal (demo)</a>
+            <a class="cta-btn cta-btn-ghost" href="/kontakt/">Kontakt / dostop</a>
+          </div>
+          <p class="vstop-note">Datoteka <span class="mono">VisionOne.exe</span> je ista zgradba kot v mapi z namizno aplikacijo. Spletni demo teče v brskalniku in ne zahteva namestitve.</p>
+        </div>
+      </div>
+      <div class="vstop-visual" aria-hidden="true">
+        <div class="vstop-visual-text">
+          <h2>VisionOne montažni portal</h2>
+          <p>Stranke, omrežje, skladišče in orodja — usklajeno z izgledom namizne aplikacije.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="brand-text footer-brand">Vision<span>One</span></div>
+        <div class="footer-muted">Videonadzor • Brezžični alarm • Domofoni • Omrežja</div>
+      </div>
+      <div class="footer-muted">
+        <div>Kontakt: info@visionone.si</div>
+        <div>© 2026 VisionOne</div>
+      </div>
+    </div>
+  </footer>
+
+  <div id="auth-modal" class="modal">
+    <div class="modal-panel">
+      <button class="modal-close" type="button" onclick="toggleAuthModal(false)" aria-label="Zapri">×</button>
+      <div id="clerk-sign-in"></div>
+    </div>
+  </div>
+
+  <script>
+        const CLERK_PUBLISHABLE_KEY = "pk_test_cHJlbWl1bS1yYW0tMzIuY2xlcmsuYWNjb3VudHMuZGV2JA";
+
+        function deriveClerkDomainFromPublishableKey(publishableKey) {
+            try {
+                const parts = publishableKey.split('_');
+                if (parts.length < 3) return null;
+                return atob(parts[2]).slice(0, -1);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function isClerkConfigured() {
+            return typeof CLERK_PUBLISHABLE_KEY === 'string' && CLERK_PUBLISHABLE_KEY.startsWith('pk_');
+        }
+
+        function isSignedIn() {
+            return Boolean(window.Clerk && window.Clerk.user);
+        }
+
+        function toggleAuthModal(force) {
+            const modal = document.getElementById('auth-modal');
+            if (!modal) return;
+            const next = typeof force === 'boolean' ? force : modal.style.display !== 'block';
+            modal.style.display = next ? 'block' : 'none';
+        }
+
+        let clerkReadyPromise = null;
+
+        function setAuthContent(html) {
+            const signInDiv = document.getElementById('clerk-sign-in');
+            if (!signInDiv) return;
+            signInDiv.innerHTML = html;
+        }
+
+        function waitFor(predicate, timeoutMs) {
+            return new Promise((resolve, reject) => {
+                const start = Date.now();
+                const tick = () => {
+                    try {
+                        if (predicate()) return resolve();
+                    } catch (e) {
+                    }
+                    if (Date.now() - start > timeoutMs) return reject(new Error('timeout'));
+                    requestAnimationFrame(tick);
+                };
+                tick();
+            });
+        }
+
+        function ensureClerkReady() {
+            if (!isClerkConfigured()) return Promise.reject(new Error('not_configured'));
+            if (clerkReadyPromise) return clerkReadyPromise;
+
+            const clerkDomain = deriveClerkDomainFromPublishableKey(CLERK_PUBLISHABLE_KEY);
+            if (!clerkDomain) return Promise.reject(new Error('bad_publishable_key'));
+
+            const ensureScript = (id, src, attrs) => {
+                const existing = document.getElementById(id);
+                if (existing) return;
+                const script = document.createElement('script');
+                script.id = id;
+                script.async = true;
+                script.crossOrigin = 'anonymous';
+                if (attrs) {
+                    Object.entries(attrs).forEach(([k, v]) => script.setAttribute(k, v));
+                }
+                script.src = src;
+                document.head.appendChild(script);
+            };
+
+            ensureScript(
+                'clerk-ui-script',
+                `https://${clerkDomain}/npm/@clerk/ui@1/dist/ui.browser.js`,
+                null
+            );
+            ensureScript(
+                'clerk-js-script',
+                `https://${clerkDomain}/npm/@clerk/clerk-js@latest/dist/clerk.browser.js`,
+                {
+                    'data-clerk-publishable-key': CLERK_PUBLISHABLE_KEY,
+                    'data-clerk-frontend-api': clerkDomain,
+                }
+            );
+
+            clerkReadyPromise = Promise.all([
+                waitFor(() => Boolean(window.__internal_ClerkUICtor), 15000),
+                waitFor(() => Boolean(window.Clerk), 15000),
+            ]).then(async () => {
+                await window.Clerk.load({
+                    ui: { ClerkUI: window.__internal_ClerkUICtor },
+                });
+            });
+
+            return clerkReadyPromise;
+        }
+
+        async function openAuth() {
+            if (!isClerkConfigured()) {
+                alert('Clerk ni nastavljen. V datoteki index.html nastavi CLERK_PUBLISHABLE_KEY.');
+                return;
+            }
+
+            if (window.location && window.location.protocol === 'file:') {
+                alert('Prijava ne deluje, če stran odpreš kot datoteko (file://). Naloži na strežnik (https://visionone.si) ali testiraj prek localhost strežnika.');
+                return;
+            }
+
+            if (window.location && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                alert('Za Clerk prijavo na domeni je potreben HTTPS. Vključi SSL (Let’s Encrypt) na hostingu in odpri https://visionone.si');
+                return;
+            }
+
+            toggleAuthModal(true);
+            setAuthContent('<div style="color: var(--text-gray);">Nalaganje prijave...</div>');
+
+            try {
+                await ensureClerkReady();
+            } catch (e) {
+                setAuthContent('<div style="color: var(--text-gray);">Prijava trenutno ni na voljo. Preveri, da stran teče na https:// in da je domena dodana v Clerk Dashboard.</div>');
+                return;
+            }
+
+            if (window.Clerk && typeof window.Clerk.openSignIn === 'function') {
+                toggleAuthModal(false);
+                window.Clerk.openSignIn({
+                    redirectUrl: window.location.href,
+                });
+                return;
+            }
+
+            if (window.Clerk && typeof window.Clerk.mountSignIn === 'function') {
+                const signInDiv = document.getElementById('clerk-sign-in');
+                if (signInDiv) {
+                    signInDiv.innerHTML = '';
+                    window.Clerk.mountSignIn(signInDiv);
+                    return;
+                }
+            }
+
+            setAuthContent('<div style="color: var(--text-gray);">Prijava se ni uspela naložiti.</div>');
+        }
+
+        function renderAuthUI() {
+            const signInBtn = document.getElementById('clerk-sign-in-btn');
+            const userButtonDiv = document.getElementById('clerk-user-button');
+            if (!signInBtn || !userButtonDiv) return;
+
+            if (!isClerkConfigured()) {
+                signInBtn.style.display = 'inline-flex';
+                signInBtn.disabled = true;
+                signInBtn.onclick = null;
+                userButtonDiv.innerHTML = '';
+                return;
+            }
+
+            if (isSignedIn()) {
+                signInBtn.style.display = 'none';
+                signInBtn.disabled = false;
+                signInBtn.onclick = null;
+                if (window.Clerk && typeof window.Clerk.mountUserButton === 'function' && userButtonDiv.childElementCount === 0) {
+                    window.Clerk.mountUserButton(userButtonDiv);
+                }
+                toggleAuthModal(false);
+            } else {
+                userButtonDiv.innerHTML = '';
+                signInBtn.style.display = 'inline-flex';
+                signInBtn.disabled = false;
+                signInBtn.onclick = openAuth;
+            }
+
+            renderPortalState();
+        }
+
+        function renderPortalState() {
+            const el = document.getElementById('portal-state');
+            if (!el) return;
+
+            if (isSignedIn()) {
+                const firstName = window.Clerk?.user?.firstName;
+                el.innerHTML = `
+                    <div style="color: var(--text-gray); margin-bottom: 1rem;">Pozdravljen${firstName ? `, ${firstName}` : ''}. Portal je v pripravi, dostop bo kmalu omejen na monterje.</div>
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                        <button class="cta-btn" type="button" onclick="location.href='/kontakt/'" style="padding: 0.8rem 1.2rem;">Zanima me dostop</button>
+                        <button class="cta-btn" type="button" onclick="toggleAuthModal(true)" style="padding: 0.8rem 1.2rem; background: rgba(255,255,255,0.08);">Uredi račun</button>
+                    </div>
+                `;
+                return;
+            }
+
+            el.innerHTML = `
+                <div style="color: var(--text-gray); margin-bottom: 1rem;">Za prihodnji dostop v portal se prijavi. Kasneje bomo dodali licenciranje in vloge za monterje.</div>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="cta-btn" type="button" onclick="openAuth()" style="padding: 0.8rem 1.2rem;">Prijava</button>
+                    <button class="cta-btn" type="button" onclick="location.href='/kontakt/'" style="padding: 0.8rem 1.2rem; background: rgba(255,255,255,0.08);">Kontakt</button>
+                </div>
+            `;
+        }
+
+        (function initClerk() {
+            if (!isClerkConfigured()) {
+                window.addEventListener('load', renderAuthUI);
+                return;
+            }
+
+            window.addEventListener('load', renderAuthUI);
+            window.addEventListener('load', () => {
+                ensureClerkReady()
+                    .then(() => {
+                        renderAuthUI();
+                        if (window.Clerk && typeof window.Clerk.addListener === 'function') {
+                            window.Clerk.addListener(() => renderAuthUI());
+                        }
+                    })
+                    .catch(() => renderAuthUI());
+            });
+            window.addEventListener('focus', renderAuthUI);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) renderAuthUI();
+            });
+        })();
+  </script>
+</body>
+</html>
