@@ -1,11 +1,7 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
-import {
-  DEFAULT_PORTAL_PASSWORD,
-  DEFAULT_PORTAL_USERNAME,
-  PORTAL_SESSION_COOKIE,
-} from "@/lib/portal-auth";
+import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
 import { getPortalSessionSecret } from "@/lib/portal-session-secret";
 import { signPortalSessionToken } from "@/lib/portal-session-sign";
 
@@ -23,10 +19,6 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!granted && username === DEFAULT_PORTAL_USERNAME && password === DEFAULT_PORTAL_PASSWORD) {
-    granted = { username: DEFAULT_PORTAL_USERNAME, isAdmin: true };
-  }
-
   if (!granted) {
     return NextResponse.redirect(new URL("/portal-login?error=1", request.url), { status: 303 });
   }
@@ -39,13 +31,16 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL("/portal-login?error=config", request.url), { status: 303 });
   }
 
+  const stayLoggedIn = String(formData.get("stay_logged_in") ?? "") === "1";
+
   const response = NextResponse.redirect(new URL("/portal", request.url), { status: 303 });
   response.cookies.set(PORTAL_SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 8,
+    /** Brez maxAge = sejni piškotek — ob zaprtju brskalnika seja poteče. Če je »Ostani prijavljen«, 30 dni. */
+    ...(stayLoggedIn ? { maxAge: 60 * 60 * 24 * 30 } : {}),
   });
   return response;
 }

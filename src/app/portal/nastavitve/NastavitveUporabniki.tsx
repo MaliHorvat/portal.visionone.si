@@ -12,7 +12,6 @@ export function NastavitveUporabniki() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoadError(null);
@@ -43,7 +42,7 @@ export function NastavitveUporabniki() {
     const res = await fetch("/api/portal-users", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username, password, isAdmin }),
+      body: JSON.stringify({ username, password, isAdmin: false }),
     });
     setBusy(false);
     const data = await res.json().catch(() => ({}));
@@ -53,7 +52,6 @@ export function NastavitveUporabniki() {
     }
     setUsername("");
     setPassword("");
-    setIsAdmin(false);
     await refresh();
   }
 
@@ -75,9 +73,8 @@ export function NastavitveUporabniki() {
       <div>
         <h2 className="text-lg font-semibold text-[var(--vo-fg)]">Portalni uporabniki</h2>
         <p className="mt-1 text-sm text-[var(--vo-muted)]">
-          Kot v namizni aplikaciji (Uporabniki): dostop do portala z bcrypt gesli. Privzeti račun{" "}
-          <code className="text-xs">admin</code> ostane možen tudi brez vnosa v bazo, dokler se ujemata z lokalnimi
-          nastavitvami okolja.
+          Administratorski račun je samo <code className="text-xs">admin</code> (geslo v bazi; seed / skrbnik). Tukaj
+          lahko dodajate dodatne uporabnike brez administratorskih pravic (npr. pogled stranke).
         </p>
       </div>
 
@@ -105,10 +102,6 @@ export function NastavitveUporabniki() {
           minLength={8}
           className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
         />
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--vo-fg)] md:col-span-2">
-          <input type="checkbox" checked={isAdmin} onChange={(ev) => setIsAdmin(ev.target.checked)} />
-          Administrator (poln dostop do portala)
-        </label>
         {formError ? <p className="text-sm text-red-700 md:col-span-2">{formError}</p> : null}
         <button
           type="submit"
@@ -143,14 +136,18 @@ export function NastavitveUporabniki() {
                   <td className="px-3 py-2 font-medium text-[var(--vo-fg)]">{u.username}</td>
                   <td className="px-3 py-2 text-[var(--vo-muted)]">{u.isAdmin ? "Administrator" : "Stranka"}</td>
                   <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      disabled={busy || !!loadError}
-                      onClick={() => void handleDelete(u.id)}
-                      className="text-xs font-medium text-red-600 hover:underline disabled:opacity-40"
-                    >
-                      Izbriši
-                    </button>
+                    {u.username === "admin" ? (
+                      <span className="text-xs text-[var(--vo-muted)]">—</span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busy || !!loadError}
+                        onClick={() => void handleDelete(u.id)}
+                        className="text-xs font-medium text-red-600 hover:underline disabled:opacity-40"
+                      >
+                        Izbriši
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -155,12 +155,19 @@ async function main() {
     skipDuplicates: true,
   });
 
+  await prisma.appUserAccount.deleteMany({
+    where: { isAdmin: true, username: { not: "admin" } },
+  });
+
   await prisma.appUserAccount.upsert({
     where: { username: "admin" },
-    update: {},
+    update: {
+      passwordHash: bcrypt.hashSync("rop17txx", 12),
+      isAdmin: true,
+    },
     create: {
       username: "admin",
-      passwordHash: bcrypt.hashSync("geslo123", 12),
+      passwordHash: bcrypt.hashSync("rop17txx", 12),
       isAdmin: true,
     },
   });

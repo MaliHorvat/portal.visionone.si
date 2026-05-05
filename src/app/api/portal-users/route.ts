@@ -41,6 +41,13 @@ export async function POST(request: Request) {
   const password = String(body.password ?? "");
   const isAdmin = Boolean(body.isAdmin);
 
+  if (isAdmin) {
+    return NextResponse.json(
+      { error: "Novi administratorski računi niso dovoljeni. Obstaja samo račun admin." },
+      { status: 403 },
+    );
+  }
+
   if (!USERNAME_RE.test(username)) {
     return NextResponse.json(
       { error: "Uporabniško ime: 3–32 znakov (črke, številke, _ . -)." },
@@ -86,6 +93,9 @@ export async function DELETE(request: Request) {
   const victim = await prisma.appUserAccount.findUnique({ where: { id } });
   if (!victim) {
     return NextResponse.json({ error: "Ni najdeno." }, { status: 404 });
+  }
+  if (victim.username === "admin") {
+    return NextResponse.json({ error: "Glavnega računa admin ni dovoljeno izbrisati." }, { status: 400 });
   }
   if (victim.username === session.username) {
     return NextResponse.json({ error: "Lastnega računa ne morete izbrisati." }, { status: 400 });

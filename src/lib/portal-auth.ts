@@ -4,4 +4,3 @@ export const PORTAL_SESSION_COOKIE = "vo_portal_session";
 export const LEGACY_PORTAL_SESSION_VALUE = "admin-authenticated";
 
 export const DEFAULT_PORTAL_USERNAME = "admin";
-export const DEFAULT_PORTAL_PASSWORD = "geslo123";
