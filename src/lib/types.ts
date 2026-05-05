@@ -58,6 +58,8 @@ export interface SwitchDevice {
 export interface DiskEntry {
   id: string;
   label: string;
+  ip?: string;
+  model?: string;
   sizeTb: number;
   installedAt: string;
   health: DiskHealth;
@@ -114,9 +116,34 @@ export interface OfferLine {
   id: string;
   code: string;
   description: string;
+  unit?: string;
   qty: number;
   unitPrice: number;
   discountPct: number;
+  lineVatPct?: number;
+}
+
+/** Shema / načrt — shranjeno v Client.topologyData */
+export type TopologyDeviceKind = "camera" | "recorder" | "switch" | "disk";
+
+export interface TopologyCanvasNode {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  deviceRef?: { kind: TopologyDeviceKind; id: string };
+}
+
+export interface TopologyCanvasEdge {
+  from: string;
+  to: string;
+}
+
+export interface ClientTopologyState {
+  nodes: TopologyCanvasNode[];
+  edges: TopologyCanvasEdge[];
+  /** Opcijsko ozadje (data URL ali zunanji URL) */
+  backgroundSrc?: string | null;
 }
 
 export interface InventoryItem {

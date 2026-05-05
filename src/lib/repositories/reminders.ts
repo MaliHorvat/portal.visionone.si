@@ -7,9 +7,13 @@ function mapKind(k: string): ReminderKind {
   return "drugo";
 }
 
-export async function listReminders(): Promise<MaintenanceReminder[]> {
-  if (!isDbConfigured() || !prisma) return mockReminders;
+export async function listReminders(clientId?: string): Promise<MaintenanceReminder[]> {
+  if (!isDbConfigured() || !prisma) {
+    const all = mockReminders;
+    return clientId ? all.filter((r) => r.clientId === clientId) : all;
+  }
   const rows = await prisma.maintenanceReminder.findMany({
+    where: clientId ? { clientId } : undefined,
     include: { client: { select: { name: true } } },
     orderBy: { dueDate: "asc" },
   });

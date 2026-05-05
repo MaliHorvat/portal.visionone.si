@@ -1,0 +1,134 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import type { WorkspaceCtx } from "./types";
+
+type Survey = {
+  id: string;
+  surveyDate: string;
+  objectType: string;
+  ceilingHeight: string;
+  cabling: string;
+  powerSupply: string;
+  lighting: string;
+  notes: string;
+};
+
+export function TabPopisi({ ctx }: { ctx: WorkspaceCtx }) {
+  const { clientId, dbConfigured } = ctx;
+  const [list, setList] = useState<Survey[]>([]);
+  const [sel, setSel] = useState<string | null>(null);
+  const [form, setForm] = useState<Survey | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!dbConfigured) return;
+    const r = await fetch(`/api/clients/${clientId}/surveys`);
+    if (!r.ok) return;
+    const j = await r.json();
+    const rows = (j.surveys ?? []) as Survey[];
+    setList(rows);
+    setSel((prev) => prev ?? rows[0]?.id ?? null);
+  }, [clientId, dbConfigured]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    const row = list.find((x) => x.id === sel);
+    if (row) setForm({ ...row });
+    else setForm(null);
+  }, [sel, list]);
+
+  async function create() {
+    if (!dbConfigured) return;
+    setBusy(true);
+    const r = await fetch(`/api/clients/${clientId}/surveys`, { method: "POST" });
+    setBusy(false);
+    if (!r.ok) return;
+    await load();
+  }
+
+  async function save() {
+    if (!form || !sel || !dbConfigured) return;
+    setBusy(true);
+    await fetch(`/api/clients/${clientId}/surveys/${sel}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    setBusy(false);
+    await load();
+  }
+
+  async function remove() {
+    if (!sel || !confirm("Izbris popisa?")) return;
+    setBusy(true);
+    await fetch(`/api/clients/${clientId}/surveys/${sel}`, { method: "DELETE" });
+    setBusy(false);
+    setSel(null);
+    await load();
+  }
+
+  return (
+    <div className="space-y-4">
+      {!dbConfigured ? <p className="text-sm text-amber-200">Zahtevana je baza.</p> : null}
+      <div className="flex flex-wrap gap-2">
+        <select value={sel ?? ""} onChange={(e) => setSel(e.target.value || null)} className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-sm">
+          <option value="">— izberi —</option>
+          {list.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.surveyDate || s.id.slice(0, 8)}
+            </option>
+          ))}
+        </select>
+        <button type="button" disabled={busy || !dbConfigured} onClick={() => void create()} className="rounded-lg bg-[var(--vo-accent)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">
+          Nov popis
+        </button>
+        <button type="button" disabled={busy || !sel || !dbConfigured} onClick={() => void save()} className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs disabled:opacity-40">
+          Shrani
+        </button>
+        <button type="button" disabled={!sel || !dbConfigured} onClick={() => void remove()} className="text-xs text-red-500 hover:underline disabled:opacity-40">
+          Izbriši
+        </button>
+      </div>
+
+      {form ? (
+        <div className="grid gap-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 md:grid-cols-2">
+          <h3 className="text-lg font-semibold text-[var(--vo-fg)] md:col-span-2">Popis stanja</h3>
+          <label className="text-xs">
+            Datum
+            <input value={form.surveyDate} onChange={(e) => setForm({ ...form, surveyDate: e.target.value })} className="mt-1 w-full rounded border border-[var(--vo-border)] px-2 py-1.5" />
+          </label>
+          <label className="text-xs">
+            Tip objekta
+            <input value={form.objectType} onChange={(e) => setForm({ ...form, objectType: e.target.value })} className="mt-1 w-full rounded border border-[var(--vo-border)] px-2 py-1.5" />
+          </label>
+          <label className="text-xs">
+            Višina stropa
+            <input value={form.ceilingHeight} onChange={(e) => setForm({ ...form, ceilingHeight: e.target.value })} className="mt-1 w-full rounded border border-[var(--vo-border)] px-2 py-1.5" />
+          </label>
+          <label className="text-xs">
+            Kabli
+            <input value={form.cabling} onChange={(e) => setForm({ ...form, cabling: e.target.value })} className="mt-1 w-full rounded border border-[var(--vo-border)] px-2 py-1.5" />
+          </label>
+          <label className="text-xs">
+            Napajanje
+            <input value={form.powerSupply} onChange={(e) => setForm({ ...form, powerSupply: e.target.value })} className="mt-1 w-full rounded border border-[var(--vo-border)] px-2 py-1.5" />
+          </label>
+          <label className="text-xs md:col-span-2">
+            Osvetlitev
+            <input value={form.lighting} onChange={(e) => setForm({ ...form, lighting: e.target.value })} className="mt-1 w-full rounded border border-[var(--vo-border)] px-2 py-1.5" />
+          </label>
+          <label className="text-xs md:col-span-2">
+            Opombe
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={4} className="mt-1 w-full rounded border border-[var(--vo-border)] px-2 py-2" />
+          </label>
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--vo-muted)]">Ni izbranega popisa.</p>
+      )}
+    </div>
+  );
+}

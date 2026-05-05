@@ -54,6 +54,8 @@ type DbClient = NonNullable<
   disks?: Array<{
     id: string;
     label: string;
+    ip: string;
+    model: string;
     sizeTb: number;
     installedAt: string;
     health: string;
@@ -132,6 +134,8 @@ function mapClientDetail(c: DbClient): ClientDetail {
     c.disks?.map((d) => ({
       id: d.id,
       label: d.label,
+      ip: d.ip ?? "",
+      model: d.model ?? "",
       sizeTb: d.sizeTb,
       installedAt: d.installedAt,
       health: mapDiskHealth(d.health),

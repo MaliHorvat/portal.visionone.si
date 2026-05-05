@@ -26,6 +26,9 @@ model Client {
   switches  ClientSwitch[]
   disks     ClientDisk[]
   reminders MaintenanceReminder[]
+  offers    ClientOffer[]
+  siteSurveys ClientSiteSurvey[]
+  timeLogs  ClientTimeLog[]
   telemetryAgents TelemetryAgent[]
   deviceProbes DeviceProbe[]
   deviceChecks DeviceCheck[]
@@ -85,12 +88,79 @@ model ClientDisk {
   id          String  @id @default(cuid())
   clientId    String
   label       String
+  ip          String  @default("")
+  model       String  @default("")
   sizeTb      Float   @default(0)
   installedAt String  @default("")
   health      String  @default("ok")
   serial      String  @default("")
   comment     String  @default("")
   client      Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model ClientOffer {
+  id               String   @id @default(cuid())
+  clientId         String
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  offerDate        String   @default("")
+  clientAddress    String   @default("")
+  notes            String   @db.Text @default("")
+  totalDiscountPct Float    @default(0)
+  vatEnabled       Boolean  @default(true)
+  vatPct           Float    @default(22)
+  lines            ClientOfferLine[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+model ClientOfferLine {
+  id          String      @id @default(cuid())
+  offerId     String
+  offer       ClientOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  section     String      @default("material")
+  sortOrder   Int         @default(0)
+  code        String      @default("")
+  description String      @default("")
+  unit        String      @default("kos")
+  qty         Float       @default(1)
+  unitPrice   Float       @default(0)
+  discountPct Float       @default(0)
+  lineVatPct  Float       @default(22)
+
+  @@index([offerId])
+}
+
+model ClientSiteSurvey {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  surveyDate    String   @default("")
+  objectType    String   @default("")
+  ceilingHeight String   @default("")
+  cabling       String   @default("")
+  powerSupply   String   @default("")
+  lighting      String   @default("")
+  notes         String   @db.Text @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+model ClientTimeLog {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  workDate     String   @default("")
+  technician   String   @default("")
+  hours        Float    @default(0)
+  hourlyRate   Float    @default(0)
+  costComputed Float    @default(0)
+  createdAt    DateTime @default(now())
 
   @@index([clientId])
 }

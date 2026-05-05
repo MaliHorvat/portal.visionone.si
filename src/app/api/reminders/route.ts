@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
 import { createReminder, listReminders } from "@/lib/repositories/reminders";
 import type { ReminderKind } from "@/lib/types";
 
 const VALID_KINDS: ReminderKind[] = ["ciscenje_kamer", "diski", "servis", "drugo"];
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const guard = await requirePortalSession();
   if (guard) return guard;
   try {
-    const reminders = await listReminders();
+    const clientId = request.nextUrl.searchParams.get("clientId") ?? undefined;
+    const reminders = await listReminders(clientId ?? undefined);
     return NextResponse.json({ reminders });
   } catch (e) {
     console.error(e);

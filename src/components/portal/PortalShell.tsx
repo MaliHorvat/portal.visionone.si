@@ -28,7 +28,7 @@ type NavItem = { href: string; label: string; icon: React.ElementType; adminOnly
 
 const navItems: NavItem[] = [
   { href: "/portal", label: "Nadzorna plošča", icon: LayoutDashboard },
-  { href: "/portal/stranke", label: "Stranke", icon: Users, adminOnly: true },
+  { href: "/portal/stranke", label: "Objekti & stranke", icon: Users, adminOnly: true },
   { href: "/portal/agents", label: "Agenti", icon: RadioTower, adminOnly: true },
   { href: "/portal/belezke", label: "Beležke", icon: BookOpen, adminOnly: true },
   { href: "/portal/kamera-definicije", label: "RTSP definicije", icon: Video, adminOnly: true },
