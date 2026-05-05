@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Shield } from "lucide-react";
-import { PortalLoginFlow } from "./PortalLoginFlow";
+import { PortalLoginFlow } from "../PortalLoginFlow";
 
 type PortalLoginPageProps = {
   searchParams?: Promise<{ error?: string }>;

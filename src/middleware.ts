@@ -11,7 +11,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   const sessionCookie = req.cookies.get(PORTAL_SESSION_COOKIE)?.value;
   const portalOk = await isPortalSessionCookieValid(sessionCookie);
 
-  const isPortalLogin = pathname === "/portal-login";
+  const isPortalLogin = pathname === "/portal-login" || pathname.startsWith("/portal-login/");
   const isPortalApp = pathname === "/portal" || pathname.startsWith("/portal/");
 
   if (isPortalApp) {
