@@ -143,3 +143,25 @@ export interface SiteTrafficLight {
   state: "ok" | "alarm";
   detail: string;
 }
+
+export type ProbeKind = "camera" | "nvr" | "switch" | "router" | "host" | "other";
+export type ProbeStatus = "online" | "offline";
+
+export interface TelemetryIngestDevice {
+  key: string;
+  name: string;
+  ip: string;
+  kind: ProbeKind;
+  reachable: boolean;
+  latencyMs?: number;
+  error?: string;
+}
+
+export interface TelemetryIngestPayload {
+  agentId: string;
+  agentName?: string;
+  siteLabel?: string;
+  clientId?: string;
+  checkedAt?: string;
+  devices: TelemetryIngestDevice[];
+}

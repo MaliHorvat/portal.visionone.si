@@ -24,6 +24,9 @@ model Client {
   switches  ClientSwitch[]
   disks     ClientDisk[]
   reminders MaintenanceReminder[]
+  telemetryAgents TelemetryAgent[]
+  deviceProbes DeviceProbe[]
+  deviceChecks DeviceCheck[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -102,4 +105,64 @@ model MaintenanceReminder {
   updatedAt DateTime @updatedAt
 
   @@index([clientId])
+}
+
+model TelemetryAgent {
+  id         String        @id @default(cuid())
+  externalId String        @unique
+  name       String
+  siteLabel  String        @default("")
+  clientId   String?
+  client     Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  lastSeenAt DateTime?
+  devices    DeviceProbe[]
+  checks     DeviceCheck[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([clientId])
+}
+
+model DeviceProbe {
+  id          String        @id @default(cuid())
+  agentId     String
+  agent       TelemetryAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  clientId    String?
+  client      Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  deviceKey   String
+  name        String
+  ip          String
+  kind        String
+  status      String        @default("offline")
+  latencyMs   Int?
+  lastError   String        @default("")
+  lastSeenAt  DateTime?
+  checks      DeviceCheck[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([clientId, deviceKey])
+  @@index([agentId])
+  @@index([clientId])
+  @@index([status])
+}
+
+model DeviceCheck {
+  id          String         @id @default(cuid())
+  agentId     String
+  agent       TelemetryAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  clientId    String?
+  client      Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  deviceId    String?
+  device      DeviceProbe?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  deviceKey   String
+  status      String
+  latencyMs   Int?
+  errorText   String         @default("")
+  checkedAt   DateTime
+  createdAt   DateTime       @default(now())
+
+  @@index([agentId, checkedAt])
+  @@index([clientId, checkedAt])
+  @@index([deviceId, checkedAt])
 }
