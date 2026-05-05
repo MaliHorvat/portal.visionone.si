@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Lock, Shield, User } from "lucide-react";
+import { Shield } from "lucide-react";
+import { PortalLoginFlow } from "./PortalLoginFlow";
 
 type PortalLoginPageProps = {
   searchParams?: Promise<{ error?: string }>;
@@ -19,6 +20,7 @@ export default async function PortalLoginPage({ searchParams }: PortalLoginPageP
   const params = await searchParams;
   const showError = params?.error === "1";
   const configError = params?.error === "config";
+  const clerkError = params?.error === "clerk";
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0a0a0a] text-white lg:flex-row">
@@ -34,81 +36,7 @@ export default async function PortalLoginPage({ searchParams }: PortalLoginPageP
             </div>
           </div>
 
-          <form action="/api/portal-login" method="post" className="mt-12 space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="username" className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                Uporabniško ime
-              </label>
-              <div className="relative">
-                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden />
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  autoComplete="username"
-                  required
-                  placeholder="Vnesite uporabniško ime"
-                  className="w-full rounded-lg border border-zinc-700 bg-[#1a1a1a] py-3 pl-10 pr-3 text-sm text-white outline-none ring-0 placeholder:text-zinc-600 focus:border-zinc-500"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                Geslo
-              </label>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden />
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  placeholder="Vnesite geslo"
-                  className="w-full rounded-lg border border-zinc-700 bg-[#1a1a1a] py-3 pl-10 pr-3 text-sm text-white outline-none ring-0 placeholder:text-zinc-600 focus:border-zinc-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <label className="flex cursor-pointer select-none items-center gap-2.5 text-sm text-zinc-400">
-                <input
-                  type="checkbox"
-                  name="stay_logged_in"
-                  value="1"
-                  className="h-4 w-4 rounded border-zinc-600 bg-[#1a1a1a] text-white accent-white"
-                />
-                Ostani prijavljen
-              </label>
-              <span className="text-xs text-zinc-500" title="Obrnite se na skrbnika sistema">
-                Pozabljeno geslo?
-              </span>
-            </div>
-
-            {showError ? (
-              <p className="rounded-lg border border-red-500/35 bg-red-950/80 px-3 py-2 text-sm text-red-100">
-                Napačno uporabniško ime ali geslo.
-              </p>
-            ) : null}
-
-            {configError ? (
-              <p className="rounded-lg border border-red-500/35 bg-red-950/80 px-3 py-2 text-sm text-red-100">
-                Strežnik ne more podpisati seje. Na Vercelu dodajte{" "}
-                <code className="rounded bg-black/30 px-1 text-xs">PORTAL_SESSION_SECRET</code> (vsaj 16 znakov)
-                v Environment Variables in ponovno deployajte. Lokalno v datoteko{" "}
-                <code className="rounded bg-black/30 px-1 text-xs">.env.local</code> — glejte{" "}
-                <code className="rounded bg-black/30 px-1 text-xs">.env.example</code>.
-              </p>
-            ) : null}
-
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-white py-3.5 text-sm font-bold tracking-wide text-black transition-opacity hover:opacity-95 active:opacity-90"
-            >
-              VSTOPI
-            </button>
-          </form>
+          <PortalLoginFlow showError={showError} configError={configError} clerkError={clerkError} />
         </div>
 
         <div className="mt-12 space-y-4 lg:mt-8">

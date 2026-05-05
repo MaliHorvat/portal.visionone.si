@@ -18,6 +18,7 @@ import {
   RadioTower,
   Settings,
   Shield,
+  UserCircle,
   Users,
   Video,
   Wrench,
@@ -30,6 +31,7 @@ type NavItem = { href: string; label: string; icon: React.ElementType; adminOnly
 
 const navItems: NavItem[] = [
   { href: "/portal", label: "Nadzorna plošča", icon: LayoutDashboard },
+  { href: "/portal/racun", label: "Moj račun", icon: UserCircle },
   { href: "/portal/stranke", label: "Objekti & stranke", icon: Users, adminOnly: true },
   { href: "/portal/agents", label: "Agenti", icon: RadioTower, adminOnly: true },
   { href: "/portal/belezke", label: "Beležke", icon: BookOpen, adminOnly: true },

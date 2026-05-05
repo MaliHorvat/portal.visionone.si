@@ -13,7 +13,7 @@ function Dot({ status }: { status: string }) {
 }
 
 export function TabOprema({ ctx }: { ctx: WorkspaceCtx }) {
-  const { client, dbConfigured, reload } = ctx;
+  const { dbConfigured, reload } = ctx;
   const [busy, setBusy] = useState(false);
 
   async function pingAll() {

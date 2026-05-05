@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
@@ -6,6 +7,11 @@ import { getPortalSessionSecret } from "@/lib/portal-session-secret";
 import { signPortalSessionToken } from "@/lib/portal-session-sign";
 
 export async function POST(request: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.redirect(new URL("/portal-login?error=clerk", request.url), { status: 303 });
+  }
+
   const formData = await request.formData();
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");

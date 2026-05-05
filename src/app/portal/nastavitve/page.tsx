@@ -1,4 +1,5 @@
 import { AdminGate } from "@/components/portal/AdminGate";
+import Link from "next/link";
 import { NastavitveUporabniki } from "./NastavitveUporabniki";
 
 export default function NastavitvePage() {
@@ -11,7 +12,11 @@ export default function NastavitvePage() {
             Funkcije iz namizne aplikacije VisionOne se uvajajo postopoma. Zbirka v{" "}
             <code className="rounded bg-[var(--vo-surface-2)] px-1 py-0.5 text-xs">9.04.2026/VisionOne</code>{" "}
             obsega veliko več (ponudbe, inventar, merjenje časa, WoL, ankete, skener …); ta razdelek začenja z
-            upravljanjem portalnih računov.
+            upravljanjem portalnih računov.{" "}
+            <Link href="/portal/racun" className="font-medium text-[var(--vo-accent)] hover:underline">
+              Sprememba portala gesla
+            </Link>{" "}
+            je na strani Moj račun.
           </p>
         </div>
 
