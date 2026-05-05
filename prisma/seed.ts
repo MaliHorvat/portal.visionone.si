@@ -28,9 +28,10 @@ async function main() {
 
   const c1 = await prisma.client.upsert({
     where: { id: "seed-c1" },
-    update: {},
+    update: { slug: "logistika-kranj-d-o-o" },
     create: {
       id: "seed-c1",
+      slug: "logistika-kranj-d-o-o",
       name: "Logistika Kranj d.o.o.",
       address: "Industrijska cesta 14, 4000 Kranj",
       contact: "Janez Novak",
@@ -64,9 +65,10 @@ async function main() {
 
   const c2 = await prisma.client.upsert({
     where: { id: "seed-c2" },
-    update: {},
+    update: { slug: "retail-park-maribor" },
     create: {
       id: "seed-c2",
+      slug: "retail-park-maribor",
       name: "Retail Park Maribor",
       address: "Trgovski center 3, 2000 Maribor",
       contact: "Ana Kovač",
@@ -100,9 +102,10 @@ async function main() {
 
   const c3 = await prisma.client.upsert({
     where: { id: "seed-c3" },
-    update: {},
+    update: { slug: "stanovanjsko-podjetje" },
     create: {
       id: "seed-c3",
+      slug: "stanovanjsko-podjetje",
       name: "Stanovanjsko podjetje",
       address: "Celovška 100, 1000 Ljubljana",
       contact: "Upravnik",

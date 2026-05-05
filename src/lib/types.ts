@@ -13,6 +13,8 @@ export interface SubscriptionPackageDto {
 
 export interface ClientSummary {
   id: string;
+  /** Za URL /portal/stranke/[slug]; če null, se uporabi id. */
+  slug: string | null;
   name: string;
   address: string;
   contact: string;

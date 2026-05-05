@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { getMockClient, getMockClients } from "@/lib/mock-data";
+import { slugifyName } from "@/lib/slug";
 import type {
   CameraDevice,
   ClientDetail,
@@ -17,6 +18,7 @@ import type {
 type DbClient = NonNullable<
   Awaited<ReturnType<NonNullable<typeof prisma>["client"]["findFirst"]>>
 > & {
+  slug?: string | null;
   package?: { id: string; name: string; price: number; description: string } | null;
   topologyData?: Prisma.JsonValue | null;
   rackData?: Prisma.JsonValue | null;
@@ -86,6 +88,7 @@ function mapHealth(h: string): ClientHealth {
 function mapClientSummary(c: DbClient): ClientSummary {
   return {
     id: c.id,
+    slug: c.slug ?? null,
     name: c.name,
     address: c.address,
     contact: c.contact,
@@ -93,6 +96,22 @@ function mapClientSummary(c: DbClient): ClientSummary {
     package: mapPackage(c.package),
     health: mapHealth(c.health),
   };
+}
+
+async function allocateUniqueClientSlug(name: string, excludeClientId?: string): Promise<string> {
+  if (!prisma) throw new Error("DB ni nastavljena.");
+  const base = slugifyName(name);
+  for (let i = 0; i < 500; i++) {
+    const candidate = i === 0 ? base : `${base}-${i}`;
+    const clash = await prisma.client.findFirst({
+      where: {
+        slug: candidate,
+        ...(excludeClientId ? { id: { not: excludeClientId } } : {}),
+      },
+    });
+    if (!clash) return candidate;
+  }
+  throw new Error("Ni mogoče dodeliti edinstvenega slug.");
 }
 
 function mapClientDetail(c: DbClient): ClientDetail {
@@ -158,6 +177,7 @@ export async function listClients(): Promise<ClientSummary[]> {
   if (!isDbConfigured() || !prisma) {
     return getMockClients().map((c) => ({
       id: c.id,
+      slug: c.slug,
       name: c.name,
       address: c.address,
       contact: c.contact,
@@ -173,21 +193,36 @@ export async function listClients(): Promise<ClientSummary[]> {
   return rows.map(mapClientSummary);
 }
 
-export async function getClient(id: string): Promise<ClientDetail | null> {
+export async function getClient(slugOrId: string): Promise<ClientDetail | null> {
   if (!isDbConfigured() || !prisma) {
-    return getMockClient(id) ?? null;
+    return getMockClient(slugOrId) ?? null;
   }
-  const row = await prisma.client.findUnique({
-    where: { id },
-    include: {
-      package: true,
-      cameras: true,
-      recorders: true,
-      switches: true,
-      disks: true,
-    },
+  const include = {
+    package: true,
+    cameras: true,
+    recorders: true,
+    switches: true,
+    disks: true,
+  } as const;
+  let row = await prisma.client.findUnique({
+    where: { id: slugOrId },
+    include,
   });
+  if (!row) {
+    row = await prisma.client.findUnique({
+      where: { slug: slugOrId },
+      include,
+    });
+  }
   if (!row) return null;
+  if (!row.slug) {
+    const slug = await allocateUniqueClientSlug(row.name, row.id);
+    row = await prisma.client.update({
+      where: { id: row.id },
+      data: { slug },
+      include,
+    });
+  }
   return mapClientDetail(row);
 }
 
@@ -206,9 +241,11 @@ export async function createClient(data: UpsertClientInput): Promise<ClientDetai
   if (!isDbConfigured() || !prisma) {
     throw new Error("DB ni nastavljena.");
   }
+  const slug = await allocateUniqueClientSlug(data.name);
   const row = await prisma.client.create({
     data: {
       name: data.name,
+      slug,
       address: data.address ?? "",
       contact: data.contact ?? "",
       email: data.email ?? "",
@@ -233,10 +270,15 @@ export async function updateClient(
   if (!isDbConfigured() || !prisma) {
     throw new Error("DB ni nastavljena.");
   }
+  let newSlug: string | undefined;
+  if (data.name !== undefined) {
+    newSlug = await allocateUniqueClientSlug(data.name, id);
+  }
   const row = await prisma.client.update({
     where: { id },
     data: {
       name: data.name,
+      ...(newSlug !== undefined ? { slug: newSlug } : {}),
       address: data.address,
       contact: data.contact,
       email: data.email,

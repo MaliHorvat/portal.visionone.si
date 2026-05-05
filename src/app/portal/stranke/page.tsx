@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 function mockSummaries() {
   return getMockClients().map((c) => ({
     id: c.id,
+    slug: c.slug,
     name: c.name,
     address: c.address,
     contact: c.contact,

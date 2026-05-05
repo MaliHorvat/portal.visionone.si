@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo } from "react";
 import {
   Bell,
   BookOpen,
@@ -23,7 +24,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { usePortalRole } from "@/context/PortalRoleContext";
-import { mockClientPortalClientId } from "@/lib/mock-data";
+import { mockClientPortalSlug } from "@/lib/mock-data";
 
 type NavItem = { href: string; label: string; icon: React.ElementType; adminOnly?: boolean };
 
@@ -35,7 +36,7 @@ const navItems: NavItem[] = [
   { href: "/portal/kamera-definicije", label: "RTSP definicije", icon: Video, adminOnly: true },
   { href: "/portal/audit", label: "Audit", icon: Shield, adminOnly: true },
   {
-    href: `/portal/stranke/${mockClientPortalClientId}`,
+    href: `/portal/stranke/${mockClientPortalSlug}`,
     label: "Moj objekt",
     icon: Camera,
     adminOnly: false,
@@ -53,14 +54,25 @@ const navItems: NavItem[] = [
 
 export function PortalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { role } = usePortalRole();
 
-  const visible = navItems.filter((item) => {
-    if (item.label === "Moj objekt") return role === "client";
-    if (item.adminOnly) return role === "admin";
-    if (item.href === "/portal/stranke") return role === "admin";
-    return true;
-  });
+  const visible = useMemo(
+    () =>
+      navItems.filter((item) => {
+        if (item.label === "Moj objekt") return role === "client";
+        if (item.adminOnly) return role === "admin";
+        if (item.href === "/portal/stranke") return role === "admin";
+        return true;
+      }),
+    [role],
+  );
+
+  useEffect(() => {
+    for (const item of visible) {
+      router.prefetch(item.href);
+    }
+  }, [router, visible]);
 
   return (
     <div className="flex min-h-screen bg-[var(--vo-bg)]">

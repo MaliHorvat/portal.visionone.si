@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePortalRole } from "@/context/PortalRoleContext";
-import { mockClientPortalClientId } from "@/lib/mock-data";
+import { clientProfilePath } from "@/lib/client-url";
+import { mockClientPortalSlug } from "@/lib/mock-data";
 import type { ClientSummary, SubscriptionPackageDto } from "@/lib/types";
 
 type Props = {
@@ -25,7 +26,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
 
   useEffect(() => {
     if (role === "client") {
-      router.replace(`/portal/stranke/${mockClientPortalClientId}`);
+      router.replace(`/portal/stranke/${encodeURIComponent(mockClientPortalSlug)}`);
     }
   }, [role, router]);
 
@@ -186,7 +187,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                 </td>
                 <td className="px-4 py-3 text-right">
                   <Link
-                    href={`/portal/stranke/${c.id}`}
+                    href={clientProfilePath(c)}
                     className="font-medium text-[var(--vo-accent)] hover:underline"
                   >
                     Profil

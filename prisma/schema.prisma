@@ -12,6 +12,8 @@ datasource db {
 
 model Client {
   id        String   @id @default(cuid())
+  /** Berljiv segment URL-ja (/portal/stranke/[slug]); interni API ostane na id. */
+  slug      String?  @unique
   name      String
   address   String   @default("")
   contact   String   @default("")

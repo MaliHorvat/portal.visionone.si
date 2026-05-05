@@ -1,3 +1,4 @@
+import { slugifyName } from "./slug";
 import type {
   ClientDetail,
   DashboardStats,
@@ -87,6 +88,7 @@ export const mockPackages: SubscriptionPackageDto[] = [
 const baseClients: ClientDetail[] = [
   {
     id: "c1",
+    slug: slugifyName("Logistika Kranj d.o.o."),
     name: "Logistika Kranj d.o.o.",
     address: "Industrijska cesta 14, 4000 Kranj",
     contact: "Janez Novak",
@@ -110,6 +112,7 @@ const baseClients: ClientDetail[] = [
   },
   {
     id: "c2",
+    slug: slugifyName("Retail Park Maribor"),
     name: "Retail Park Maribor",
     address: "Trgovski center 3, 2000 Maribor",
     contact: "Ana Kovač",
@@ -133,6 +136,7 @@ const baseClients: ClientDetail[] = [
   },
   {
     id: "c3",
+    slug: slugifyName("Stanovanjsko podjetje"),
     name: "Stanovanjsko podjetje",
     address: "Celovška 100, 1000 Ljubljana",
     contact: "Upravnik",
@@ -156,12 +160,15 @@ export function getMockClients(): ClientDetail[] {
   return baseClients;
 }
 
-export function getMockClient(id: string): ClientDetail | undefined {
-  return baseClients.find((c) => c.id === id);
+export function getMockClient(slugOrId: string): ClientDetail | undefined {
+  return baseClients.find((c) => c.id === slugOrId || c.slug === slugOrId);
 }
 
 /** Demo stranka za Client pogled — filtrirano na c1 */
 export const mockClientPortalClientId = "c1";
+
+/** Demo URL segment za Moj objekt (skladno s slug za c1). */
+export const mockClientPortalSlug = baseClients[0]!.slug!;
 
 export const mockTopologyNodes: TopologyNode[] = [
   { id: "inet", label: "Internet", type: "internet", x: 50, y: 120 },
