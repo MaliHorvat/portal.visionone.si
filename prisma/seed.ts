@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -149,6 +150,16 @@ async function main() {
       },
     ],
     skipDuplicates: true,
+  });
+
+  await prisma.appUserAccount.upsert({
+    where: { username: "admin" },
+    update: {},
+    create: {
+      username: "admin",
+      passwordHash: bcrypt.hashSync("geslo123", 12),
+      isAdmin: true,
+    },
   });
 
   await prisma.cameraDefinition.upsert({

@@ -5,6 +5,7 @@ type PortalLoginPageProps = {
 export default async function PortalLoginPage({ searchParams }: PortalLoginPageProps) {
   const params = await searchParams;
   const showError = params?.error === "1";
+  const configError = params?.error === "config";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--vo-bg)] px-4">
@@ -44,6 +45,13 @@ export default async function PortalLoginPage({ searchParams }: PortalLoginPageP
           {showError ? (
             <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               Napačno uporabniško ime ali geslo.
+            </p>
+          ) : null}
+
+          {configError ? (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              Strežnik ne more podpisati seje — v produkciji nastavite močno{" "}
+              <code className="text-xs">PORTAL_SESSION_SECRET</code> (vsaj 16 znakov) v okoljskih spremenljivkah.
             </p>
           ) : null}
 

@@ -11,8 +11,15 @@ type Ctx = {
 
 const PortalRoleContext = createContext<Ctx | null>(null);
 
-export function PortalRoleProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRole] = useState<PortalRole>("admin");
+export function PortalRoleProvider({
+  children,
+  initialRole = "admin",
+}: {
+  children: React.ReactNode;
+  /** Iz piškotka (strežnik): admin ali stranka (ne-admin uporabnik). */
+  initialRole?: PortalRole;
+}) {
+  const [role, setRole] = useState<PortalRole>(initialRole);
   const value = useMemo(() => ({ role, setRole }), [role]);
   return (
     <PortalRoleContext.Provider value={value}>{children}</PortalRoleContext.Provider>

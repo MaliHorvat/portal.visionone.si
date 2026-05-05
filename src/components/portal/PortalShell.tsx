@@ -14,6 +14,7 @@ import {
   Network,
   Package,
   RadioTower,
+  Settings,
   Shield,
   Users,
   Video,
@@ -45,6 +46,7 @@ const navItems: NavItem[] = [
   { href: "/portal/opomniki", label: "Opomniki", icon: CalendarClock },
   { href: "/portal/cas", label: "Beleženje časa", icon: ClipboardList, adminOnly: true },
   { href: "/portal/obvestila", label: "Obvestila (Telegram)", icon: Bell, adminOnly: true },
+  { href: "/portal/nastavitve", label: "Nastavitve", icon: Settings, adminOnly: true },
 ];
 
 export function PortalShell({ children }: { children: React.ReactNode }) {

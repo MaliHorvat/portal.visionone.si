@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { isPortalSessionValid, PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
+import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
+import { isPortalSessionCookieValid } from "@/lib/portal-session-verify";
 
-export default function middleware(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get(PORTAL_SESSION_COOKIE)?.value;
-  const isLoggedIn = isPortalSessionValid(sessionCookie);
+  const isLoggedIn = await isPortalSessionCookieValid(sessionCookie);
   const isPortalLoginRoute = pathname === "/portal-login";
   const isPortalRoute = pathname === "/portal" || pathname.startsWith("/portal/");
 
