@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       const status = reachable ? "online" : "offline";
 
       const device = await prisma.deviceProbe.upsert({
-        where: { clientId_deviceKey: { clientId, deviceKey: key } },
+        where: { agentId_deviceKey: { agentId: agent.id, deviceKey: key } },
         create: {
           agentId: agent.id,
           clientId,

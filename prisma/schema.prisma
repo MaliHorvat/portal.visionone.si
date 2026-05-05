@@ -141,7 +141,7 @@ model DeviceProbe {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  @@unique([clientId, deviceKey])
+  @@unique([agentId, deviceKey])
   @@index([agentId])
   @@index([clientId])
   @@index([status])
