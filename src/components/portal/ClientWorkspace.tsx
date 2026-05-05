@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import type { ElementType, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ClientDetail } from "@/lib/types";
 import { TabCas } from "./client-workspace/TabCas";
@@ -13,6 +12,7 @@ import { TabRack } from "./client-workspace/TabRack";
 import { TabShema } from "./client-workspace/TabShema";
 import { TabVzdrzevanje } from "./client-workspace/TabVzdrzevanje";
 import type { WorkspaceCtx, WorkspaceTab } from "./client-workspace/types";
+import { parseWorkspaceTab } from "./client-workspace/types";
 import {
   Boxes,
   Camera,
@@ -25,7 +25,7 @@ import {
   Wrench,
 } from "lucide-react";
 
-const TABS: { id: WorkspaceTab; label: string; icon: React.ElementType }[] = [
+const TABS: { id: WorkspaceTab; label: string; icon: ElementType }[] = [
   { id: "kamere", label: "Kamere", icon: Camera },
   { id: "oprema", label: "Oprema", icon: Boxes },
   { id: "shema", label: "Shema", icon: Network },
@@ -36,24 +36,47 @@ const TABS: { id: WorkspaceTab; label: string; icon: React.ElementType }[] = [
   { id: "vzdrzevanje", label: "Vzdrževanje", icon: Wrench },
 ];
 
-function normalizeTab(raw: string | null): WorkspaceTab {
-  const ids = new Set(TABS.map((t) => t.id));
-  return raw && ids.has(raw as WorkspaceTab) ? (raw as WorkspaceTab) : "kamere";
-}
-
 type Props = {
   initialClient: ClientDetail;
   dbConfigured: boolean;
+  initialTab: WorkspaceTab;
 };
 
-export function ClientWorkspace({ initialClient, dbConfigured }: Props) {
-  const searchParams = useSearchParams();
-  const tab = normalizeTab(searchParams.get("tab"));
+export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Props) {
+  const [tab, setTab] = useState<WorkspaceTab>(initialTab);
+  const [visited, setVisited] = useState<Set<WorkspaceTab>>(() => new Set([initialTab]));
   const [client, setClient] = useState(initialClient);
 
   useEffect(() => {
     setClient(initialClient);
   }, [initialClient]);
+
+  useEffect(() => {
+    setTab(initialTab);
+    setVisited(new Set([initialTab]));
+  }, [initialClient.id, initialTab]);
+
+  useEffect(() => {
+    const onPop = () => {
+      const sp = new URLSearchParams(window.location.search);
+      const t = parseWorkspaceTab(sp.get("tab"));
+      setTab(t);
+      setVisited((v) => new Set(v).add(t));
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const selectTab = useCallback((id: WorkspaceTab) => {
+    setTab(id);
+    setVisited((v) => new Set(v).add(id));
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", id);
+      const qs = url.searchParams.toString();
+      window.history.replaceState(null, "", qs ? `${url.pathname}?${qs}` : url.pathname);
+    }
+  }, []);
 
   const reload = useCallback(async () => {
     if (!dbConfigured) return;
@@ -77,6 +100,16 @@ export function ClientWorkspace({ initialClient, dbConfigured }: Props) {
     ? `${client.package.name} (${client.package.price} €)`
     : "—";
 
+  function panel(id: WorkspaceTab, node: ReactNode) {
+    if (!visited.has(id)) return null;
+    const hidden = tab !== id;
+    return (
+      <div className={hidden ? "hidden" : undefined} aria-hidden={hidden}>
+        {node}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -93,10 +126,10 @@ export function ClientWorkspace({ initialClient, dbConfigured }: Props) {
         {TABS.map(({ id, label, icon: Icon }) => {
           const active = tab === id;
           return (
-            <Link
+            <button
               key={id}
-              href={`/portal/stranke/${client.id}?tab=${id}`}
-              scroll={false}
+              type="button"
+              onClick={() => selectTab(id)}
               className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t-lg px-3 py-2 ${
                 active
                   ? "bg-[var(--vo-accent-muted)] text-[var(--vo-accent)]"
@@ -105,20 +138,20 @@ export function ClientWorkspace({ initialClient, dbConfigured }: Props) {
             >
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               {label}
-            </Link>
+            </button>
           );
         })}
       </nav>
 
       <div className="min-h-[320px]">
-        {tab === "kamere" ? <TabKamere ctx={ctx} /> : null}
-        {tab === "oprema" ? <TabOprema ctx={ctx} /> : null}
-        {tab === "shema" ? <TabShema ctx={ctx} /> : null}
-        {tab === "rack" ? <TabRack ctx={ctx} /> : null}
-        {tab === "ponudbe" ? <TabPonudbe ctx={ctx} /> : null}
-        {tab === "popisi" ? <TabPopisi ctx={ctx} /> : null}
-        {tab === "cas" ? <TabCas ctx={ctx} /> : null}
-        {tab === "vzdrzevanje" ? <TabVzdrzevanje ctx={ctx} /> : null}
+        {panel("kamere", <TabKamere ctx={ctx} />)}
+        {panel("oprema", <TabOprema ctx={ctx} />)}
+        {panel("shema", <TabShema ctx={ctx} />)}
+        {panel("rack", <TabRack ctx={ctx} />)}
+        {panel("ponudbe", <TabPonudbe ctx={ctx} />)}
+        {panel("popisi", <TabPopisi ctx={ctx} />)}
+        {panel("cas", <TabCas ctx={ctx} />)}
+        {panel("vzdrzevanje", <TabVzdrzevanje ctx={ctx} />)}
       </div>
     </div>
   );

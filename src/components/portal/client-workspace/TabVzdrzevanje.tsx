@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePortalToast } from "@/context/PortalToastContext";
 import type { MaintenanceReminder } from "@/lib/types";
 import type { WorkspaceCtx } from "./types";
 
 export function TabVzdrzevanje({ ctx }: { ctx: WorkspaceCtx }) {
+  const { showToast } = usePortalToast();
   const { clientId, dbConfigured } = ctx;
   const [rows, setRows] = useState<MaintenanceReminder[]>([]);
   const [title, setTitle] = useState("");
@@ -26,32 +28,47 @@ export function TabVzdrzevanje({ ctx }: { ctx: WorkspaceCtx }) {
     e.preventDefault();
     if (!title.trim() || !due || !dbConfigured) return;
     setBusy(true);
-    await fetch("/api/reminders", {
+    const res = await fetch("/api/reminders", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ clientId, title, dueDate: due, kind: "drugo" }),
     });
     setBusy(false);
+    if (!res.ok) {
+      showToast("Dodajanje opomnika ni uspelo.", "err");
+      return;
+    }
     setTitle("");
     setDue("");
     await load();
+    showToast("Opomnik dodan.");
   }
 
   async function toggleDone(r: MaintenanceReminder) {
     if (!dbConfigured) return;
-    await fetch(`/api/reminders/${r.id}`, {
+    const res = await fetch(`/api/reminders/${r.id}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ completed: !r.completed }),
     });
+    if (!res.ok) {
+      showToast("Posodobitev opomnika ni uspela.", "err");
+      return;
+    }
     await load();
+    showToast("Opomnik posodobljen.");
   }
 
   async function remove(id: string) {
     if (!dbConfigured) return;
     if (!confirm("Izbris?")) return;
-    await fetch(`/api/reminders/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/reminders/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      showToast("Brisanje opomnika ni uspelo.", "err");
+      return;
+    }
     await load();
+    showToast("Opomnik izbrisan.");
   }
 
   return (

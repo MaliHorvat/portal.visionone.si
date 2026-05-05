@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePortalToast } from "@/context/PortalToastContext";
 import type { WorkspaceCtx } from "./types";
 
 type Survey = {
@@ -15,6 +16,7 @@ type Survey = {
 };
 
 export function TabPopisi({ ctx }: { ctx: WorkspaceCtx }) {
+  const { showToast } = usePortalToast();
   const { clientId, dbConfigured } = ctx;
   const [list, setList] = useState<Survey[]>([]);
   const [sel, setSel] = useState<string | null>(null);
@@ -46,29 +48,43 @@ export function TabPopisi({ ctx }: { ctx: WorkspaceCtx }) {
     setBusy(true);
     const r = await fetch(`/api/clients/${clientId}/surveys`, { method: "POST" });
     setBusy(false);
-    if (!r.ok) return;
+    if (!r.ok) {
+      showToast("Ustvarjanje popisa ni uspelo.", "err");
+      return;
+    }
     await load();
+    showToast("Nov popis ustvarjen.");
   }
 
   async function save() {
     if (!form || !sel || !dbConfigured) return;
     setBusy(true);
-    await fetch(`/api/clients/${clientId}/surveys/${sel}`, {
+    const r = await fetch(`/api/clients/${clientId}/surveys/${sel}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(form),
     });
     setBusy(false);
+    if (!r.ok) {
+      showToast("Shranjevanje popisa ni uspelo.", "err");
+      return;
+    }
     await load();
+    showToast("Popis shranjen.");
   }
 
   async function remove() {
     if (!sel || !confirm("Izbris popisa?")) return;
     setBusy(true);
-    await fetch(`/api/clients/${clientId}/surveys/${sel}`, { method: "DELETE" });
+    const r = await fetch(`/api/clients/${clientId}/surveys/${sel}`, { method: "DELETE" });
     setBusy(false);
+    if (!r.ok) {
+      showToast("Brisanje popisa ni uspelo.", "err");
+      return;
+    }
     setSel(null);
     await load();
+    showToast("Popis izbrisan.");
   }
 
   return (

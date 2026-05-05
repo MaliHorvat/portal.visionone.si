@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePortalToast } from "@/context/PortalToastContext";
 import type { WorkspaceCtx } from "./types";
 
 type LineRow = {
@@ -68,7 +69,34 @@ function dtoToRows(o: OfferDto): LineRow[] {
   }));
 }
 
+function formatOfferPlainText(
+  clientName: string,
+  draft: OfferDto,
+  rows: LineRow[],
+  totals: { net: number; vat: number; gross: number },
+): string {
+  const hdr = [`PONUDBA`, `Stranka: ${clientName}`, `Datum: ${draft.offerDate}`, `Naslov: ${draft.clientAddress}`, ""].join("\n");
+  const lines = rows.map(
+    (l) =>
+      `${l.section === "material" ? "[MAT]" : "[DEL]"} ${l.code}\t${l.description}\t${l.qty} ${l.unit} × ${l.unitPrice} € (popust ${l.discountPct}%) => ${lineNet(l).toFixed(2)} €`,
+  );
+  const tail = [
+    "",
+    `Skupni popust dokumenta: ${draft.totalDiscountPct}%`,
+    `DDV: ${draft.vatEnabled ? `${draft.vatPct}%` : "izklopljen"}`,
+    `Osnova: ${totals.net.toFixed(2)} €`,
+    `DDV znesek: ${totals.vat.toFixed(2)} €`,
+    `SKUPAJ: ${totals.gross.toFixed(2)} €`,
+    "",
+    draft.notes ? `Opombe:\n${draft.notes}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return `${hdr}\n${lines.join("\n")}\n${tail}`;
+}
+
 export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
+  const { showToast } = usePortalToast();
   const { client, clientId, dbConfigured } = ctx;
   const [offers, setOffers] = useState<{ id: string; updatedAt?: string }[]>([]);
   const [sel, setSel] = useState<string | null>(null);
@@ -121,10 +149,14 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
     setBusy(true);
     const r = await fetch(`/api/clients/${clientId}/offers`, { method: "POST" });
     setBusy(false);
-    if (!r.ok) return;
+    if (!r.ok) {
+      showToast("Ustvarjanje ponudbe ni uspelo.", "err");
+      return;
+    }
     const j = await r.json();
     await loadList();
     setSel(j.offer.id);
+    showToast("Nova ponudba ustvarjena.");
   }
 
   async function saveOffer() {
@@ -141,7 +173,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       discountPct: l.discountPct,
       lineVatPct: l.lineVatPct,
     }));
-    await fetch(`/api/clients/${clientId}/offers/${sel}`, {
+    const r = await fetch(`/api/clients/${clientId}/offers/${sel}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -155,18 +187,93 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       }),
     });
     setBusy(false);
+    if (!r.ok) {
+      showToast("Shranjevanje ponudbe ni uspelo.", "err");
+      return;
+    }
     await loadOffer(sel);
+    showToast("Ponudba shranjena.");
   }
 
   async function deleteOffer() {
     if (!sel || !confirm("Izbris ponudbe?")) return;
     setBusy(true);
-    await fetch(`/api/clients/${clientId}/offers/${sel}`, { method: "DELETE" });
+    const r = await fetch(`/api/clients/${clientId}/offers/${sel}`, { method: "DELETE" });
     setBusy(false);
+    if (!r.ok) {
+      showToast("Brisanje ponudbe ni uspelo.", "err");
+      return;
+    }
     setSel(null);
     setDraft(null);
     setRows([]);
     await loadList();
+    showToast("Ponudba izbrisana.");
+  }
+
+  async function copyOfferText() {
+    if (!draft) return;
+    try {
+      const text = formatOfferPlainText(client.name, draft, rows, totals);
+      await navigator.clipboard.writeText(text);
+      showToast("Ponudba kopirana v odložišče.");
+    } catch {
+      showToast("Kopiranje v odložišče ni uspelo.", "err");
+    }
+  }
+
+  async function exportOfferPdf() {
+    if (!draft || !sel) return;
+    try {
+      const [{ jsPDF }, autoTableMod] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
+      const autoTable = autoTableMod.default;
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      doc.text("Ponudba", 14, 18);
+      doc.setFontSize(10);
+      let y = 26;
+      doc.text(`Stranka: ${client.name}`, 14, y);
+      y += 6;
+      doc.text(`Datum: ${draft.offerDate}`, 14, y);
+      y += 6;
+      doc.text(`Naslov: ${draft.clientAddress}`, 14, y);
+      y += 8;
+      const body = rows.map((l) => [
+        l.section === "material" ? "Mat." : "Delo",
+        l.code,
+        l.description,
+        l.unit,
+        String(l.qty),
+        l.unitPrice.toFixed(2),
+        String(l.discountPct),
+        lineNet(l).toFixed(2),
+      ]);
+      autoTable(doc, {
+        startY: y,
+        head: [["Tip", "Šifra", "Opis", "Enota", "Kol.", "Cena €", "Popust %", "Neto €"]],
+        body,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [45, 45, 48] },
+      });
+      const docExt = doc as unknown as { lastAutoTable?: { finalY: number } };
+      const finalY = docExt.lastAutoTable?.finalY ?? y + 40;
+      doc.text(`Skupni popust dokumenta: ${draft.totalDiscountPct}%`, 14, finalY + 8);
+      doc.text(`DDV: ${draft.vatEnabled ? `${draft.vatPct}%` : "izklopljen"}`, 14, finalY + 14);
+      doc.text(`Osnova: ${totals.net.toFixed(2)} €`, 14, finalY + 20);
+      doc.text(`DDV: ${totals.vat.toFixed(2)} €`, 14, finalY + 26);
+      doc.setFont("helvetica", "bold");
+      doc.text(`SKUPAJ: ${totals.gross.toFixed(2)} €`, 14, finalY + 34);
+      if (draft.notes) {
+        doc.setFont("helvetica", "normal");
+        doc.text("Opombe:", 14, finalY + 44);
+        const split = doc.splitTextToSize(draft.notes, 180);
+        doc.text(split, 14, finalY + 50);
+      }
+      doc.save(`ponudba-${sel.slice(0, 8)}.pdf`);
+      showToast("PDF ponudbe izvožen.");
+    } catch {
+      showToast("Izvoz PDF ni uspel.", "err");
+    }
   }
 
   function updateRow(key: string, patch: Partial<LineRow>) {
@@ -271,6 +378,22 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         </button>
         <button type="button" disabled={busy || !sel || !dbConfigured} onClick={() => void saveOffer()} className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs font-semibold disabled:opacity-40">
           Shrani
+        </button>
+        <button
+          type="button"
+          disabled={!draft || busy}
+          onClick={() => void exportOfferPdf()}
+          className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs font-semibold disabled:opacity-40"
+        >
+          PDF
+        </button>
+        <button
+          type="button"
+          disabled={!draft || busy}
+          onClick={() => void copyOfferText()}
+          className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs font-semibold disabled:opacity-40"
+        >
+          Kopiraj
         </button>
         <button type="button" disabled={!sel || !dbConfigured} onClick={() => void deleteOffer()} className="text-xs text-red-500 hover:underline disabled:opacity-40">
           Izbriši

@@ -292,6 +292,15 @@ model SavedView {
   createdAt DateTime @default(now())
 }
 
+/** Samostojni rack projekt (globalni Rack dizajner — ni vezan na stranko). */
+model StandaloneRack {
+  id        String   @id @default(cuid())
+  name      String   @default("Rack")
+  rackData  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model AppUserAccount {
   id           String @id @default(cuid())
   username     String @unique

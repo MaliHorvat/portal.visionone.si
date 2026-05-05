@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePortalToast } from "@/context/PortalToastContext";
 import type { WorkspaceCtx } from "./types";
 
 function StatusDot({ status }: { status: string }) {
@@ -14,6 +15,7 @@ function StatusDot({ status }: { status: string }) {
 }
 
 export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
+  const { showToast } = usePortalToast();
   const { client, dbConfigured, reload } = ctx;
   const [busy, setBusy] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -30,43 +32,63 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
   async function checkAll() {
     if (!dbConfigured) return;
     setBusy(true);
-    await fetch(`/api/clients/${ctx.clientId}/reachability`, { method: "POST" });
+    const r = await fetch(`/api/clients/${ctx.clientId}/reachability`, { method: "POST" });
     setBusy(false);
+    if (!r.ok) {
+      showToast("Preverjanje dosegljivosti ni uspelo.", "err");
+      return;
+    }
     await reload();
+    showToast("Stanje kamer posodobljeno.");
   }
 
   async function addCamera(e: React.FormEvent) {
     e.preventDefault();
     if (!dbConfigured || !form.name.trim()) return;
     setBusy(true);
-    await fetch(`/api/clients/${ctx.clientId}/cameras`, {
+    const r = await fetch(`/api/clients/${ctx.clientId}/cameras`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(form),
     });
     setBusy(false);
+    if (!r.ok) {
+      showToast("Dodajanje kamere ni uspelo.", "err");
+      return;
+    }
     setForm({ tag: "", name: "", ip: "", rtspUser: "", rtspPass: "", model: "", comment: "" });
     await reload();
+    showToast("Kamera dodana.");
   }
 
   async function deleteCam(id: string) {
     if (!confirm("Izbris kamere?")) return;
     setBusy(true);
-    await fetch(`/api/clients/${ctx.clientId}/cameras/${id}`, { method: "DELETE" });
+    const r = await fetch(`/api/clients/${ctx.clientId}/cameras/${id}`, { method: "DELETE" });
     setBusy(false);
+    if (!r.ok) {
+      showToast("Brisanje kamere ni uspelo.", "err");
+      return;
+    }
     await reload();
+    showToast("Kamera izbrisana.");
   }
 
   async function saveCam(id: string, patch: Record<string, string>) {
     setBusy(true);
-    await fetch(`/api/clients/${ctx.clientId}/cameras/${id}`, {
+    const r = await fetch(`/api/clients/${ctx.clientId}/cameras/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(patch),
     });
     setBusy(false);
+    if (!r.ok) {
+      showToast("Shranjevanje kamere ni uspelo.", "err");
+      return;
+    }
     setEditId(null);
     await reload();
+    showToast("Kamera shranjena.");
   }
 
   return (

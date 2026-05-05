@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePortalToast } from "@/context/PortalToastContext";
 import { parseTopologyState } from "@/lib/topology-parse";
 import type { ClientTopologyState, TopologyCanvasNode, TopologyDeviceKind } from "@/lib/types";
 import type { WorkspaceCtx } from "./types";
@@ -12,6 +13,7 @@ function newId() {
 }
 
 export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
+  const { showToast } = usePortalToast();
   const { client, clientId, dbConfigured, reload } = ctx;
   const [topo, setTopo] = useState<ClientTopologyState>(() => parseTopologyState(client.topologyData));
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
@@ -126,13 +128,18 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
 
   const save = useCallback(async () => {
     if (!dbConfigured) return;
-    await fetch(`/api/clients/${clientId}`, {
+    const r = await fetch(`/api/clients/${clientId}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ topologyData: topo }),
     });
+    if (!r.ok) {
+      showToast("Shranjevanje načrta ni uspelo.", "err");
+      return;
+    }
     await reload();
-  }, [clientId, dbConfigured, reload, topo]);
+    showToast("Načrt shranjen.");
+  }, [clientId, dbConfigured, reload, topo, showToast]);
 
   useEffect(() => {
     if (!dragging || !canvasRef.current) return;

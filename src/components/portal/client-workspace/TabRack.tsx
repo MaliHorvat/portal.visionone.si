@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePortalToast } from "@/context/PortalToastContext";
 import type { RackUnit } from "@/lib/types";
 import { RackView } from "@/components/portal/RackView";
 import type { WorkspaceCtx } from "./types";
 import { parseRackUnits } from "./rack-parse";
 
 export function TabRack({ ctx }: { ctx: WorkspaceCtx }) {
+  const { showToast } = usePortalToast();
   const { client, clientId, dbConfigured, reload } = ctx;
   const [units, setUnits] = useState<RackUnit[]>(() => parseRackUnits(client.rackData));
   const [f, setF] = useState<RackUnit>({ uStart: 1, uSpan: 1, label: "", deviceType: "other" });
@@ -17,12 +19,17 @@ export function TabRack({ ctx }: { ctx: WorkspaceCtx }) {
 
   async function save() {
     if (!dbConfigured) return;
-    await fetch(`/api/clients/${clientId}`, {
+    const r = await fetch(`/api/clients/${clientId}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ rackData: units }),
     });
+    if (!r.ok) {
+      showToast("Shranjevanje racka ni uspelo.", "err");
+      return;
+    }
     await reload();
+    showToast("Rack shranjen.");
   }
 
   function add(e: React.FormEvent) {

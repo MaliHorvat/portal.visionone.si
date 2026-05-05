@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePortalToast } from "@/context/PortalToastContext";
 import type { WorkspaceCtx } from "./types";
 
 type Log = {
@@ -13,6 +14,7 @@ type Log = {
 };
 
 export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
+  const { showToast } = usePortalToast();
   const { clientId, dbConfigured } = ctx;
   const [logs, setLogs] = useState<Log[]>([]);
   const [busy, setBusy] = useState(false);
@@ -36,7 +38,7 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
   async function addManual() {
     if (!tech.trim() || !dbConfigured) return;
     setBusy(true);
-    await fetch(`/api/clients/${clientId}/timelogs`, {
+    const r = await fetch(`/api/clients/${clientId}/timelogs`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -47,14 +49,19 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
       }),
     });
     setBusy(false);
+    if (!r.ok) {
+      showToast("Vnos ur ni uspel.", "err");
+      return;
+    }
     setHoursManual(0);
     await load();
+    showToast("Ure dodane.");
   }
 
   async function checkInStub() {
     if (!tech.trim() || !dbConfigured) return;
     setBusy(true);
-    await fetch(`/api/clients/${clientId}/timelogs`, {
+    const r = await fetch(`/api/clients/${clientId}/timelogs`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -65,13 +72,23 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
       }),
     });
     setBusy(false);
+    if (!r.ok) {
+      showToast("Začetek dela ni uspel.", "err");
+      return;
+    }
     await load();
+    showToast("Začetek dela zabeležen.");
   }
 
   async function del(id: string) {
     if (!confirm("Izbris?")) return;
-    await fetch(`/api/clients/${clientId}/timelogs/${id}`, { method: "DELETE" });
+    const r = await fetch(`/api/clients/${clientId}/timelogs/${id}`, { method: "DELETE" });
+    if (!r.ok) {
+      showToast("Brisanje vnosa ni uspelo.", "err");
+      return;
+    }
     await load();
+    showToast("Vnos izbrisan.");
   }
 
   const sumH = logs.reduce((s, l) => s + l.hours, 0);
