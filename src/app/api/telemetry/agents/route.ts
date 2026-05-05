@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
+import { appendAuditLog } from "@/lib/repositories/audit-log";
 
 export async function GET() {
   const guard = await requirePortalSession();
@@ -54,6 +55,8 @@ export async function POST(request: Request) {
       },
       include: { client: { select: { id: true, name: true } } },
     });
+
+    await appendAuditLog("admin", "telemetry_agent_upsert", `${externalId} → ${clientId}`);
 
     return NextResponse.json({ agent });
   } catch (e) {

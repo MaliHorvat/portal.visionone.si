@@ -31,6 +31,8 @@ export async function PUT(request: Request, ctx: Ctx) {
       email: body?.email,
       health: body?.health === "alarm" ? "alarm" : body?.health === "ok" ? "ok" : undefined,
       packageId: body?.packageId === undefined ? undefined : body.packageId,
+      topologyData: body?.topologyData,
+      rackData: body?.rackData,
     });
     return NextResponse.json({ client: updated });
   } catch (e) {

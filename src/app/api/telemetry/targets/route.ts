@@ -60,12 +60,16 @@ export async function GET(request: Request) {
     for (const cam of client.cameras) {
       const ip = cam.ip.trim();
       if (!ip) continue;
+      const camPort =
+        typeof cam.checkPort === "number" && cam.checkPort > 0 && cam.checkPort <= 65535
+          ? cam.checkPort
+          : defaultPort("camera");
       targets.push({
         key: `cam:${cam.id}`,
         name: cam.name,
         ip,
         kind: "camera",
-        port: defaultPort("camera"),
+        port: camPort,
       });
     }
     for (const nvr of client.recorders) {

@@ -17,6 +17,8 @@ model Client {
   contact   String   @default("")
   email     String   @default("")
   health    String   @default("ok")
+  topologyData Json?
+  rackData       Json?
   packageId String?
   package   SubscriptionPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
   cameras   ClientCamera[]
@@ -40,6 +42,12 @@ model ClientCamera {
   ip       String  @default("")
   model    String  @default("")
   status   String  @default("online")
+  checkPort Int?
+  rtspUser  String @default("")
+  rtspPass  String @default("")
+  streamUrl String @default("")
+  comment   String @default("")
+  tag       String @default("")
   client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
@@ -53,6 +61,7 @@ model ClientRecorder {
   model    String  @default("")
   status   String  @default("online")
   diskTb   Float   @default(0)
+  comment  String  @default("")
   client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
@@ -66,6 +75,7 @@ model ClientSwitch {
   model    String  @default("")
   status   String  @default("online")
   ports    Int     @default(0)
+  comment  String  @default("")
   client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
@@ -78,6 +88,8 @@ model ClientDisk {
   sizeTb      Float   @default(0)
   installedAt String  @default("")
   health      String  @default("ok")
+  serial      String  @default("")
+  comment     String  @default("")
   client      Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
@@ -165,4 +177,59 @@ model DeviceCheck {
   @@index([agentId, checkedAt])
   @@index([clientId, checkedAt])
   @@index([deviceId, checkedAt])
+}
+
+model CameraDefinition {
+  manufacturer String @id
+  mainStream   String @default("")
+  subStream    String @default("")
+}
+
+model TelegramBot {
+  id     String @id @default(cuid())
+  name   String
+  token  String @db.Text
+  chatId String
+}
+
+model UserNote {
+  id        Int      @id @default(autoincrement())
+  username  String   @default("portal")
+  parentId  Int?
+  title     String
+  content   String   @db.Text
+  isFolder  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  username  String   @default("")
+  action    String
+  details   String   @db.Text
+
+  @@index([createdAt])
+}
+
+model SavedView {
+  id        Int      @id @default(autoincrement())
+  name      String
+  layout    Json
+  createdAt DateTime @default(now())
+}
+
+model AppUserAccount {
+  id           String @id @default(cuid())
+  username     String @unique
+  passwordHash String
+  isAdmin      Boolean @default(false)
+}
+
+model PasswordResetRequest {
+  username String @id
+  status   String @default("requested")
 }

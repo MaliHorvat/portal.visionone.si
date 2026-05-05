@@ -27,6 +27,12 @@ export interface CameraDevice {
   ip: string;
   model: string;
   status: DeviceStatus;
+  checkPort?: number | null;
+  rtspUser?: string;
+  rtspPass?: string;
+  streamUrl?: string;
+  comment?: string;
+  tag?: string;
 }
 
 export interface NvrDevice {
@@ -36,6 +42,7 @@ export interface NvrDevice {
   model: string;
   status: DeviceStatus;
   diskTb: number;
+  comment?: string;
 }
 
 export interface SwitchDevice {
@@ -45,6 +52,7 @@ export interface SwitchDevice {
   model: string;
   status: DeviceStatus;
   ports: number;
+  comment?: string;
 }
 
 export interface DiskEntry {
@@ -53,6 +61,8 @@ export interface DiskEntry {
   sizeTb: number;
   installedAt: string;
   health: DiskHealth;
+  serial?: string;
+  comment?: string;
 }
 
 export interface ClientDetail extends ClientSummary {
@@ -60,6 +70,8 @@ export interface ClientDetail extends ClientSummary {
   nvrs: NvrDevice[];
   switches: SwitchDevice[];
   disks: DiskEntry[];
+  topologyData?: unknown | null;
+  rackData?: unknown | null;
 }
 
 export interface TopologyNode {

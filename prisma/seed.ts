@@ -151,6 +151,31 @@ async function main() {
     skipDuplicates: true,
   });
 
+  await prisma.cameraDefinition.upsert({
+    where: { manufacturer: "Hikvision" },
+    create: {
+      manufacturer: "Hikvision",
+      mainStream: "/Streaming/Channels/101",
+      subStream: "/Streaming/Channels/102",
+    },
+    update: {
+      mainStream: "/Streaming/Channels/101",
+      subStream: "/Streaming/Channels/102",
+    },
+  });
+  await prisma.cameraDefinition.upsert({
+    where: { manufacturer: "Dahua" },
+    create: {
+      manufacturer: "Dahua",
+      mainStream: "/cam/realmonitor?channel=1&subtype=0",
+      subStream: "/cam/realmonitor?channel=1&subtype=1",
+    },
+    update: {
+      mainStream: "/cam/realmonitor?channel=1&subtype=0",
+      subStream: "/cam/realmonitor?channel=1&subtype=1",
+    },
+  });
+
   console.log("Seed: ok");
 }
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  BookOpen,
   Boxes,
   CalendarClock,
   Camera,
@@ -13,7 +14,9 @@ import {
   Network,
   Package,
   RadioTower,
+  Shield,
   Users,
+  Video,
   Wrench,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -26,6 +29,9 @@ const navItems: NavItem[] = [
   { href: "/portal", label: "Nadzorna plošča", icon: LayoutDashboard },
   { href: "/portal/stranke", label: "Stranke", icon: Users, adminOnly: true },
   { href: "/portal/agents", label: "Agenti", icon: RadioTower, adminOnly: true },
+  { href: "/portal/belezke", label: "Beležke", icon: BookOpen, adminOnly: true },
+  { href: "/portal/kamera-definicije", label: "RTSP definicije", icon: Video, adminOnly: true },
+  { href: "/portal/audit", label: "Audit", icon: Shield, adminOnly: true },
   {
     href: `/portal/stranke/${mockClientPortalClientId}`,
     label: "Moj objekt",

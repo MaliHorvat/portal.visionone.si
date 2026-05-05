@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { getMockClient, getMockClients } from "@/lib/mock-data";
 import type {
@@ -17,10 +18,48 @@ type DbClient = NonNullable<
   Awaited<ReturnType<NonNullable<typeof prisma>["client"]["findFirst"]>>
 > & {
   package?: { id: string; name: string; price: number; description: string } | null;
-  cameras?: Array<{ id: string; name: string; ip: string; model: string; status: string }>;
-  recorders?: Array<{ id: string; name: string; ip: string; model: string; status: string; diskTb: number }>;
-  switches?: Array<{ id: string; name: string; ip: string; model: string; status: string; ports: number }>;
-  disks?: Array<{ id: string; label: string; sizeTb: number; installedAt: string; health: string }>;
+  topologyData?: Prisma.JsonValue | null;
+  rackData?: Prisma.JsonValue | null;
+  cameras?: Array<{
+    id: string;
+    name: string;
+    ip: string;
+    model: string;
+    status: string;
+    checkPort: number | null;
+    rtspUser: string;
+    rtspPass: string;
+    streamUrl: string;
+    comment: string;
+    tag: string;
+  }>;
+  recorders?: Array<{
+    id: string;
+    name: string;
+    ip: string;
+    model: string;
+    status: string;
+    diskTb: number;
+    comment: string;
+  }>;
+  switches?: Array<{
+    id: string;
+    name: string;
+    ip: string;
+    model: string;
+    status: string;
+    ports: number;
+    comment: string;
+  }>;
+  disks?: Array<{
+    id: string;
+    label: string;
+    sizeTb: number;
+    installedAt: string;
+    health: string;
+    serial: string;
+    comment: string;
+  }>;
 };
 
 function mapPackage(p: DbClient["package"]): SubscriptionPackageDto | null {
@@ -62,6 +101,12 @@ function mapClientDetail(c: DbClient): ClientDetail {
       ip: d.ip,
       model: d.model,
       status: mapStatus(d.status),
+      checkPort: d.checkPort,
+      rtspUser: d.rtspUser,
+      rtspPass: d.rtspPass,
+      streamUrl: d.streamUrl,
+      comment: d.comment,
+      tag: d.tag,
     })) ?? [];
   const nvrs: NvrDevice[] =
     c.recorders?.map((d) => ({
@@ -71,6 +116,7 @@ function mapClientDetail(c: DbClient): ClientDetail {
       model: d.model,
       status: mapStatus(d.status),
       diskTb: d.diskTb,
+      comment: d.comment,
     })) ?? [];
   const switches: SwitchDevice[] =
     c.switches?.map((d) => ({
@@ -80,6 +126,7 @@ function mapClientDetail(c: DbClient): ClientDetail {
       model: d.model,
       status: mapStatus(d.status),
       ports: d.ports,
+      comment: d.comment,
     })) ?? [];
   const disks: DiskEntry[] =
     c.disks?.map((d) => ({
@@ -88,9 +135,19 @@ function mapClientDetail(c: DbClient): ClientDetail {
       sizeTb: d.sizeTb,
       installedAt: d.installedAt,
       health: mapDiskHealth(d.health),
+      serial: d.serial,
+      comment: d.comment,
     })) ?? [];
 
-  return { ...mapClientSummary(c), cameras, nvrs, switches, disks };
+  return {
+    ...mapClientSummary(c),
+    cameras,
+    nvrs,
+    switches,
+    disks,
+    topologyData: c.topologyData ?? null,
+    rackData: c.rackData ?? null,
+  };
 }
 
 export async function listClients(): Promise<ClientSummary[]> {
@@ -137,6 +194,8 @@ export interface UpsertClientInput {
   email?: string;
   health?: ClientHealth;
   packageId?: string | null;
+  topologyData?: Prisma.InputJsonValue;
+  rackData?: Prisma.InputJsonValue;
 }
 
 export async function createClient(data: UpsertClientInput): Promise<ClientDetail> {
@@ -179,6 +238,8 @@ export async function updateClient(
       email: data.email,
       health: data.health,
       packageId: data.packageId === undefined ? undefined : data.packageId,
+      topologyData: data.topologyData === undefined ? undefined : data.topologyData,
+      rackData: data.rackData === undefined ? undefined : data.rackData,
     },
     include: {
       package: true,
