@@ -2,7 +2,7 @@
 
 import { Show, SignIn, SignOutButton, useUser } from "@clerk/nextjs";
 import { Lock, User } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   showError: boolean;
@@ -42,14 +42,25 @@ const clerkAppearance = {
 export function PortalLoginFlow({ showError, configError, clerkError }: Props) {
   const { user, isLoaded } = useUser();
   const accessSentRef = useRef(false);
+  const [accessEmailSent, setAccessEmailSent] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!isLoaded || !user?.id || accessSentRef.current) return;
     accessSentRef.current = true;
     const key = `vo_portal_access_${user.id}`;
-    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(key)) return;
-    void fetch("/api/portal-access-request", { method: "POST" }).then(() => {
-      sessionStorage.setItem(key, "1");
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(key)) {
+      const cached = sessionStorage.getItem(`${key}_email`);
+      setAccessEmailSent(cached === "1");
+      return;
+    }
+    void fetch("/api/portal-access-request", { method: "POST" }).then(async (res) => {
+      const data = (await res.json().catch(() => ({}))) as { emailSent?: boolean };
+      const sent = Boolean(data.emailSent);
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem(key, "1");
+        sessionStorage.setItem(`${key}_email`, sent ? "1" : "0");
+      }
+      setAccessEmailSent(sent);
     });
   }, [isLoaded, user?.id]);
 
@@ -75,12 +86,29 @@ export function PortalLoginFlow({ showError, configError, clerkError }: Props) {
       <Show when="signed-in">
         <div className="space-y-6 rounded-xl border border-teal-800/40 bg-teal-950/25 px-4 py-4">
           <p className="text-sm leading-relaxed text-teal-50/95">
-            <span className="font-semibold text-teal-200">Zahteva za uporabo portala je posredovana.</span> Obvestilo je
-            poslano na{" "}
-            <a href="mailto:info@visionone.si" className="font-medium text-teal-300 underline underline-offset-2">
-              info@visionone.si
-            </a>
-            . Ko vam skrbnik ročno ustvari portalni račun, se spodaj prijavite z uporabniškim imenom in geslom.
+            <span className="font-semibold text-teal-200">Zahteva za uporabo portala je zabeležena.</span>{" "}
+            {accessEmailSent === true ? (
+              <>
+                Obvestilo je poslano na{" "}
+                <a href="mailto:info@visionone.si" className="font-medium text-teal-300 underline underline-offset-2">
+                  info@visionone.si
+                </a>
+                .
+              </>
+            ) : accessEmailSent === false ? (
+              <>
+                E-pošta na{" "}
+                <a href="mailto:info@visionone.si" className="font-medium text-teal-300 underline underline-offset-2">
+                  info@visionone.si
+                </a>{" "}
+                trenutno ni bila poslana (strežnik nima nastavljenega SMTP ali Resend — glejte{" "}
+                <code className="rounded bg-black/30 px-1 text-[11px]">.env.example</code>
+                ). Zahteva je vseeno shranjena v dnevnik dogodkov.
+              </>
+            ) : (
+              <>Obveščanje skrbnika …</>
+            )}{" "}
+            Ko vam skrbnik ročno ustvari portalni račun, se spodaj prijavite z uporabniškim imenom in geslom.
           </p>
           <SignOutButton signOutOptions={{ redirectUrl: "/portal-login" }}>
             <button
