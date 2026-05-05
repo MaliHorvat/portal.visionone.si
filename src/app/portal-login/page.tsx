@@ -94,8 +94,11 @@ export default async function PortalLoginPage({ searchParams }: PortalLoginPageP
 
             {configError ? (
               <p className="rounded-lg border border-red-500/35 bg-red-950/80 px-3 py-2 text-sm text-red-100">
-                Strežnik ne more podpisati seje — v produkciji nastavite močno{" "}
-                <code className="rounded bg-black/30 px-1 text-xs">PORTAL_SESSION_SECRET</code> (vsaj 16 znakov).
+                Strežnik ne more podpisati seje. Na Vercelu dodajte{" "}
+                <code className="rounded bg-black/30 px-1 text-xs">PORTAL_SESSION_SECRET</code> (vsaj 16 znakov)
+                v Environment Variables in ponovno deployajte. Lokalno v datoteko{" "}
+                <code className="rounded bg-black/30 px-1 text-xs">.env.local</code> — glejte{" "}
+                <code className="rounded bg-black/30 px-1 text-xs">.env.example</code>.
               </p>
             ) : null}
 
