@@ -11,9 +11,11 @@ type Props = {
   clients: ClientSummary[];
   packages: SubscriptionPackageDto[];
   dbConfigured: boolean;
+  /** Napaka pri branju iz baze (npr. shema ni posodobljena); stran prikaže demo podatke. */
+  loadError?: string | null;
 };
 
-export function StrankeView({ clients, packages, dbConfigured }: Props) {
+export function StrankeView({ clients, packages, dbConfigured, loadError = null }: Props) {
   const { role } = usePortalRole();
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -89,7 +91,11 @@ export function StrankeView({ clients, packages, dbConfigured }: Props) {
         </button>
       </div>
 
-      {!dbConfigured ? (
+      {loadError ? (
+        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900">
+          {loadError}
+        </div>
+      ) : !dbConfigured ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Baza ni nastavljena. Nastavite <code>DATABASE_URL</code> v Vercelu in poženite{" "}
           <code>npm run db:push</code>. Trenutno so prikazani demo podatki in dodajanje/brisanje ne bo
