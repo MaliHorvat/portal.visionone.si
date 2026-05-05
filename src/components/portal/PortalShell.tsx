@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Network,
   Package,
+  RadioTower,
   Users,
   Wrench,
 } from "lucide-react";
@@ -24,6 +25,7 @@ type NavItem = { href: string; label: string; icon: React.ElementType; adminOnly
 const navItems: NavItem[] = [
   { href: "/portal", label: "Nadzorna plošča", icon: LayoutDashboard },
   { href: "/portal/stranke", label: "Stranke", icon: Users, adminOnly: true },
+  { href: "/portal/agents", label: "Agenti", icon: RadioTower, adminOnly: true },
   {
     href: `/portal/stranke/${mockClientPortalClientId}`,
     label: "Moj objekt",

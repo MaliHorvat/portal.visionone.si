@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { jsonError } from "@/lib/api-guard";
+import { requireEspIngestAuth } from "@/lib/esp-ingest-token";
 import type { ProbeKind, TelemetryIngestPayload } from "@/lib/types";
 
 const VALID_KINDS: ProbeKind[] = ["camera", "nvr", "switch", "router", "host", "other"];
-
-function parseBearerToken(value: string | null): string {
-  if (!value) return "";
-  const [type, token] = value.split(" ");
-  if (type?.toLowerCase() !== "bearer") return "";
-  return token?.trim() ?? "";
-}
 
 function toIsoDate(value?: string) {
   if (!value) return new Date();
@@ -21,24 +15,17 @@ function toIsoDate(value?: string) {
 
 export async function POST(request: Request) {
   try {
+    const auth = requireEspIngestAuth(request);
+    if (auth) return auth;
+
     if (!isDbConfigured() || !prisma) {
       return jsonError("DB ni nastavljena.", 500);
     }
 
-    const expectedToken = process.env.ESP_INGEST_TOKEN ?? "";
-    if (!expectedToken) {
-      return jsonError("ESP_INGEST_TOKEN ni nastavljen.", 500);
-    }
-    const providedToken = parseBearerToken(request.headers.get("authorization"));
-    if (!providedToken || providedToken !== expectedToken) {
-      return jsonError("Neavtorizirano.", 401);
-    }
-
     const body = (await request.json()) as TelemetryIngestPayload;
     const agentId = String(body?.agentId ?? "").trim();
-    const agentName = String(body?.agentName ?? "ESP32 Agent").trim();
+    const agentName = String(body?.agentName ?? "VisionOne Agent").trim();
     const siteLabel = String(body?.siteLabel ?? "").trim();
-    const clientId = body?.clientId ? String(body.clientId).trim() : null;
     const devices = Array.isArray(body?.devices) ? body.devices : [];
 
     if (!agentId) return jsonError("Polje 'agentId' je obvezno.");
@@ -46,20 +33,26 @@ export async function POST(request: Request) {
 
     const checkedAt = toIsoDate(body?.checkedAt);
 
-    const agent = await prisma.telemetryAgent.upsert({
+    const registered = await prisma.telemetryAgent.findUnique({
       where: { externalId: agentId },
-      create: {
-        externalId: agentId,
-        name: agentName || "ESP32 Agent",
-        siteLabel,
-        clientId,
+    });
+    if (!registered) {
+      return jsonError(
+        "Agent ni registriran. V Portalu pod Agenti dodaj agent_id in ga dodeli stranki.",
+        403,
+      );
+    }
+    const clientId = registered.clientId;
+    if (!clientId) {
+      return jsonError("Agent nima dodeljene stranke v portalu.", 422);
+    }
+
+    const agent = await prisma.telemetryAgent.update({
+      where: { id: registered.id },
+      data: {
         lastSeenAt: checkedAt,
-      },
-      update: {
-        name: agentName || "ESP32 Agent",
-        siteLabel,
-        clientId,
-        lastSeenAt: checkedAt,
+        name: agentName || registered.name,
+        siteLabel: siteLabel || registered.siteLabel,
       },
     });
 
