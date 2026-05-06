@@ -30,7 +30,7 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
   const [rate, setRate] = useState(20);
   const [hoursManual, setHoursManual] = useState(0);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
 
   const load = useCallback(async () => {
     if (!dbConfigured) return;
@@ -145,10 +145,10 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
     showToast("Vnos izbrisan.");
   }
 
-  const sumH = useMemo(() => logs.reduce((s, l) => s + liveHours(l), 0), [logs, tick]);
-  const sumC = useMemo(
-    () => logs.reduce((s, l) => s + (l.startedAt && !l.endedAt ? liveHours(l) * l.hourlyRate : l.costComputed), 0),
-    [logs, tick],
+  const sumH = logs.reduce((s, l) => s + liveHours(l), 0);
+  const sumC = logs.reduce(
+    (s, l) => s + (l.startedAt && !l.endedAt ? liveHours(l) * l.hourlyRate : l.costComputed),
+    0,
   );
 
   return (

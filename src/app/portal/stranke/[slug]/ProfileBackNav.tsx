@@ -76,10 +76,10 @@ export function ProfileBackNav() {
   }
 
   return (
-    <aside className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 shadow-[var(--vo-card-shadow)]">
+    <aside className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-2 shadow-[var(--vo-card-shadow)]">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <div className="text-xs font-semibold text-[var(--vo-fg)]">Objekti &amp; stranke</div>
+          <div className="text-xs font-semibold text-[var(--vo-fg)]">Objekti</div>
           <Link href="/portal/stranke" className="text-[11px] text-[var(--vo-muted)] hover:underline">
             Upravljanje strank
           </Link>
@@ -100,13 +100,13 @@ export function ProfileBackNav() {
           return (
             <div
               key={c.id}
-              className={`flex items-center justify-between gap-2 rounded-lg border px-2 py-2 text-sm ${
-                active ? "border-[var(--vo-accent)] bg-[var(--vo-accent-muted)]" : "border-[var(--vo-border)]"
+              className={`flex items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-sm ${
+                active ? "border-[var(--vo-border)] bg-[var(--vo-surface-2)]" : "border-[var(--vo-border)]/80"
               }`}
             >
               <Link href={clientHref(c, tab)} className="flex min-w-0 flex-1 items-center gap-2">
                 <StatusDot health={c.health} />
-                <span className={`truncate ${active ? "text-[var(--vo-accent)]" : "text-[var(--vo-fg)]"}`}>
+                <span className={`truncate ${active ? "text-[var(--vo-fg)]" : "text-[var(--vo-fg)]/90"}`}>
                   {c.name}
                 </span>
               </Link>

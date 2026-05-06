@@ -166,17 +166,16 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-[var(--vo-bg)]">
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-[var(--vo-border)] bg-[var(--vo-surface)] md:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--vo-border)] bg-[var(--vo-surface)] md:flex">
         <div className="border-b border-[var(--vo-border)] px-4 py-4">
           <Link href="/" className="text-sm font-semibold text-[var(--vo-fg)]">
             Vision<span className="text-[var(--vo-accent)]">One</span>
-            <span className="block text-xs font-normal text-[var(--vo-muted)]">Portal</span>
           </Link>
         </div>
-        <nav className="flex flex-1 flex-col gap-4 overflow-auto p-2">
+        <nav className="flex flex-1 flex-col gap-3 overflow-auto px-2 py-3">
           {visible.map((section) => (
             <div key={section.title}>
-              <div className="px-3 pb-1 text-[10px] font-semibold tracking-wider text-[var(--vo-muted)]">
+              <div className="px-3 pb-1 text-[10px] font-semibold tracking-[0.11em] text-[var(--vo-muted)]/90">
                 {section.title}
               </div>
               <div className="flex flex-col gap-0.5">
@@ -190,9 +189,9 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={href + label}
                       href={href}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
+                      className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px] font-medium ${
                         active
-                          ? "bg-[var(--vo-accent-muted)] text-[var(--vo-accent)]"
+                          ? "border border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-fg)]"
                           : "text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)]"
                       }`}
                     >
@@ -205,13 +204,15 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </nav>
-        <div className="border-t border-[var(--vo-border)] p-3 text-xs text-[var(--vo-muted)]">
-          VisionOne portal · Faza 1
+        <div className="border-t border-[var(--vo-border)] p-3">
+          <div className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-center text-[11px] font-medium text-emerald-300">
+            ● System Online
+          </div>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-3">
+        <header className="flex items-center justify-between gap-3 border-b border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-2">
           <div className="flex min-w-0 items-center gap-3">
             <Network className="h-5 w-5 shrink-0 text-[var(--vo-accent)] md:hidden" aria-hidden />
             <div className="min-w-0">
@@ -250,28 +251,6 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 </div>
               ) : null}
             </div>
-            {role === "admin" ? (
-              <>
-                <Link
-                  href="/portal/stranke"
-                  className="hidden rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)] md:inline-flex"
-                >
-                  + Stranka
-                </Link>
-                <Link
-                  href="/portal/opomniki"
-                  className="hidden rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)] md:inline-flex"
-                >
-                  + Opomnik
-                </Link>
-                <Link
-                  href="/portal/nastavitve"
-                  className="hidden rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)] md:inline-flex"
-                >
-                  + Uporabnik
-                </Link>
-              </>
-            ) : null}
             <ThemeToggle />
             <form action="/api/portal-logout" method="post">
               <button
