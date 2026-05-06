@@ -8,6 +8,7 @@ type Survey = {
   id: string;
   surveyDate: string;
   objectType: string;
+  address: string;
   ceilingHeight: string;
   cabling: string;
   powerSupply: string;
@@ -15,9 +16,26 @@ type Survey = {
   notes: string;
 };
 
+function surveyText(clientName: string, s: Survey) {
+  const parts = [
+    "POPIS STANJA",
+    `Stranka: ${clientName}`,
+    `Datum: ${s.surveyDate || "—"}`,
+    `Tip objekta: ${s.objectType || "—"}`,
+    `Naslov: ${s.address || "—"}`,
+    `Višina stropa: ${s.ceilingHeight || "—"}`,
+    `Kabli: ${s.cabling || "—"}`,
+    `Napajanje: ${s.powerSupply || "—"}`,
+    `Osvetlitev: ${s.lighting || "—"}`,
+    "",
+    s.notes ? `Opombe:\n${s.notes}` : "",
+  ].filter(Boolean);
+  return parts.join("\n");
+}
+
 export function TabPopisi({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
-  const { clientId, dbConfigured } = ctx;
+  const { clientId, dbConfigured, client } = ctx;
   const [list, setList] = useState<Survey[]>([]);
   const [sel, setSel] = useState<string | null>(null);
   const [form, setForm] = useState<Survey | null>(null);
@@ -39,9 +57,12 @@ export function TabPopisi({ ctx }: { ctx: WorkspaceCtx }) {
 
   useEffect(() => {
     const row = list.find((x) => x.id === sel);
-    if (row) setForm({ ...row });
+    if (row) {
+      const address = row.address || client.address || "";
+      setForm({ ...row, address });
+    }
     else setForm(null);
-  }, [sel, list]);
+  }, [sel, list, client.address]);
 
   async function create() {
     if (!dbConfigured) return;
@@ -71,6 +92,58 @@ export function TabPopisi({ ctx }: { ctx: WorkspaceCtx }) {
     }
     await load();
     showToast("Popis shranjen.");
+  }
+
+  async function copy() {
+    if (!form) return;
+    try {
+      await navigator.clipboard.writeText(surveyText(client.name, form));
+      showToast("Popis kopiran v odložišče.");
+    } catch {
+      showToast("Kopiranje ni uspelo.", "err");
+    }
+  }
+
+  async function pdf() {
+    if (!form) return;
+    try {
+      const [{ jsPDF }] = await Promise.all([import("jspdf")]);
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      doc.text("Popis stanja", 14, 18);
+      doc.setFontSize(10);
+      let y = 28;
+      const rows: Array<[string, string]> = [
+        ["Stranka", client.name],
+        ["Datum", form.surveyDate || "—"],
+        ["Tip objekta", form.objectType || "—"],
+        ["Naslov", form.address || "—"],
+        ["Višina stropa", form.ceilingHeight || "—"],
+        ["Kabli", form.cabling || "—"],
+        ["Napajanje", form.powerSupply || "—"],
+        ["Osvetlitev", form.lighting || "—"],
+      ];
+      for (const [k, v] of rows) {
+        doc.setFont("helvetica", "bold");
+        doc.text(`${k}:`, 14, y);
+        doc.setFont("helvetica", "normal");
+        const split = doc.splitTextToSize(v, 160);
+        doc.text(split, 46, y);
+        y += 6 + Math.max(0, (split.length - 1) * 4);
+      }
+      if (form.notes) {
+        y += 4;
+        doc.setFont("helvetica", "bold");
+        doc.text("Opombe:", 14, y);
+        doc.setFont("helvetica", "normal");
+        const split = doc.splitTextToSize(form.notes, 180);
+        doc.text(split, 14, y + 6);
+      }
+      doc.save(`popis-${form.id.slice(0, 8)}.pdf`);
+      showToast("PDF izvožen.");
+    } catch {
+      showToast("Izvoz PDF ni uspel.", "err");
+    }
   }
 
   async function remove() {
@@ -105,6 +178,12 @@ export function TabPopisi({ ctx }: { ctx: WorkspaceCtx }) {
         <button type="button" disabled={busy || !sel || !dbConfigured} onClick={() => void save()} className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs disabled:opacity-40">
           Shrani
         </button>
+        <button type="button" disabled={!form} onClick={() => void copy()} className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs disabled:opacity-40">
+          Kopiraj
+        </button>
+        <button type="button" disabled={!form} onClick={() => void pdf()} className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs disabled:opacity-40">
+          PDF
+        </button>
         <button type="button" disabled={!sel || !dbConfigured} onClick={() => void remove()} className="text-xs text-red-500 hover:underline disabled:opacity-40">
           Izbriši
         </button>
@@ -114,12 +193,20 @@ export function TabPopisi({ ctx }: { ctx: WorkspaceCtx }) {
         <div className="grid gap-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 md:grid-cols-2">
           <h3 className="text-lg font-semibold text-[var(--vo-fg)] md:col-span-2">Popis stanja</h3>
           <label className="text-xs">
+            Stranka
+            <input readOnly value={client.name} className="mt-1 w-full rounded border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-2 py-1.5" />
+          </label>
+          <label className="text-xs">
             Datum
             <input value={form.surveyDate} onChange={(e) => setForm({ ...form, surveyDate: e.target.value })} className="mt-1 w-full rounded border border-[var(--vo-border)] px-2 py-1.5" />
           </label>
           <label className="text-xs">
             Tip objekta
             <input value={form.objectType} onChange={(e) => setForm({ ...form, objectType: e.target.value })} className="mt-1 w-full rounded border border-[var(--vo-border)] px-2 py-1.5" />
+          </label>
+          <label className="text-xs md:col-span-2">
+            Naslov
+            <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="mt-1 w-full rounded border border-[var(--vo-border)] px-2 py-1.5" />
           </label>
           <label className="text-xs">
             Višina stropa

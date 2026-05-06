@@ -142,6 +142,7 @@ model ClientSiteSurvey {
   client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   surveyDate    String   @default("")
   objectType    String   @default("")
+  address       String   @default("")
   ceilingHeight String   @default("")
   cabling       String   @default("")
   powerSupply   String   @default("")
@@ -159,10 +160,14 @@ model ClientTimeLog {
   client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   workDate     String   @default("")
   technician   String   @default("")
+  note         String   @db.Text @default("")
+  startedAt    DateTime?
+  endedAt      DateTime?
   hours        Float    @default(0)
   hourlyRate   Float    @default(0)
   costComputed Float    @default(0)
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([clientId])
 }

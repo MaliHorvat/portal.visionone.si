@@ -30,15 +30,34 @@ export async function POST(request: Request, ctx: Ctx) {
     const exists = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true } });
     if (!exists) return jsonError("Stranka ne obstaja.", 404);
     const body = await request.json();
+    const action = String(body?.action ?? "").trim();
     const technician = String(body?.technician ?? "").trim();
     const hours = Number(body?.hours);
     const hourlyRate = Number(body?.hourlyRate);
     const workDate = String(body?.workDate ?? "").trim();
+    const note = body?.note !== undefined ? String(body.note) : "";
     if (!technician) return jsonError("Tehnik je obvezen.");
     if (!workDate) return jsonError("Datum je obvezen.");
-    if (Number.isNaN(hours) || hours < 0) return jsonError("Neveljavne ure.");
     if (Number.isNaN(hourlyRate) || hourlyRate < 0) return jsonError("Neveljavna postavka.");
-    const log = await createTimeLog(clientId, { workDate, technician, hours, hourlyRate });
+    if (action === "start") {
+      const running = await prisma.clientTimeLog.findFirst({
+        where: { clientId, technician, workDate, startedAt: { not: null }, endedAt: null },
+        select: { id: true },
+      });
+      if (running) return jsonError("Časovnik za tega tehnika je že zagnan.", 409);
+      const log = await createTimeLog(clientId, {
+        workDate,
+        technician,
+        hours: 0,
+        hourlyRate,
+        note,
+        startedAt: new Date(),
+        endedAt: null,
+      });
+      return NextResponse.json({ log }, { status: 201 });
+    }
+    if (Number.isNaN(hours) || hours < 0) return jsonError("Neveljavne ure.");
+    const log = await createTimeLog(clientId, { workDate, technician, hours, hourlyRate, note });
     return NextResponse.json({ log }, { status: 201 });
   } catch (e) {
     console.error(e);

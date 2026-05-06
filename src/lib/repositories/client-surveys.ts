@@ -22,6 +22,7 @@ export async function updateSiteSurvey(
   data: Partial<{
     surveyDate: string;
     objectType: string;
+    address: string;
     ceilingHeight: string;
     cabling: string;
     powerSupply: string;

@@ -17,6 +17,7 @@ export async function PUT(request: Request, ctx: Ctx) {
     const survey = await updateSiteSurvey(surveyId, {
       surveyDate: body?.surveyDate !== undefined ? String(body.surveyDate) : undefined,
       objectType: body?.objectType !== undefined ? String(body.objectType) : undefined,
+      address: body?.address !== undefined ? String(body.address) : undefined,
       ceilingHeight: body?.ceilingHeight !== undefined ? String(body.ceilingHeight) : undefined,
       cabling: body?.cabling !== undefined ? String(body.cabling) : undefined,
       powerSupply: body?.powerSupply !== undefined ? String(body.powerSupply) : undefined,

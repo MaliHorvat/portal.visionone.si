@@ -20,6 +20,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
   const { role } = usePortalRole();
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
+  const [editClientId, setEditClientId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
     return <p className="text-sm text-[var(--vo-muted)]">Preusmerjam na vaš objekt …</p>;
   }
 
-  async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setSubmitting(true);
@@ -46,19 +47,18 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
       email: String(form.get("email") ?? ""),
       packageId: String(form.get("packageId") ?? "") || null,
     };
-    const res = await fetch("/api/clients", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const url = editClientId ? `/api/clients/${encodeURIComponent(editClientId)}` : "/api/clients";
+    const method = editClientId ? "PUT" : "POST";
+    const res = await fetch(url, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
     setSubmitting(false);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(data?.error ?? "Napaka pri ustvarjanju stranke.");
+      setError(data?.error ?? (editClientId ? "Napaka pri urejanju stranke." : "Napaka pri ustvarjanju stranke."));
       return;
     }
-    setNotice("Stranka je uspešno shranjena.");
+    setNotice(editClientId ? "Stranka je uspešno posodobljena." : "Stranka je uspešno shranjena.");
     setShowForm(false);
+    setEditClientId(null);
     router.refresh();
   }
 
@@ -85,7 +85,11 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
         </div>
         <button
           type="button"
-          onClick={() => setShowForm((s) => !s)}
+          onClick={() => {
+            setError(null);
+            setShowForm((s) => !s);
+            setEditClientId(null);
+          }}
           className="rounded-lg bg-[var(--vo-accent)] px-3 py-2 text-sm font-semibold text-white"
         >
           {showForm ? "Prekliči" : "Nova stranka"}
@@ -112,15 +116,21 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
 
       {showForm ? (
         <form
-          onSubmit={handleCreate}
+          onSubmit={handleSave}
           className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]"
         >
           <div className="grid gap-3 md:grid-cols-2">
-            <input name="name" required placeholder="Ime stranke" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <input name="address" placeholder="Naslov" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <input name="contact" placeholder="Kontaktna oseba" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <input name="email" type="email" placeholder="E-naslov" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <select name="packageId" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2">
+            <input name="name" required placeholder="Ime stranke" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.name ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <input name="address" placeholder="Naslov" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.address ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <input name="contact" placeholder="Kontaktna oseba" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.contact ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <input name="email" type="email" placeholder="E-naslov" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.email ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <select
+              name="packageId"
+              defaultValue={
+                editClientId ? clients.find((c) => c.id === editClientId)?.package?.id ?? "" : ""
+              }
+              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
+            >
               <option value="">— brez paketa —</option>
               {packages.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -135,7 +145,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
             disabled={submitting}
             className="rounded-lg bg-[var(--vo-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {submitting ? "Shranjujem…" : "Shrani"}
+            {submitting ? "Shranjujem…" : editClientId ? "Shrani spremembe" : "Shrani"}
           </button>
         </form>
       ) : null}
@@ -192,6 +202,18 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                   >
                     Profil
                   </Link>
+                  <button
+                    type="button"
+                    className="ml-3 text-xs font-medium text-[var(--vo-fg)] hover:underline"
+                    onClick={() => {
+                      setError(null);
+                      setNotice(null);
+                      setEditClientId(c.id);
+                      setShowForm(true);
+                    }}
+                  >
+                    Uredi
+                  </button>
                   {dbConfigured ? (
                     <button
                       type="button"

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
@@ -10,17 +10,22 @@ import {
   CalendarClock,
   Camera,
   ClipboardList,
+  Cpu,
   FileText,
   Layers,
   LayoutDashboard,
   Network,
   Package,
+  PlugZap,
+  Router,
   RadioTower,
   Settings,
   Shield,
+  SlidersHorizontal,
   UserCircle,
   Users,
   Video,
+  Wifi,
   Wrench,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -29,54 +34,115 @@ import { roleLabel } from "@/lib/portal-roles";
 import { mockClientPortalSlug } from "@/lib/mock-data";
 
 type NavItem = { href: string; label: string; icon: React.ElementType; adminOnly?: boolean };
+type NavSection = { title: string; items: NavItem[] };
 
-const navItems: NavItem[] = [
-  { href: "/portal", label: "Nadzorna plošča", icon: LayoutDashboard },
-  { href: "/portal/racun", label: "Moj račun", icon: UserCircle },
-  { href: "/portal/stranke", label: "Objekti & stranke", icon: Users, adminOnly: true },
-  { href: "/portal/agents", label: "Agenti", icon: RadioTower, adminOnly: true },
-  { href: "/portal/belezke", label: "Beležke", icon: BookOpen, adminOnly: true },
-  { href: "/portal/kamera-definicije", label: "RTSP definicije", icon: Video, adminOnly: true },
-  { href: "/portal/audit", label: "Audit", icon: Shield, adminOnly: true },
+const navSections: NavSection[] = [
   {
-    href: `/portal/stranke/${mockClientPortalSlug}`,
-    label: "Moj objekt",
-    icon: Camera,
-    adminOnly: false,
+    title: "PREGLED",
+    items: [
+      { href: "/portal", label: "Nadzorna plošča", icon: LayoutDashboard },
+      { href: "/portal/racun", label: "Moj račun", icon: UserCircle },
+    ],
   },
-  { href: "/portal/orodja", label: "Orodja in diagnostika", icon: Wrench },
-  { href: "/portal/paketi", label: "Paketi", icon: Package, adminOnly: true },
-  { href: "/portal/ponudbe", label: "Ponudbe", icon: FileText, adminOnly: true },
-  { href: "/portal/rack-dizajner", label: "Rack dizajner", icon: Layers, adminOnly: true },
-  { href: "/portal/inventar", label: "Inventar", icon: Boxes, adminOnly: true },
-  { href: "/portal/opomniki", label: "Opomniki", icon: CalendarClock },
-  { href: "/portal/cas", label: "Beleženje časa", icon: ClipboardList, adminOnly: true },
-  { href: "/portal/obvestila", label: "Obvestila (Telegram)", icon: Bell, adminOnly: true },
-  { href: "/portal/nastavitve", label: "Nastavitve", icon: Settings, adminOnly: true },
+  {
+    title: "VODENJE PROJEKTOV",
+    items: [
+      { href: "/portal/stranke", label: "Objekti & stranke", icon: Users, adminOnly: true },
+      { href: "/portal/ponudbe", label: "Ponudbe", icon: FileText, adminOnly: true },
+      { href: "/portal/cas", label: "Sledenje času", icon: ClipboardList, adminOnly: true },
+      { href: "/portal/opomniki", label: "Vzdrževanje", icon: CalendarClock },
+      {
+        href: `/portal/stranke/${mockClientPortalSlug}`,
+        label: "Moj objekt",
+        icon: Camera,
+        adminOnly: false,
+      },
+    ],
+  },
+  {
+    title: "NAČRTOVANJE",
+    items: [
+      { href: "/portal/rack-dizajner", label: "Rack dizajner", icon: Layers, adminOnly: true },
+      { href: "/portal/orodja?tool=poe", label: "PoE kalkulator", icon: PlugZap, adminOnly: true },
+      { href: "/portal/orodja?tool=storage", label: "Kalkulator shrambe", icon: Boxes, adminOnly: true },
+      { href: "/portal/orodja?tool=lcc", label: "Kalkulator LCC", icon: SlidersHorizontal, adminOnly: true },
+    ],
+  },
+  {
+    title: "OMREŽJE & DIAGNOSTIKA",
+    items: [
+      { href: "/portal/orodja?tool=ip-scan", label: "IP scanner", icon: Router, adminOnly: true },
+      { href: "/portal/orodja?tool=wifi", label: "Wi‑Fi analizator", icon: Network, adminOnly: true },
+      { href: "/portal/orodja?tool=ping", label: "Ping watchdog", icon: Cpu, adminOnly: true },
+      { href: "/portal/orodja?tool=ipam", label: "IPAM (IP manager)", icon: Network, adminOnly: true },
+      { href: "/portal/orodja?tool=mac", label: "MAC lookup", icon: Network, adminOnly: true },
+      { href: "/portal/orodja?tool=wol", label: "Wake on LAN", icon: Wifi, adminOnly: true },
+    ],
+  },
+  {
+    title: "ORODJA & NAPRAVE",
+    items: [
+      { href: "/portal/orodja?tool=nvr", label: "NVR manager", icon: Video, adminOnly: true },
+      { href: "/portal/orodja?tool=lpr", label: "LPR prepoznava", icon: Camera, adminOnly: true },
+      { href: "/portal/orodja?tool=bulk", label: "Bulk config", icon: Wrench, adminOnly: true },
+      { href: "/portal/orodja?tool=qr", label: "QR generator", icon: Layers, adminOnly: true },
+      { href: "/portal/orodja?tool=pw", label: "Generator gesel", icon: Shield, adminOnly: true },
+    ],
+  },
+  {
+    title: "BAZA ZNANJA",
+    items: [
+      { href: "/portal/belezke?tab=dokumentacija", label: "Dokumentacija", icon: BookOpen, adminOnly: true },
+      { href: "/portal/belezke?tab=belezke", label: "Beležke", icon: BookOpen, adminOnly: true },
+      { href: "/portal/belezke?tab=privzeta-gesla", label: "Privzeta gesla", icon: Shield, adminOnly: true },
+      { href: "/portal/belezke?tab=firmware", label: "Firmware baza", icon: Package, adminOnly: true },
+    ],
+  },
+  {
+    title: "SISTEM",
+    items: [
+      { href: "/portal/inventar", label: "Skladišče", icon: Boxes, adminOnly: true },
+      { href: "/portal/agents", label: "Agenti", icon: RadioTower, adminOnly: true },
+      { href: "/portal/obvestila", label: "Obvestila (Telegram)", icon: Bell, adminOnly: true },
+      { href: "/portal/kamera-definicije", label: "RTSP definicije", icon: Video, adminOnly: true },
+      { href: "/portal/audit", label: "Audit log", icon: Shield, adminOnly: true },
+      { href: "/portal/paketi", label: "Naročniški paketi", icon: Package, adminOnly: true },
+      { href: "/portal/nastavitve", label: "Nastavitve", icon: Settings, adminOnly: true },
+    ],
+  },
 ];
 
 export function PortalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { role } = usePortalRole();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Array<{ id: string; label: string; href: string; meta?: string }>>([]);
   const [showResults, setShowResults] = useState(false);
 
+  const current = useMemo(() => {
+    const qs = searchParams.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  }, [pathname, searchParams]);
+
   const visible = useMemo(
     () =>
-      navItems.filter((item) => {
-        if (item.label === "Moj objekt") return role !== "admin";
-        if (item.adminOnly) return role === "admin";
-        if (item.href === "/portal/stranke") return role === "admin";
-        return true;
-      }),
+      navSections.map((s) => ({
+        ...s,
+        items: s.items.filter((item) => {
+          if (item.label === "Moj objekt") return role !== "admin";
+          if (item.adminOnly) return role === "admin";
+          if (item.href === "/portal/stranke") return role === "admin";
+          return true;
+        }),
+      })),
     [role],
   );
 
   useEffect(() => {
-    for (const item of visible) {
-      router.prefetch(item.href);
+    for (const section of visible) {
+      for (const item of section.items) router.prefetch(item.href);
     }
   }, [router, visible]);
 
@@ -107,25 +173,37 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             <span className="block text-xs font-normal text-[var(--vo-muted)]">Portal</span>
           </Link>
         </div>
-        <nav className="flex flex-1 flex-col gap-0.5 p-2">
-          {visible.map(({ href, label, icon: Icon }) => {
-              const active =
-                href === "/portal" ? pathname === "/portal" : pathname.startsWith(href);
-              return (
-                <Link
-                  key={href + label}
-                  href={href}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
-                    active
-                      ? "bg-[var(--vo-accent-muted)] text-[var(--vo-accent)]"
-                      : "text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)]"
-                  }`}
-                >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                  {label}
-                </Link>
-              );
-            })}
+        <nav className="flex flex-1 flex-col gap-4 overflow-auto p-2">
+          {visible.map((section) => (
+            <div key={section.title}>
+              <div className="px-3 pb-1 text-[10px] font-semibold tracking-wider text-[var(--vo-muted)]">
+                {section.title}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {section.items.map(({ href, label, icon: Icon }) => {
+                  const active = href.includes("?")
+                    ? current.startsWith(href)
+                    : href === "/portal"
+                      ? pathname === "/portal"
+                      : pathname.startsWith(href);
+                  return (
+                    <Link
+                      key={href + label}
+                      href={href}
+                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
+                        active
+                          ? "bg-[var(--vo-accent-muted)] text-[var(--vo-accent)]"
+                          : "text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)]"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                      {label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
         <div className="border-t border-[var(--vo-border)] p-3 text-xs text-[var(--vo-muted)]">
           VisionOne portal · Faza 1
@@ -208,21 +286,24 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
         <div className="border-b border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 md:hidden">
           <nav className="flex gap-1 overflow-x-auto">
-            {visible.map(({ href, label }) => {
-                const active =
-                  href === "/portal" ? pathname === "/portal" : pathname.startsWith(href);
-                return (
-                  <Link
-                    key={href + label + "m"}
-                    href={href}
-                    className={`whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-medium ${
-                      active ? "bg-[var(--vo-accent-muted)] text-[var(--vo-accent)]" : "text-[var(--vo-muted)]"
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                );
-              })}
+            {visible.flatMap((s) => s.items).map(({ href, label }) => {
+              const active = href.includes("?")
+                ? current.startsWith(href)
+                : href === "/portal"
+                  ? pathname === "/portal"
+                  : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href + label + "m"}
+                  href={href}
+                  className={`whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-medium ${
+                    active ? "bg-[var(--vo-accent-muted)] text-[var(--vo-accent)]" : "text-[var(--vo-muted)]"
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
