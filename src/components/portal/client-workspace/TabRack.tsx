@@ -9,7 +9,7 @@ import { parseRackUnits } from "./rack-parse";
 
 export function TabRack({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
-  const { client, clientId, dbConfigured, reload } = ctx;
+  const { client, clientId, dbConfigured, reload, applyClient } = ctx;
   const [units, setUnits] = useState<RackUnit[]>(() => parseRackUnits(client.rackData));
   const [f, setF] = useState<RackUnit>({ uStart: 1, uSpan: 1, label: "", deviceType: "other" });
 
@@ -28,7 +28,9 @@ export function TabRack({ ctx }: { ctx: WorkspaceCtx }) {
       showToast("Shranjevanje racka ni uspelo.", "err");
       return;
     }
-    await reload();
+    const j = (await r.json().catch(() => ({}))) as { client?: typeof client };
+    if (j.client) applyClient(j.client);
+    else await reload();
     showToast("Rack shranjen.");
   }
 

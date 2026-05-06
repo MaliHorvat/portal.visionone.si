@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       name,
       address: body?.address ?? "",
       contact: body?.contact ?? "",
+      phone: body?.phone ?? "",
       email: body?.email ?? "",
       health: body?.health === "alarm" ? "alarm" : "ok",
       packageId: body?.packageId ?? null,

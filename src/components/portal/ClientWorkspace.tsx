@@ -21,6 +21,7 @@ import {
   Clock,
   FileText,
   MapPin,
+  Mail,
   Phone,
   Layers,
   LayoutGrid,
@@ -95,6 +96,7 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
       client,
       dbConfigured,
       reload,
+      applyClient: (next) => setClient(next),
     }),
     [client, dbConfigured, reload],
   );
@@ -145,6 +147,18 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
                 <span className="inline-flex items-center gap-1 rounded-full border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)]">
                   <Phone className="h-3.5 w-3.5" aria-hidden />
                   {client.contact}
+                </span>
+              ) : null}
+              {client.phone ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)]">
+                  <Phone className="h-3.5 w-3.5" aria-hidden />
+                  {client.phone}
+                </span>
+              ) : null}
+              {client.email ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)]">
+                  <Mail className="h-3.5 w-3.5" aria-hidden />
+                  {client.email}
                 </span>
               ) : null}
             </div>

@@ -92,6 +92,7 @@ function mapClientSummary(c: DbClient): ClientSummary {
     name: c.name,
     address: c.address,
     contact: c.contact,
+    phone: c.phone ?? "",
     email: c.email,
     package: mapPackage(c.package),
     health: mapHealth(c.health),
@@ -181,6 +182,7 @@ export async function listClients(): Promise<ClientSummary[]> {
       name: c.name,
       address: c.address,
       contact: c.contact,
+      phone: c.phone,
       email: c.email,
       package: c.package,
       health: c.health,
@@ -215,14 +217,8 @@ export async function getClient(slugOrId: string): Promise<ClientDetail | null> 
     });
   }
   if (!row) return null;
-  if (!row.slug) {
-    const slug = await allocateUniqueClientSlug(row.name, row.id);
-    row = await prisma.client.update({
-      where: { id: row.id },
-      data: { slug },
-      include,
-    });
-  }
+  // Ne izvajamo samodejnega UPDATE tukaj, da profil ne čaka dodatne DB mutacije.
+  // Če stranka še nima sluga, stran ostane dostopna tudi preko id.
   return mapClientDetail(row);
 }
 
@@ -230,6 +226,7 @@ export interface UpsertClientInput {
   name: string;
   address?: string;
   contact?: string;
+  phone?: string;
   email?: string;
   health?: ClientHealth;
   packageId?: string | null;
@@ -248,6 +245,7 @@ export async function createClient(data: UpsertClientInput): Promise<ClientDetai
       slug,
       address: data.address ?? "",
       contact: data.contact ?? "",
+      phone: data.phone ?? "",
       email: data.email ?? "",
       health: data.health ?? "ok",
       packageId: data.packageId ?? null,
@@ -281,6 +279,7 @@ export async function updateClient(
       ...(newSlug !== undefined ? { slug: newSlug } : {}),
       address: data.address,
       contact: data.contact,
+      phone: data.phone,
       email: data.email,
       health: data.health,
       packageId: data.packageId === undefined ? undefined : data.packageId,

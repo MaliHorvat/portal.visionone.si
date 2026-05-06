@@ -17,6 +17,7 @@ model Client {
   name      String
   address   String   @default("")
   contact   String   @default("")
+  phone     String   @default("")
   email     String   @default("")
   health    String   @default("ok")
   topologyData Json?

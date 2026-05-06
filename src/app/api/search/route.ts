@@ -20,9 +20,16 @@ export async function GET(request: Request) {
 
   const [clients, users, reminders] = await Promise.all([
     prisma.client.findMany({
-      where: { OR: [{ name: { contains: q } }, { email: { contains: q } }, { contact: { contains: q } }] },
+      where: {
+        OR: [
+          { name: { contains: q } },
+          { email: { contains: q } },
+          { contact: { contains: q } },
+          { phone: { contains: q } },
+        ],
+      },
       take: 8,
-      select: { id: true, slug: true, name: true, contact: true },
+      select: { id: true, slug: true, name: true, contact: true, phone: true },
       orderBy: { name: "asc" },
     }),
     prisma.appUserAccount.findMany({
@@ -45,7 +52,7 @@ export async function GET(request: Request) {
       type: "client" as const,
       label: c.name,
       href: `/portal/stranke/${encodeURIComponent(c.slug || c.id)}`,
-      meta: c.contact || undefined,
+      meta: c.contact || c.phone || undefined,
     })),
     ...users.map((u) => ({
       id: `user-${u.id}`,

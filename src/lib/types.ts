@@ -18,6 +18,7 @@ export interface ClientSummary {
   name: string;
   address: string;
   contact: string;
+  phone: string;
   email: string;
   package: SubscriptionPackageDto | null;
   health: ClientHealth;

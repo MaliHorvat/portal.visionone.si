@@ -25,7 +25,7 @@ function newId() {
 
 export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
-  const { client, clientId, dbConfigured, reload } = ctx;
+  const { client, clientId, dbConfigured, reload, applyClient } = ctx;
   const [topo, setTopo] = useState<ClientTopologyState>(() => parseTopologyState(client.topologyData));
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ id: string; dx: number; dy: number } | null>(null);
@@ -155,9 +155,11 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
       showToast("Shranjevanje načrta ni uspelo.", "err");
       return;
     }
-    await reload();
+    const j = (await r.json().catch(() => ({}))) as { client?: typeof client };
+    if (j.client) applyClient(j.client);
+    else await reload();
     showToast("Načrt shranjen.");
-  }, [clientId, dbConfigured, reload, topo, showToast]);
+  }, [applyClient, clientId, dbConfigured, reload, topo, showToast]);
 
   useEffect(() => {
     if (!dragging || !canvasRef.current) return;

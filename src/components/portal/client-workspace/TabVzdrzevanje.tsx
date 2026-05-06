@@ -41,9 +41,14 @@ export function TabVzdrzevanje({ ctx }: { ctx: WorkspaceCtx }) {
       showToast("Dodajanje opomnika ni uspelo.", "err");
       return;
     }
+    const created = (await res.json().catch(() => ({}))) as { reminder?: MaintenanceReminder };
     setTitle("");
     setDue("");
-    await load();
+    if (created.reminder) {
+      setRows((prev) => [created.reminder!, ...prev]);
+    } else {
+      await load();
+    }
     showToast("Opomnik dodan.");
   }
 
@@ -58,7 +63,9 @@ export function TabVzdrzevanje({ ctx }: { ctx: WorkspaceCtx }) {
       showToast("Posodobitev opomnika ni uspela.", "err");
       return;
     }
-    await load();
+    setRows((prev) =>
+      prev.map((x) => (x.id === r.id ? { ...x, completed: !r.completed } : x)),
+    );
     showToast("Opomnik posodobljen.");
   }
 
@@ -70,7 +77,7 @@ export function TabVzdrzevanje({ ctx }: { ctx: WorkspaceCtx }) {
       showToast("Brisanje opomnika ni uspelo.", "err");
       return;
     }
-    await load();
+    setRows((prev) => prev.filter((x) => x.id !== id));
     showToast("Opomnik izbrisan.");
   }
 
@@ -91,18 +98,30 @@ export function TabVzdrzevanje({ ctx }: { ctx: WorkspaceCtx }) {
       showToast("Shranjevanje ni uspelo.", "err");
       return;
     }
+    setRows((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, title: editTitle, dueDate: editDue } : x)),
+    );
     setEditId(null);
-    await load();
     showToast("Vzdrževanje posodobljeno.");
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3">
       <h3 className="text-sm font-semibold text-[var(--vo-fg)]">Vzdrževanje</h3>
-      <form onSubmit={add} className="flex flex-wrap gap-2 text-sm">
-        <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="rounded border border-[var(--vo-border)] px-2 py-2" />
-        <input placeholder="Opis naloga" value={title} onChange={(e) => setTitle(e.target.value)} className="min-w-[200px] flex-1 rounded border border-[var(--vo-border)] px-2 py-2" />
-        <button type="submit" disabled={busy || !dbConfigured} className="rounded-lg bg-[var(--vo-accent)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">
+      <form onSubmit={add} className="grid grid-cols-[150px_1fr_auto] gap-2 text-sm">
+        <input
+          type="date"
+          value={due}
+          onChange={(e) => setDue(e.target.value)}
+          className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-2"
+        />
+        <input
+          placeholder="Opis naloga"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-2"
+        />
+        <button type="submit" disabled={busy || !dbConfigured} className="rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">
           + Dodaj
         </button>
       </form>

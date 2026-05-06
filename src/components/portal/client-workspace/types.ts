@@ -26,6 +26,7 @@ export type WorkspaceCtx = {
   client: ClientDetail;
   dbConfigured: boolean;
   reload: () => Promise<void>;
+  applyClient: (next: ClientDetail) => void;
 };
 
 export function parseWorkspaceTab(raw: string | null | undefined): WorkspaceTab {

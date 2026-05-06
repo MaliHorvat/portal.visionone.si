@@ -28,6 +28,7 @@ export async function PUT(request: Request, ctx: Ctx) {
       name: body?.name,
       address: body?.address,
       contact: body?.contact,
+      phone: body?.phone,
       email: body?.email,
       health: body?.health === "alarm" ? "alarm" : body?.health === "ok" ? "ok" : undefined,
       packageId: body?.packageId === undefined ? undefined : body.packageId,

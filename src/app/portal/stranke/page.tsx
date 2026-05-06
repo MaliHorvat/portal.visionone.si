@@ -13,6 +13,7 @@ function mockSummaries() {
     name: c.name,
     address: c.address,
     contact: c.contact,
+    phone: c.phone,
     email: c.email,
     package: c.package,
     health: c.health,

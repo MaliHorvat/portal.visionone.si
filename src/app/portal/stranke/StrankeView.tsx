@@ -44,6 +44,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
       name: String(form.get("name") ?? ""),
       address: String(form.get("address") ?? ""),
       contact: String(form.get("contact") ?? ""),
+      phone: String(form.get("phone") ?? ""),
       email: String(form.get("email") ?? ""),
       packageId: String(form.get("packageId") ?? "") || null,
     };
@@ -123,6 +124,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
             <input name="name" required placeholder="Ime stranke" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.name ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
             <input name="address" placeholder="Naslov" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.address ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
             <input name="contact" placeholder="Kontaktna oseba" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.contact ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <input name="phone" placeholder="Telefon" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.phone ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
             <input name="email" type="email" placeholder="E-naslov" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.email ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
             <select
               name="packageId"
@@ -176,6 +178,12 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                 <td className="px-4 py-3 text-[var(--vo-muted)]">{c.address}</td>
                 <td className="px-4 py-3 text-[var(--vo-muted)]">
                   {c.contact}
+                  {c.phone ? (
+                    <>
+                      <br />
+                      <span className="text-xs">{c.phone}</span>
+                    </>
+                  ) : null}
                   {c.email ? (
                     <>
                       <br />
