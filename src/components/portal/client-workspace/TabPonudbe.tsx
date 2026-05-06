@@ -24,6 +24,8 @@ type OfferDto = {
   totalDiscountPct: number;
   vatEnabled: boolean;
   vatPct: number;
+  createdAt?: string;
+  updatedAt?: string;
   lines: Array<{
     section: string;
     sortOrder: number;
@@ -95,6 +97,15 @@ function formatOfferPlainText(
   return `${hdr}\n${lines.join("\n")}\n${tail}`;
 }
 
+function escapeHtml(s: string) {
+  return s
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
   const { client, clientId, dbConfigured } = ctx;
@@ -110,7 +121,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
     if (!r.ok) return;
     const j = await r.json();
     const list = (j.offers ?? []) as OfferDto[];
-    setOffers(list.map((x) => ({ id: x.id })));
+    setOffers(list.map((x) => ({ id: x.id, updatedAt: x.updatedAt })));
     setSel((prev) => prev ?? list[0]?.id ?? null);
   }, [clientId, dbConfigured]);
 
@@ -220,6 +231,87 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
     } catch {
       showToast("Kopiranje v odložišče ni uspelo.", "err");
     }
+  }
+
+  function openPreview() {
+    if (!draft) return;
+    const w = window.open("", "_blank", "noopener,noreferrer,width=980,height=760");
+    if (!w) return;
+    const head = `
+      <meta charset="utf-8" />
+      <title>Ponudba</title>
+      <style>
+        body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:24px;color:#111}
+        h1{font-size:18px;margin:0 0 12px}
+        .meta{font-size:12px;color:#333;margin-bottom:12px}
+        table{width:100%;border-collapse:collapse;margin:10px 0 18px}
+        th,td{border:1px solid #ddd;padding:6px 8px;font-size:12px;vertical-align:top}
+        th{background:#f5f5f5;text-align:left}
+        .right{text-align:right}
+        .sum{margin-top:8px;display:flex;justify-content:flex-end;gap:24px;font-size:12px}
+        .sum b{font-size:14px}
+        pre{white-space:pre-wrap;font-size:12px;background:#fafafa;border:1px solid #eee;padding:10px}
+      </style>
+    `;
+    const mat = rows.filter((r) => r.section === "material");
+    const svc = rows.filter((r) => r.section === "service");
+    function table(title: string, list: LineRow[]) {
+      const body = list
+        .map(
+          (l) => `
+            <tr>
+              <td>${escapeHtml(l.code)}</td>
+              <td>${escapeHtml(l.description)}</td>
+              <td>${escapeHtml(l.unit)}</td>
+              <td class="right">${l.qty}</td>
+              <td class="right">${l.unitPrice.toFixed(2)} €</td>
+              <td class="right">${l.discountPct}%</td>
+              <td class="right">${l.lineVatPct}%</td>
+              <td class="right">${lineNet(l).toFixed(2)} €</td>
+            </tr>`,
+        )
+        .join("");
+      return `
+        <h2 style="font-size:13px;margin:14px 0 6px">${escapeHtml(title)}</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ŠIFRA</th>
+              <th>OPIS</th>
+              <th>ENOTA</th>
+              <th class="right">KOL.</th>
+              <th class="right">CENA</th>
+              <th class="right">POPUST</th>
+              <th class="right">DDV</th>
+              <th class="right">SKUPAJ</th>
+            </tr>
+          </thead>
+          <tbody>${body || `<tr><td colspan="8" style="color:#666">—</td></tr>`}</tbody>
+        </table>
+      `;
+    }
+    const html = `
+      <!doctype html><html><head>${head}</head><body>
+        <h1>Ponudba</h1>
+        <div class="meta">
+          <div><b>Stranka:</b> ${escapeHtml(client.name)}</div>
+          <div><b>Datum:</b> ${escapeHtml(draft.offerDate || "—")}</div>
+          <div><b>Naslov:</b> ${escapeHtml(draft.clientAddress || "—")}</div>
+        </div>
+        ${table("Material", mat)}
+        ${table("Storitve / delo", svc)}
+        <div class="sum">
+          <div>Osnova<br/><b>${totals.net.toFixed(2)} €</b></div>
+          <div>DDV<br/><b>${totals.vat.toFixed(2)} €</b></div>
+          <div>Skupaj<br/><b>${totals.gross.toFixed(2)} €</b></div>
+        </div>
+        ${draft.notes ? `<h2 style="font-size:13px;margin:18px 0 6px">Opombe</h2><pre>${escapeHtml(draft.notes)}</pre>` : ""}
+        <script>window.focus();</script>
+      </body></html>
+    `;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
   }
 
   async function exportOfferPdf() {
@@ -376,8 +468,21 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         <button type="button" disabled={busy || !dbConfigured} onClick={() => void createOffer()} className="rounded-lg bg-[var(--vo-accent)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">
           Nova ponudba
         </button>
-        <button type="button" disabled={busy || !sel || !dbConfigured} onClick={() => void saveOffer()} className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs font-semibold disabled:opacity-40">
-          Shrani
+        <button
+          type="button"
+          disabled={!draft || busy}
+          onClick={() => openPreview()}
+          className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs font-semibold disabled:opacity-40"
+        >
+          Predogled
+        </button>
+        <button
+          type="button"
+          disabled={!draft || busy}
+          onClick={() => void copyOfferText()}
+          className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs font-semibold disabled:opacity-40"
+        >
+          Kopiraj
         </button>
         <button
           type="button"
@@ -387,13 +492,8 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         >
           PDF
         </button>
-        <button
-          type="button"
-          disabled={!draft || busy}
-          onClick={() => void copyOfferText()}
-          className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs font-semibold disabled:opacity-40"
-        >
-          Kopiraj
+        <button type="button" disabled={busy || !sel || !dbConfigured} onClick={() => void saveOffer()} className="ml-auto rounded-lg bg-[var(--vo-accent)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">
+          Shrani
         </button>
         <button type="button" disabled={!sel || !dbConfigured} onClick={() => void deleteOffer()} className="text-xs text-red-500 hover:underline disabled:opacity-40">
           Izbriši

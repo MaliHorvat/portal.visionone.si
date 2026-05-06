@@ -79,7 +79,7 @@ export async function createPortalUserFromRequest(input: {
         passwordHash: input.passwordHash,
         role: input.role,
         isAdmin: input.role === "admin",
-        mustChangePassword: true,
+        mustChangePassword: false,
       },
     });
     const request = await tx.portalAccessRequest.update({

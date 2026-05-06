@@ -70,8 +70,7 @@ export async function POST(request: Request) {
 
   const stayLoggedIn = String(formData.get("stay_logged_in") ?? "") === "1";
 
-  const nextPath = granted.mustChangePassword ? "/portal/racun?force_password=1" : "/portal";
-  const response = NextResponse.redirect(new URL(nextPath, request.url), { status: 303 });
+  const response = NextResponse.redirect(new URL("/portal", request.url), { status: 303 });
   response.cookies.set(PORTAL_SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

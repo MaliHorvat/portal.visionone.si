@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { PortalRole } from "@/context/PortalRoleContext";
 import { roleLabel } from "@/lib/portal-roles";
 
-type Row = { id: string; username: string; email: string; role: PortalRole; mustChangePassword: boolean };
+type Row = { id: string; username: string; email: string; role: PortalRole };
 
 export function NastavitveUporabniki() {
   const [users, setUsers] = useState<Row[]>([]);
@@ -31,8 +31,8 @@ export function NastavitveUporabniki() {
       setLoadError(data?.error ?? "Napaka pri nalaganju.");
       return;
     }
-    const data = (await res.json()) as { users: Row[] };
-    setUsers(data.users ?? []);
+    const data = (await res.json()) as { users: Array<Row & { mustChangePassword?: boolean }> };
+    setUsers((data.users ?? []).map(({ id, username, email, role }) => ({ id, username, email, role })));
   }, []);
 
   useEffect(() => {
@@ -144,14 +144,13 @@ export function NastavitveUporabniki() {
                 <th className="px-3 py-2 font-medium">Uporabnik</th>
                 <th className="px-3 py-2 font-medium">E-pošta</th>
                 <th className="px-3 py-2 font-medium">Vloga</th>
-                <th className="px-3 py-2 font-medium">Stanje</th>
                 <th className="px-3 py-2 font-medium" />
               </tr>
             </thead>
             <tbody>
               {users.length === 0 && !loadError ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-[var(--vo-muted)]">
+                  <td colSpan={4} className="px-3 py-6 text-center text-[var(--vo-muted)]">
                     Ni vpisanih uporabnikov v bazi.
                   </td>
                 </tr>
@@ -161,9 +160,6 @@ export function NastavitveUporabniki() {
                   <td className="px-3 py-2 font-medium text-[var(--vo-fg)]">{u.username}</td>
                   <td className="px-3 py-2 text-[var(--vo-muted)]">{u.email || "—"}</td>
                   <td className="px-3 py-2 text-[var(--vo-muted)]">{roleLabel(u.role)}</td>
-                  <td className="px-3 py-2 text-[var(--vo-muted)]">
-                    {u.mustChangePassword ? "Čaka menjavo gesla" : "Aktiven"}
-                  </td>
                   <td className="px-3 py-2 text-right">
                     {u.username === "admin" ? (
                       <span className="text-xs text-[var(--vo-muted)]">—</span>

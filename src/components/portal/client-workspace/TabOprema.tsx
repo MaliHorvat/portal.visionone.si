@@ -104,7 +104,7 @@ function RecorderBlock({
   }
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
       <h3 className="text-sm font-semibold text-[var(--vo-fg)]">Snemalniki</h3>
       <form onSubmit={add} className="flex flex-wrap gap-2 text-xs">
         <input placeholder="Ime" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
@@ -113,50 +113,51 @@ function RecorderBlock({
         <input placeholder="Komentar" value={f.comment} onChange={(e) => setF({ ...f, comment: e.target.value })} className="min-w-[140px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
         <button type="submit" disabled={busy || !dbConfigured} className="rounded-lg bg-[var(--vo-fg)] px-3 py-1.5 font-semibold text-[var(--vo-bg)] disabled:opacity-40">+</button>
       </form>
-      <table className="w-full text-left text-xs">
-        <thead className="text-[var(--vo-muted)]">
-          <tr>
-            <th className="py-1">STATUS</th>
-            <th className="py-1">IME</th>
-            <th className="py-1">IP</th>
-            <th className="py-1">MODEL</th>
-            <th className="py-1">KOMENTAR</th>
-            <th className="py-1 text-right">AKCIJE</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ctx.client.nvrs.map((r) => (
-            <tr key={r.id} className={`border-t border-[var(--vo-border)] ${r.status !== "online" ? "bg-red-950/15" : ""}`}>
-              <td className="py-2"><Dot status={r.status} /></td>
-              <td className="py-2 text-[var(--vo-fg)]">
+      <div className="overflow-x-auto rounded-lg border border-[var(--vo-border)]">
+        <table className="min-w-[820px] w-full text-left text-xs">
+          <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
+            <tr>
+              <th className="px-2 py-2">STATUS</th>
+              <th className="px-2 py-2">IME</th>
+              <th className="px-2 py-2">IP</th>
+              <th className="px-2 py-2">MODEL</th>
+              <th className="px-2 py-2">KOMENTAR</th>
+              <th className="px-2 py-2 text-right">AKCIJE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ctx.client.nvrs.map((r) => (
+              <tr key={r.id} className={`border-b border-[var(--vo-border)] ${r.status !== "online" ? "bg-red-950/15" : ""}`}>
+                <td className="px-2 py-2"><Dot status={r.status} /></td>
+                <td className="px-2 py-2 text-[var(--vo-fg)]">
                 {edit === r.id ? (
                   <input defaultValue={r.name} id={`rn-${r.id}`} className="w-full rounded border border-[var(--vo-border)] bg-transparent px-1" />
                 ) : (
                   r.name
                 )}
               </td>
-              <td className="py-2 font-mono text-[var(--vo-muted)]">
+              <td className="px-2 py-2 font-mono text-[var(--vo-muted)]">
                 {edit === r.id ? (
                   <input defaultValue={r.ip} id={`rip-${r.id}`} className="w-full rounded border border-[var(--vo-border)] bg-transparent px-1" />
                 ) : (
                   r.ip
                 )}
               </td>
-              <td className="py-2 text-[var(--vo-muted)]">
+              <td className="px-2 py-2 text-[var(--vo-muted)]">
                 {edit === r.id ? (
                   <input defaultValue={r.model} id={`rm-${r.id}`} className="w-full rounded border border-[var(--vo-border)] bg-transparent px-1" />
                 ) : (
                   r.model || "—"
                 )}
               </td>
-              <td className="py-2 text-[var(--vo-muted)]">
+              <td className="px-2 py-2 text-[var(--vo-muted)]">
                 {edit === r.id ? (
                   <input defaultValue={r.comment ?? ""} id={`rc-${r.id}`} className="w-full rounded border border-[var(--vo-border)] bg-transparent px-1" />
                 ) : (
                   r.comment || "—"
                 )}
               </td>
-              <td className="py-2 text-right">
+              <td className="px-2 py-2 text-right">
                 {edit === r.id ? (
                   <button
                     type="button"
@@ -191,8 +192,9 @@ function RecorderBlock({
               </td>
             </tr>
           ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -230,7 +232,7 @@ function SwitchBlock({
   }
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
       <h3 className="text-sm font-semibold text-[var(--vo-fg)]">Switchi</h3>
       <form onSubmit={add} className="flex flex-wrap gap-2 text-xs">
         <input placeholder="Ime" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
@@ -240,34 +242,35 @@ function SwitchBlock({
         <input type="number" placeholder="Ports" value={f.ports || ""} onChange={(e) => setF({ ...f, ports: Number(e.target.value) || 0 })} className="w-20 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
         <button type="submit" disabled={busy || !dbConfigured} className="rounded-lg bg-[var(--vo-fg)] px-3 py-1.5 font-semibold text-[var(--vo-bg)] disabled:opacity-40">+</button>
       </form>
-      <table className="w-full text-left text-xs">
-        <thead className="text-[var(--vo-muted)]">
-          <tr>
-            <th className="py-1">STATUS</th>
-            <th className="py-1">IME</th>
-            <th className="py-1">IP</th>
-            <th className="py-1">MODEL</th>
-            <th className="py-1">KOMENTAR</th>
-            <th className="py-1 text-right">AKCIJE</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ctx.client.switches.map((s) => (
-            <tr key={s.id} className={`border-t border-[var(--vo-border)] ${s.status !== "online" ? "bg-red-950/15" : ""}`}>
-              <td className="py-2"><Dot status={s.status} /></td>
-              <td className="py-2">
+      <div className="overflow-x-auto rounded-lg border border-[var(--vo-border)]">
+        <table className="min-w-[820px] w-full text-left text-xs">
+          <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
+            <tr>
+              <th className="px-2 py-2">STATUS</th>
+              <th className="px-2 py-2">IME</th>
+              <th className="px-2 py-2">IP</th>
+              <th className="px-2 py-2">MODEL</th>
+              <th className="px-2 py-2">KOMENTAR</th>
+              <th className="px-2 py-2 text-right">AKCIJE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ctx.client.switches.map((s) => (
+              <tr key={s.id} className={`border-b border-[var(--vo-border)] ${s.status !== "online" ? "bg-red-950/15" : ""}`}>
+                <td className="px-2 py-2"><Dot status={s.status} /></td>
+                <td className="px-2 py-2">
                 {edit === s.id ? <input defaultValue={s.name} id={`sn-${s.id}`} className="rounded border border-[var(--vo-border)] bg-transparent px-1" /> : s.name}
               </td>
-              <td className="py-2 font-mono">
+              <td className="px-2 py-2 font-mono">
                 {edit === s.id ? <input defaultValue={s.ip} id={`sip-${s.id}`} className="rounded border border-[var(--vo-border)] bg-transparent px-1" /> : s.ip}
               </td>
-              <td className="py-2">
+              <td className="px-2 py-2">
                 {edit === s.id ? <input defaultValue={s.model} id={`sm-${s.id}`} className="rounded border border-[var(--vo-border)] bg-transparent px-1" /> : s.model || "—"}
               </td>
-              <td className="py-2">
+              <td className="px-2 py-2">
                 {edit === s.id ? <input defaultValue={s.comment ?? ""} id={`sc-${s.id}`} className="rounded border border-[var(--vo-border)] bg-transparent px-1" /> : s.comment || "—"}
               </td>
-              <td className="py-2 text-right">
+              <td className="px-2 py-2 text-right">
                 {edit === s.id ? (
                   <button type="button" className="text-[var(--vo-ok)] hover:underline" onClick={() => {
                     void patch(`/switches/${s.id}`, {
@@ -284,8 +287,9 @@ function SwitchBlock({
               </td>
             </tr>
           ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -323,7 +327,7 @@ function DiskBlock({
   }
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
       <h3 className="text-sm font-semibold text-[var(--vo-fg)]">Diski</h3>
       <form onSubmit={add} className="flex flex-wrap gap-2 text-xs">
         <input placeholder="Ime" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
@@ -335,40 +339,41 @@ function DiskBlock({
         <input placeholder="Komentar" value={f.comment} onChange={(e) => setF({ ...f, comment: e.target.value })} className="min-w-[120px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
         <button type="submit" disabled={busy || !dbConfigured} className="rounded-lg bg-[var(--vo-fg)] px-3 py-1.5 font-semibold text-[var(--vo-bg)] disabled:opacity-40">+</button>
       </form>
-      <table className="w-full text-left text-xs">
-        <thead className="text-[var(--vo-muted)]">
-          <tr>
-            <th className="py-1">STATUS</th>
-            <th className="py-1">DISK</th>
-            <th className="py-1">IP</th>
-            <th className="py-1">MODEL</th>
-            <th className="py-1">TB</th>
-            <th className="py-1">MONTAŽA</th>
-            <th className="py-1">ZDRAVJE</th>
-            <th className="py-1 text-right">AKCIJE</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ctx.client.disks.map((d) => (
-            <tr key={d.id} className={`border-t border-[var(--vo-border)] ${d.health !== "ok" ? "bg-red-950/15" : ""}`}>
-              <td className="py-2"><Dot status={d.health === "ok" ? "online" : "offline"} /></td>
-              <td className="py-2 text-[var(--vo-fg)]">
+      <div className="overflow-x-auto rounded-lg border border-[var(--vo-border)]">
+        <table className="min-w-[980px] w-full text-left text-xs">
+          <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
+            <tr>
+              <th className="px-2 py-2">STATUS</th>
+              <th className="px-2 py-2">DISK</th>
+              <th className="px-2 py-2">IP</th>
+              <th className="px-2 py-2">MODEL</th>
+              <th className="px-2 py-2">TB</th>
+              <th className="px-2 py-2">MONTAŽA</th>
+              <th className="px-2 py-2">ZDRAVJE</th>
+              <th className="px-2 py-2 text-right">AKCIJE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ctx.client.disks.map((d) => (
+              <tr key={d.id} className={`border-b border-[var(--vo-border)] ${d.health !== "ok" ? "bg-red-950/15" : ""}`}>
+                <td className="px-2 py-2"><Dot status={d.health === "ok" ? "online" : "offline"} /></td>
+                <td className="px-2 py-2 text-[var(--vo-fg)]">
                 {edit === d.id ? <input defaultValue={d.label} id={`dl-${d.id}`} className="rounded border px-1" /> : d.label}
               </td>
-              <td className="py-2 font-mono text-[var(--vo-muted)]">
+              <td className="px-2 py-2 font-mono text-[var(--vo-muted)]">
                 {edit === d.id ? <input defaultValue={d.ip ?? ""} id={`dip-${d.id}`} className="rounded border px-1" /> : d.ip || "—"}
               </td>
-              <td className="py-2">
+              <td className="px-2 py-2">
                 {edit === d.id ? <input defaultValue={d.model ?? ""} id={`dm-${d.id}`} className="rounded border px-1" /> : d.model || "—"}
               </td>
-              <td className="py-2">{d.sizeTb}</td>
-              <td className="py-2 text-[var(--vo-muted)]">{d.installedAt || <span className="italic">Ni datuma</span>}</td>
-              <td className="py-2">
+              <td className="px-2 py-2">{d.sizeTb}</td>
+              <td className="px-2 py-2 text-[var(--vo-muted)]">{d.installedAt || <span className="italic">Ni datuma</span>}</td>
+              <td className="px-2 py-2">
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${d.health === "ok" ? "bg-[var(--vo-ok-muted)] text-[var(--vo-ok)]" : "bg-[var(--vo-danger-muted)] text-[var(--vo-danger)]"}`}>
                   {d.health === "ok" ? "Vse OK" : d.health}
                 </span>
               </td>
-              <td className="py-2 text-right">
+              <td className="px-2 py-2 text-right">
                 {edit === d.id ? (
                   <button type="button" className="text-[var(--vo-ok)] hover:underline" onClick={() => {
                     void patch(`/disks/${d.id}`, {
@@ -384,8 +389,9 @@ function DiskBlock({
               </td>
             </tr>
           ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

@@ -28,13 +28,15 @@ export default async function StrankaProfilPage({ params, searchParams }: Props)
 
   return (
     <ClientProfileGate clientId={client.id}>
-      <div className="space-y-4">
-        <ProfileBackNav />
-        <Suspense
-          fallback={<p className="text-sm text-[var(--vo-muted)]">Nalaganje delovnega prostora…</p>}
-        >
-          <ClientWorkspace initialClient={client} dbConfigured={isDbConfigured()} initialTab={initialTab} />
-        </Suspense>
+      <div className="grid gap-4 md:grid-cols-[260px_1fr]">
+        <div className="md:sticky md:top-4 md:self-start">
+          <ProfileBackNav />
+        </div>
+        <div className="min-w-0 space-y-4">
+          <Suspense fallback={<p className="text-sm text-[var(--vo-muted)]">Nalaganje delovnega prostora…</p>}>
+            <ClientWorkspace initialClient={client} dbConfigured={isDbConfigured()} initialTab={initialTab} />
+          </Suspense>
+        </div>
       </div>
     </ClientProfileGate>
   );

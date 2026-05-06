@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         passwordHash,
         role,
         isAdmin: role === "admin",
-        mustChangePassword: true,
+        mustChangePassword: false,
       },
     });
   } catch (e: unknown) {

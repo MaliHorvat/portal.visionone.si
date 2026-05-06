@@ -7,6 +7,17 @@ import type { ClientTopologyState, TopologyCanvasNode, TopologyDeviceKind } from
 import type { WorkspaceCtx } from "./types";
 
 type DragPayload = { kind: TopologyDeviceKind; id: string; label: string };
+type PaletteItem = DragPayload & { status: "online" | "offline" };
+
+function Dot({ status }: { status: "online" | "offline" }) {
+  return (
+    <span
+      className={`inline-block h-2 w-2 shrink-0 rounded-full ${
+        status === "online" ? "bg-[var(--vo-ok)]" : "bg-[var(--vo-danger)]"
+      }`}
+    />
+  );
+}
 
 function newId() {
   return typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `n-${Date.now()}`;
@@ -24,13 +35,14 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     setTopo(parseTopologyState(client.topologyData));
   }, [client.topologyData]);
 
-  const palette: { title: string; items: DragPayload[] }[] = [
+  const palette: { title: string; items: PaletteItem[] }[] = [
     {
       title: "Kamere",
       items: client.cameras.map((c) => ({
         kind: "camera" as const,
         id: c.id,
         label: `${c.tag ? `${c.tag} ` : ""}${c.name}`.trim(),
+        status: c.status === "online" ? "online" : "offline",
       })),
     },
     {
@@ -39,6 +51,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
         kind: "recorder" as const,
         id: r.id,
         label: r.name,
+        status: r.status === "online" ? "online" : "offline",
       })),
     },
     {
@@ -47,6 +60,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
         kind: "switch" as const,
         id: s.id,
         label: s.name,
+        status: s.status === "online" ? "online" : "offline",
       })),
     },
     {
@@ -55,6 +69,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
         kind: "disk" as const,
         id: d.id,
         label: d.label,
+        status: d.health === "ok" ? "online" : "offline",
       })),
     },
   ];
@@ -186,8 +201,9 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   key={`${item.kind}-${item.id}`}
                   draggable={dbConfigured}
                   onDragStart={(e) => onPaletteDragStart(e, item)}
-                  className="cursor-grab rounded border border-[var(--vo-border)] px-2 py-1 active:cursor-grabbing"
+                  className="flex cursor-grab items-center gap-2 rounded border border-[var(--vo-border)] px-2 py-1 active:cursor-grabbing"
                 >
+                  <Dot status={item.status} />
                   {item.label}
                 </li>
               ))}
@@ -205,11 +221,12 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           <button type="button" onClick={clearBg} className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)]">
             Odstrani ozadje
           </button>
+          <span className="ml-auto text-xs text-[var(--vo-muted)]">Čvorov ({topo.nodes.length})</span>
           <button
             type="button"
             disabled={!dbConfigured}
             onClick={() => void save()}
-            className="ml-auto rounded-lg bg-[var(--vo-accent)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+            className="rounded-lg bg-[var(--vo-accent)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
           >
             Shrani načrt
           </button>
