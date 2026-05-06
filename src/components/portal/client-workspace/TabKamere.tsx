@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePortalToast } from "@/context/PortalToastContext";
 import type { WorkspaceCtx } from "./types";
 
@@ -19,6 +19,9 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
   const { client, dbConfigured, reload } = ctx;
   const [busy, setBusy] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [live, setLive] = useState<
+    Record<string, { status: string; lastSeenAt: string | null; latencyMs: number | null; lastError: string }>
+  >({});
   const [form, setForm] = useState({
     tag: "",
     name: "",
@@ -28,6 +31,32 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
     model: "",
     comment: "",
   });
+
+  useEffect(() => {
+    if (!dbConfigured) return;
+    let stopped = false;
+    const tick = async () => {
+      try {
+        const r = await fetch(`/api/clients/${ctx.clientId}/camera-status`, { cache: "no-store" });
+        if (!r.ok) return;
+        const j = (await r.json()) as {
+          statusByCameraId: Record<
+            string,
+            { status: string; lastSeenAt: string | null; latencyMs: number | null; lastError: string }
+          >;
+        };
+        if (!stopped) setLive(j.statusByCameraId ?? {});
+      } catch {
+        // ignore intermittent network/UI polling errors
+      }
+    };
+    void tick();
+    const id = window.setInterval(tick, 10_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+    };
+  }, [ctx.clientId, dbConfigured]);
 
   async function checkAll() {
     if (!dbConfigured) return;
@@ -188,7 +217,9 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
               </tr>
             ) : null}
             {client.cameras.map((cam) => {
-              const offline = cam.status !== "online";
+              const liveStatus = live[cam.id]?.status;
+              const effectiveStatus = liveStatus || cam.status;
+              const offline = effectiveStatus !== "online";
               const editing = editId === cam.id;
               return (
                 <tr
@@ -196,7 +227,7 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
                   className={`border-b border-[var(--vo-border)] ${offline ? "bg-red-950/20" : ""}`}
                 >
                   <td className="px-2 py-2">
-                    <StatusDot status={cam.status} />
+                    <StatusDot status={effectiveStatus} />
                   </td>
                   <td className="px-2 py-2">
                     {editing ? (
