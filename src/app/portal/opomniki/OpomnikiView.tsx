@@ -28,7 +28,7 @@ export function OpomnikiView({ reminders, clients, dbConfigured }: Props) {
   const [notice, setNotice] = useState<string | null>(null);
 
   const rows =
-    role === "client"
+    role !== "admin"
       ? reminders.filter((r) => r.clientId === mockClientPortalClientId)
       : reminders;
 

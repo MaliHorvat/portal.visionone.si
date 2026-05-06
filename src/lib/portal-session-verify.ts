@@ -1,9 +1,11 @@
 import { LEGACY_PORTAL_SESSION_VALUE } from "@/lib/portal-auth";
 import { getPortalSessionSecret } from "@/lib/portal-session-secret";
+import type { PortalUserRole } from "@/lib/portal-roles";
 
 export type PortalSessionPayload = {
   username: string;
-  isAdmin: boolean;
+  role: PortalUserRole;
+  mustChangePassword: boolean;
   /** UNIX sekunde */
   exp: number;
 };
@@ -60,9 +62,11 @@ export async function verifyPortalSessionToken(
   } catch {
     return null;
   }
+  const roleOk = parsed.role === "admin" || parsed.role === "operator" || parsed.role === "viewer";
   if (
     typeof parsed.username !== "string" ||
-    typeof parsed.isAdmin !== "boolean" ||
+    !roleOk ||
+    typeof parsed.mustChangePassword !== "boolean" ||
     typeof parsed.exp !== "number"
   ) {
     return null;

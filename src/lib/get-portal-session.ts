@@ -14,7 +14,8 @@ export async function getPortalSession(): Promise<PortalSessionPayload | null> {
   if (raw === LEGACY_PORTAL_SESSION_VALUE) {
     return {
       username: DEFAULT_PORTAL_USERNAME,
-      isAdmin: true,
+      role: "admin",
+      mustChangePassword: false,
       exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 365,
     };
   }

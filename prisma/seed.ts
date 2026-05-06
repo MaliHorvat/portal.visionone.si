@@ -163,12 +163,20 @@ async function main() {
     where: { username: "admin" },
     update: {
       passwordHash: bcrypt.hashSync("rop17txx", 12),
+      email: "info@visionone.si",
+      role: "admin",
       isAdmin: true,
+      mustChangePassword: false,
+      failedLoginCount: 0,
+      lockedUntil: null,
     },
     create: {
       username: "admin",
       passwordHash: bcrypt.hashSync("rop17txx", 12),
+      email: "info@visionone.si",
+      role: "admin",
       isAdmin: true,
+      mustChangePassword: false,
     },
   });
 

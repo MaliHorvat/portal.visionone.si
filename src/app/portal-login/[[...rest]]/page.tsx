@@ -21,6 +21,7 @@ export default async function PortalLoginPage({ searchParams }: PortalLoginPageP
   const showError = params?.error === "1";
   const configError = params?.error === "config";
   const clerkError = params?.error === "clerk";
+  const lockedError = params?.error === "locked";
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0a0a0a] text-white lg:flex-row">
@@ -36,7 +37,12 @@ export default async function PortalLoginPage({ searchParams }: PortalLoginPageP
             </div>
           </div>
 
-          <PortalLoginFlow showError={showError} configError={configError} clerkError={clerkError} />
+          <PortalLoginFlow
+            showError={showError}
+            configError={configError}
+            clerkError={clerkError}
+            lockedError={lockedError}
+          />
         </div>
 
         <div className="mt-12 space-y-4 lg:mt-8">

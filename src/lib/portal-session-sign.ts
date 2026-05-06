@@ -10,7 +10,8 @@ export function signPortalSessionToken(
   const maxAgeSec = payload.maxAgeSec ?? 60 * 60 * 8;
   const bodyObj: PortalSessionPayload = {
     username: payload.username,
-    isAdmin: payload.isAdmin,
+    role: payload.role,
+    mustChangePassword: payload.mustChangePassword,
     exp: Math.floor(Date.now() / 1000) + maxAgeSec,
   };
   const body = Buffer.from(JSON.stringify(bodyObj), "utf8").toString("base64url");

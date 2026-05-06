@@ -6,7 +6,7 @@ import type { PortalRole } from "@/context/PortalRoleContext";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const session = await getPortalSession();
-  const initialRole: PortalRole = session?.isAdmin ? "admin" : "client";
+  const initialRole: PortalRole = session?.role ?? "viewer";
 
   return (
     <PortalRoleProvider initialRole={initialRole}>

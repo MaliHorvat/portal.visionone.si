@@ -8,6 +8,7 @@ type Props = {
   showError: boolean;
   configError: boolean;
   clerkError: boolean;
+  lockedError: boolean;
 };
 
 const clerkAppearance = {
@@ -39,7 +40,7 @@ const clerkAppearance = {
   },
 } as const;
 
-export function PortalLoginFlow({ showError, configError, clerkError }: Props) {
+export function PortalLoginFlow({ showError, configError, clerkError, lockedError }: Props) {
   const { user, isLoaded } = useUser();
   const accessSentRef = useRef(false);
   const [accessEmailSent, setAccessEmailSent] = useState<boolean | null>(null);
@@ -178,6 +179,12 @@ export function PortalLoginFlow({ showError, configError, clerkError }: Props) {
                 Pozabljeno geslo?
               </a>
             </div>
+
+            {lockedError ? (
+              <p className="rounded-lg border border-red-500/35 bg-red-950/80 px-3 py-2 text-sm text-red-100">
+                Račun je začasno zaklenjen zaradi preveč neuspešnih prijav. Poskusite ponovno čez približno 15 minut.
+              </p>
+            ) : null}
 
             {showError ? (
               <p className="rounded-lg border border-red-500/35 bg-red-950/80 px-3 py-2 text-sm text-red-100">

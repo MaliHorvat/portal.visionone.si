@@ -5,7 +5,7 @@ import { usePortalRole } from "@/context/PortalRoleContext";
 
 export function ProfileBackNav() {
   const { role } = usePortalRole();
-  if (role === "client") {
+  if (role !== "admin") {
     return (
       <Link href="/portal" className="text-xs font-medium text-[var(--vo-accent)] hover:underline">
         ← Nazaj na nadzorno ploščo

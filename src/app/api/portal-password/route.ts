@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.appUserAccount.update({
     where: { id: row.id },
-    data: { passwordHash },
+    data: { passwordHash, mustChangePassword: false, failedLoginCount: 0, lockedUntil: null },
   });
 
   await appendAuditLog(session.username, "portal_password_change", "uspešno");

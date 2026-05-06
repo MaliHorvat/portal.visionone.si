@@ -12,7 +12,7 @@ export function ClientProfileGate({
 }) {
   const { role } = usePortalRole();
 
-  if (role === "client" && clientId !== mockClientPortalClientId) {
+  if (role !== "admin" && clientId !== mockClientPortalClientId) {
     return (
       <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-8 text-center shadow-[var(--vo-card-shadow)]">
         <p className="text-[var(--vo-fg)]">Nimate dostopa do tega profila.</p>

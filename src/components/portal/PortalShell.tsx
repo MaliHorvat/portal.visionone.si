@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
   BookOpen,
@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { usePortalRole } from "@/context/PortalRoleContext";
+import { roleLabel } from "@/lib/portal-roles";
 import { mockClientPortalSlug } from "@/lib/mock-data";
 
 type NavItem = { href: string; label: string; icon: React.ElementType; adminOnly?: boolean };
@@ -58,11 +59,14 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { role } = usePortalRole();
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Array<{ id: string; label: string; href: string; meta?: string }>>([]);
+  const [showResults, setShowResults] = useState(false);
 
   const visible = useMemo(
     () =>
       navItems.filter((item) => {
-        if (item.label === "Moj objekt") return role === "client";
+        if (item.label === "Moj objekt") return role !== "admin";
         if (item.adminOnly) return role === "admin";
         if (item.href === "/portal/stranke") return role === "admin";
         return true;
@@ -75,6 +79,24 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       router.prefetch(item.href);
     }
   }, [router, visible]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setResults([]);
+      return;
+    }
+    const id = window.setTimeout(async () => {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      if (!res.ok) return;
+      const data = (await res.json().catch(() => ({}))) as {
+        items?: Array<{ id: string; label: string; href: string; meta?: string }>;
+      };
+      setResults(data.items ?? []);
+      setShowResults(true);
+    }, 200);
+    return () => window.clearTimeout(id);
+  }, [query]);
 
   return (
     <div className="flex min-h-screen bg-[var(--vo-bg)]">
@@ -119,12 +141,59 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               <p className="truncate text-xs text-[var(--vo-muted)]">
                 Pogled:{" "}
                 <span className="font-medium text-[var(--vo-accent)]">
-                  {role === "admin" ? "Administrator" : "Stranka"}
+                  {roleLabel(role)}
                 </span>
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="relative flex items-center gap-2">
+            <div className="relative hidden md:block">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setShowResults(true)}
+                onBlur={() => window.setTimeout(() => setShowResults(false), 120)}
+                placeholder="Iskanje (stranke, uporabniki, opomniki)…"
+                className="w-80 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5 text-sm"
+              />
+              {showResults && results.length > 0 ? (
+                <div className="absolute right-0 z-20 mt-1 max-h-80 w-80 overflow-auto rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] p-1 shadow-xl">
+                  {results.map((r) => (
+                    <Link
+                      key={r.id}
+                      href={r.href}
+                      className="block rounded px-2 py-1.5 hover:bg-[var(--vo-surface-2)]"
+                      onClick={() => setShowResults(false)}
+                    >
+                      <p className="text-sm text-[var(--vo-fg)]">{r.label}</p>
+                      {r.meta ? <p className="text-xs text-[var(--vo-muted)]">{r.meta}</p> : null}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            {role === "admin" ? (
+              <>
+                <Link
+                  href="/portal/stranke"
+                  className="hidden rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)] md:inline-flex"
+                >
+                  + Stranka
+                </Link>
+                <Link
+                  href="/portal/opomniki"
+                  className="hidden rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)] md:inline-flex"
+                >
+                  + Opomnik
+                </Link>
+                <Link
+                  href="/portal/nastavitve"
+                  className="hidden rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)] md:inline-flex"
+                >
+                  + Uporabnik
+                </Link>
+              </>
+            ) : null}
             <ThemeToggle />
             <form action="/api/portal-logout" method="post">
               <button

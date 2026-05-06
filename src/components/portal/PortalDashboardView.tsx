@@ -37,7 +37,7 @@ export function PortalDashboardView({ initial }: Props) {
   }, []);
 
   const clients = useMemo(() => {
-    if (role === "client") {
+    if (role !== "admin") {
       return initial.clients.filter((c) => c.id === mockClientPortalClientId);
     }
     return initial.clients;
@@ -191,7 +191,7 @@ export function PortalDashboardView({ initial }: Props) {
             title="Projekti &amp; stranke"
             desc="Objekti, kamere, načrt in oprema."
             icon={Video}
-            adminOnly={role !== "client"}
+            adminOnly={role === "admin"}
           />
           <QuickCard href="/portal/ponudbe" title="Ponudbe" desc="Postavke in izračuni." icon={Boxes} adminOnly />
           <QuickCard href="/portal/orodja" title="Omrežna orodja" desc="Diagnostika in orodja." icon={Router} />
@@ -216,7 +216,7 @@ function QuickCard({
   adminOnly?: boolean;
 }) {
   const { role } = usePortalRole();
-  if (adminOnly && role === "client") return null;
+  if (adminOnly && role !== "admin") return null;
   return (
     <Link
       href={href}

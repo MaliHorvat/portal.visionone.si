@@ -1,6 +1,7 @@
 import { AdminGate } from "@/components/portal/AdminGate";
 import Link from "next/link";
 import { NastavitveUporabniki } from "./NastavitveUporabniki";
+import { PortalAccessRequestsPanel } from "./PortalAccessRequestsPanel";
 
 export default function NastavitvePage() {
   return (
@@ -20,6 +21,7 @@ export default function NastavitvePage() {
           </p>
         </div>
 
+        <PortalAccessRequestsPanel />
         <NastavitveUporabniki />
       </div>
     </AdminGate>

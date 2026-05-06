@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import type { PortalUserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { getPortalSession } from "@/lib/get-portal-session";
@@ -8,7 +9,7 @@ const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,32}$/;
 
 export async function GET() {
   const session = await getPortalSession();
-  if (!session?.isAdmin) {
+  if (session?.role !== "admin") {
     return NextResponse.json({ error: "Prepovedano" }, { status: 403 });
   }
   if (!isDbConfigured() || !prisma) {
@@ -16,21 +17,21 @@ export async function GET() {
   }
   const users = await prisma.appUserAccount.findMany({
     orderBy: { username: "asc" },
-    select: { id: true, username: true, isAdmin: true },
+    select: { id: true, username: true, email: true, role: true, mustChangePassword: true },
   });
   return NextResponse.json({ users });
 }
 
 export async function POST(request: Request) {
   const session = await getPortalSession();
-  if (!session?.isAdmin) {
+  if (session?.role !== "admin") {
     return NextResponse.json({ error: "Prepovedano" }, { status: 403 });
   }
   if (!isDbConfigured() || !prisma) {
     return NextResponse.json({ error: "Baza ni nastavljena." }, { status: 503 });
   }
 
-  let body: { username?: string; password?: string; isAdmin?: boolean };
+  let body: { username?: string; email?: string; password?: string; role?: PortalUserRole };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -38,15 +39,9 @@ export async function POST(request: Request) {
   }
 
   const username = String(body.username ?? "").trim();
+  const email = String(body.email ?? "").trim();
   const password = String(body.password ?? "");
-  const isAdmin = Boolean(body.isAdmin);
-
-  if (isAdmin) {
-    return NextResponse.json(
-      { error: "Novi administratorski računi niso dovoljeni. Obstaja samo račun admin." },
-      { status: 403 },
-    );
-  }
+  const role = (body.role ?? "viewer") as PortalUserRole;
 
   if (!USERNAME_RE.test(username)) {
     return NextResponse.json(
@@ -57,11 +52,21 @@ export async function POST(request: Request) {
   if (password.length < 8) {
     return NextResponse.json({ error: "Geslo mora imeti vsaj 8 znakov." }, { status: 400 });
   }
+  if (role !== "admin" && role !== "operator" && role !== "viewer") {
+    return NextResponse.json({ error: "Neveljavna vloga." }, { status: 400 });
+  }
 
   const passwordHash = await bcrypt.hash(password, 12);
   try {
     await prisma.appUserAccount.create({
-      data: { username, passwordHash, isAdmin },
+      data: {
+        username,
+        email,
+        passwordHash,
+        role,
+        isAdmin: role === "admin",
+        mustChangePassword: true,
+      },
     });
   } catch (e: unknown) {
     const code = e && typeof e === "object" && "code" in e ? String((e as { code?: string }).code) : "";
@@ -72,13 +77,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Shranjevanje ni uspelo." }, { status: 500 });
   }
 
-  await appendAuditLog(session.username, "portal_user_create", username);
+  await appendAuditLog(session.username, "portal_user_create", `${username}|${role}`);
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(request: Request) {
   const session = await getPortalSession();
-  if (!session?.isAdmin) {
+  if (session?.role !== "admin") {
     return NextResponse.json({ error: "Prepovedano" }, { status: 403 });
   }
   if (!isDbConfigured() || !prisma) {
@@ -100,8 +105,8 @@ export async function DELETE(request: Request) {
   if (victim.username === session.username) {
     return NextResponse.json({ error: "Lastnega računa ne morete izbrisati." }, { status: 400 });
   }
-  if (victim.isAdmin) {
-    const admins = await prisma.appUserAccount.count({ where: { isAdmin: true } });
+  if (victim.role === "admin") {
+    const admins = await prisma.appUserAccount.count({ where: { role: "admin" } });
     if (admins <= 1) {
       return NextResponse.json({ error: "Zadnjega administratorja ni dovoljeno izbrisati." }, { status: 400 });
     }

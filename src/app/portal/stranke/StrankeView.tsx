@@ -25,12 +25,12 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    if (role === "client") {
+    if (role !== "admin") {
       router.replace(`/portal/stranke/${encodeURIComponent(mockClientPortalSlug)}`);
     }
   }, [role, router]);
 
-  if (role === "client") {
+  if (role !== "admin") {
     return <p className="text-sm text-[var(--vo-muted)]">Preusmerjam na vaš objekt …</p>;
   }
 

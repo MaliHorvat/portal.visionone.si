@@ -5,6 +5,11 @@ import { prisma, isDbConfigured } from "@/lib/db";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
 import { getPortalSessionSecret } from "@/lib/portal-session-secret";
 import { signPortalSessionToken } from "@/lib/portal-session-sign";
+import { appendAuditLog } from "@/lib/repositories/audit-log";
+import { logger } from "@/lib/logger";
+
+const MAX_FAILED = 5;
+const LOCK_MINUTES = 15;
 
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -16,12 +21,38 @@ export async function POST(request: Request) {
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  let granted: { username: string; isAdmin: boolean } | null = null;
+  let granted: { username: string; role: "admin" | "operator" | "viewer"; mustChangePassword: boolean } | null = null;
 
   if (username && password && isDbConfigured() && prisma) {
     const row = await prisma.appUserAccount.findUnique({ where: { username } });
+    if (row?.lockedUntil && row.lockedUntil.getTime() > Date.now()) {
+      await appendAuditLog(username, "portal_login_locked", row.lockedUntil.toISOString());
+      return NextResponse.redirect(new URL("/portal-login?error=locked", request.url), { status: 303 });
+    }
     if (row && (await bcrypt.compare(password, row.passwordHash))) {
-      granted = { username: row.username, isAdmin: row.isAdmin };
+      granted = { username: row.username, role: row.role, mustChangePassword: row.mustChangePassword };
+      await prisma.appUserAccount.update({
+        where: { id: row.id },
+        data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() },
+      });
+      await appendAuditLog(row.username, "portal_login_success", row.role);
+    } else if (row) {
+      const failed = row.failedLoginCount + 1;
+      const lockUntil = failed >= MAX_FAILED ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null;
+      await prisma.appUserAccount.update({
+        where: { id: row.id },
+        data: {
+          failedLoginCount: failed >= MAX_FAILED ? 0 : failed,
+          lockedUntil: lockUntil,
+        },
+      });
+      await appendAuditLog(username, "portal_login_fail", lockUntil ? "locked" : `attempt_${failed}`);
+      if (lockUntil) {
+        return NextResponse.redirect(new URL("/portal-login?error=locked", request.url), { status: 303 });
+      }
+    } else {
+      await appendAuditLog(username || "unknown", "portal_login_fail", "no_user");
+      logger.warn("portal_login_fail", { username, reason: "no_user" });
     }
   }
 
@@ -33,13 +64,14 @@ export async function POST(request: Request) {
   try {
     token = signPortalSessionToken(granted, getPortalSessionSecret());
   } catch (err) {
-    console.error("[portal-login] session sign:", err);
+    logger.error("portal_login_session_sign_failed", { error: String(err) });
     return NextResponse.redirect(new URL("/portal-login?error=config", request.url), { status: 303 });
   }
 
   const stayLoggedIn = String(formData.get("stay_logged_in") ?? "") === "1";
 
-  const response = NextResponse.redirect(new URL("/portal", request.url), { status: 303 });
+  const nextPath = granted.mustChangePassword ? "/portal/racun?force_password=1" : "/portal";
+  const response = NextResponse.redirect(new URL(nextPath, request.url), { status: 303 });
   response.cookies.set(PORTAL_SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

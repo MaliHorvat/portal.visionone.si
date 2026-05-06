@@ -12,12 +12,14 @@ function notifyRecipient(): string {
  * Prednost: SMTP (PORTAL_SMTP_*) — primerno za lasten strežnik pošte @visionone.si;
  * sicer Resend (RESEND_API_KEY + PORTAL_RESEND_FROM).
  */
-export async function sendPortalAccessNotifyEmail(input: {
+export async function sendPortalEmail(input: {
+  to: string;
   subject: string;
   text: string;
   replyTo?: string;
 }): Promise<{ sent: boolean; transport: "smtp" | "resend" | "none" }> {
-  const to = notifyRecipient();
+  const to = input.to;
+  if (!to || !to.includes("@")) return { sent: false, transport: "none" };
 
   const host = process.env.PORTAL_SMTP_HOST?.trim();
   const user = process.env.PORTAL_SMTP_USER?.trim();
@@ -42,7 +44,7 @@ export async function sendPortalAccessNotifyEmail(input: {
       });
       return { sent: true, transport: "smtp" };
     } catch (e) {
-      console.error("[portal-access-notify] SMTP:", e);
+      console.error("[portal-mail] SMTP:", e);
       return { sent: false, transport: "smtp" };
     }
   }
@@ -67,20 +69,27 @@ export async function sendPortalAccessNotifyEmail(input: {
       });
       if (!res.ok) {
         const body = await res.text().catch(() => "");
-        console.error("[portal-access-notify] Resend HTTP", res.status, body);
+        console.error("[portal-mail] Resend HTTP", res.status, body);
         return { sent: false, transport: "resend" };
       }
       return { sent: true, transport: "resend" };
     } catch (e) {
-      console.error("[portal-access-notify] Resend:", e);
+      console.error("[portal-mail] Resend:", e);
       return { sent: false, transport: "resend" };
     }
   }
 
   console.warn(
-    "[portal-access-notify] Pošta ni nastavljena. Za obvestila na",
-    to,
-    "dodajte PORTAL_SMTP_* (priporočeno za @visionone.si) ali RESEND_API_KEY + PORTAL_RESEND_FROM.",
+    "[portal-mail] Pošta ni nastavljena. Dodajte PORTAL_SMTP_* ali RESEND_API_KEY + PORTAL_RESEND_FROM.",
   );
   return { sent: false, transport: "none" };
+}
+
+export async function sendPortalAccessNotifyEmail(input: {
+  subject: string;
+  text: string;
+  replyTo?: string;
+}): Promise<{ sent: boolean; transport: "smtp" | "resend" | "none" }> {
+  const to = notifyRecipient();
+  return sendPortalEmail({ ...input, to });
 }

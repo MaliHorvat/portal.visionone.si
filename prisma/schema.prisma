@@ -306,11 +306,47 @@ model StandaloneRack {
 model AppUserAccount {
   id           String @id @default(cuid())
   username     String @unique
+  email        String @default("")
   passwordHash String
+  role         PortalUserRole @default(viewer)
   isAdmin      Boolean @default(false)
+  mustChangePassword Boolean @default(true)
+  failedLoginCount   Int      @default(0)
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
+  accessRequests     PortalAccessRequest[]
 }
 
 model PasswordResetRequest {
   username String @id
   status   String @default("requested")
+}
+
+enum PortalUserRole {
+  admin
+  operator
+  viewer
+}
+
+enum PortalAccessRequestStatus {
+  new
+  approved
+  rejected
+}
+
+model PortalAccessRequest {
+  id            String                    @id @default(cuid())
+  clerkUserId   String                    @unique
+  clerkEmail    String                    @default("")
+  clerkName     String                    @default("")
+  status        PortalAccessRequestStatus @default(new)
+  requestedAt   DateTime                  @default(now())
+  processedAt   DateTime?
+  processedBy   String                    @default("")
+  note          String                    @db.Text @default("")
+  portalUserId  String?
+  portalUser    AppUserAccount?           @relation(fields: [portalUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, requestedAt])
+  @@index([portalUserId])
 }
