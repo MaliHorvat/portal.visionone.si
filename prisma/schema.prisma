@@ -33,6 +33,8 @@ model Client {
   siteSurveys ClientSiteSurvey[]
   timeLogs  ClientTimeLog[]
   telemetryAgents TelemetryAgent[]
+  agentClaims AgentClaimCode[]
+  agentJobs AgentJob[]
   deviceProbes DeviceProbe[]
   deviceChecks DeviceCheck[]
   createdAt DateTime @default(now())
@@ -205,12 +207,58 @@ model TelemetryAgent {
   clientId   String?
   client     Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
   lastSeenAt DateTime?
+  configVersion Int        @default(1)
+  lastConfigAt DateTime?
+  lastError   String       @default("")
   devices    DeviceProbe[]
   checks     DeviceCheck[]
+  jobs       AgentJob[]
+  claims     AgentClaimCode[]
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
   @@index([clientId])
+}
+
+model AgentClaimCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  externalId  String
+  name        String
+  siteLabel   String   @default("")
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  agentId     String?
+  agent       TelemetryAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdBy   String   @default("admin")
+  createdAt   DateTime @default(now())
+
+  @@index([clientId])
+  @@index([externalId])
+  @@index([expiresAt])
+}
+
+model AgentJob {
+  id          String        @id @default(cuid())
+  agentId     String
+  agent       TelemetryAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  clientId    String?
+  client      Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  type        AgentJobType
+  status      AgentJobStatus @default(pending)
+  payload     Json
+  result      Json?
+  errorText   String        @default("")
+  createdBy   String        @default("admin")
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([agentId, status, createdAt])
+  @@index([clientId, createdAt])
 }
 
 model DeviceProbe {
@@ -332,6 +380,18 @@ enum PortalUserRole {
   admin
   operator
   viewer
+}
+
+enum AgentJobType {
+  ping
+  scan
+}
+
+enum AgentJobStatus {
+  pending
+  running
+  done
+  error
 }
 
 enum PortalAccessRequestStatus {

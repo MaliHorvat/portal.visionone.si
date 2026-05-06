@@ -53,6 +53,7 @@ export async function POST(request: Request) {
         lastSeenAt: checkedAt,
         name: agentName || registered.name,
         siteLabel: siteLabel || registered.siteLabel,
+        lastError: "",
       },
     });
 
