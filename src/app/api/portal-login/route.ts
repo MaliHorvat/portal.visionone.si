@@ -30,12 +30,22 @@ export async function POST(request: Request) {
       return NextResponse.redirect(new URL("/portal-login?error=locked", request.url), { status: 303 });
     }
     if (row && (await bcrypt.compare(password, row.passwordHash))) {
-      granted = { username: row.username, role: row.role, mustChangePassword: row.mustChangePassword };
+      // V preteklosti so lahko obstajali zapisi z `isAdmin = true` in `role = viewer`.
+      // Za prijavo vedno obravnavamo tak račun kot admin.
+      const effectiveRole: "admin" | "operator" | "viewer" = row.isAdmin ? "admin" : row.role;
+      granted = { username: row.username, role: effectiveRole, mustChangePassword: row.mustChangePassword };
       await prisma.appUserAccount.update({
         where: { id: row.id },
-        data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() },
+        data: {
+          failedLoginCount: 0,
+          lockedUntil: null,
+          lastLoginAt: new Date(),
+          // Samodejna sanacija neskladja role/isAdmin v bazi.
+          ...(row.isAdmin && row.role !== "admin" ? { role: "admin" } : {}),
+          ...(!row.isAdmin && row.role === "admin" ? { role: "viewer" } : {}),
+        },
       });
-      await appendAuditLog(row.username, "portal_login_success", row.role);
+      await appendAuditLog(row.username, "portal_login_success", effectiveRole);
     } else if (row) {
       const failed = row.failedLoginCount + 1;
       const lockUntil = failed >= MAX_FAILED ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null;

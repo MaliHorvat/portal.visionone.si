@@ -116,7 +116,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { role } = usePortalRole();
+  const { role, setRole, canSwitchRoles } = usePortalRole();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Array<{ id: string; label: string; href: string; meta?: string }>>([]);
   const [showResults, setShowResults] = useState(false);
@@ -251,6 +251,18 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 </div>
               ) : null}
             </div>
+            {canSwitchRoles ? (
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as "admin" | "operator" | "viewer")}
+                className="hidden rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-xs text-[var(--vo-muted)] md:block"
+                title="Testni preklop vloge (samo UI)"
+              >
+                <option value="admin">admin</option>
+                <option value="operator">operator</option>
+                <option value="viewer">viewer</option>
+              </select>
+            ) : null}
             <ThemeToggle />
             <form action="/api/portal-logout" method="post">
               <button
