@@ -79,7 +79,7 @@ export function ProfileBackNav() {
     <aside className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 shadow-[var(--vo-card-shadow)]">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <div className="text-xs font-semibold text-[var(--vo-fg)]">Objekti</div>
+          <div className="text-xs font-semibold text-[var(--vo-fg)]">Objekti &amp; stranke</div>
           <Link href="/portal/stranke" className="text-[11px] text-[var(--vo-muted)] hover:underline">
             Upravljanje strank
           </Link>

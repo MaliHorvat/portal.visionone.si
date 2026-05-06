@@ -27,7 +27,7 @@ function getSystemDark() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
+  const [theme, setThemeState] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -35,6 +35,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     try {
       const s = localStorage.getItem(STORAGE_KEY) as Theme | null;
       if (s === "light" || s === "dark" || s === "system") setThemeState(s);
+      else {
+        localStorage.setItem(STORAGE_KEY, "dark");
+        document.documentElement.classList.add("dark");
+      }
     } catch {
       /* ignore */
     }

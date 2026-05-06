@@ -12,6 +12,9 @@ export function TabVzdrzevanje({ ctx }: { ctx: WorkspaceCtx }) {
   const [title, setTitle] = useState("");
   const [due, setDue] = useState("");
   const [busy, setBusy] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDue, setEditDue] = useState("");
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/reminders?clientId=${encodeURIComponent(clientId)}`);
@@ -71,6 +74,28 @@ export function TabVzdrzevanje({ ctx }: { ctx: WorkspaceCtx }) {
     showToast("Opomnik izbrisan.");
   }
 
+  async function saveEdit(id: string) {
+    if (!dbConfigured) return;
+    if (!editTitle.trim() || !editDue) {
+      showToast("Vnesite naslov in datum.", "err");
+      return;
+    }
+    setBusy(true);
+    const res = await fetch(`/api/reminders/${id}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: editTitle, dueDate: editDue }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      showToast("Shranjevanje ni uspelo.", "err");
+      return;
+    }
+    setEditId(null);
+    await load();
+    showToast("Vzdrževanje posodobljeno.");
+  }
+
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-[var(--vo-fg)]">Vzdrževanje</h3>
@@ -92,17 +117,68 @@ export function TabVzdrzevanje({ ctx }: { ctx: WorkspaceCtx }) {
                 checked={r.completed}
                 onChange={() => void toggleDone(r)}
               />
-              <span className={r.completed ? "text-[var(--vo-muted)] line-through" : ""}>{r.title}</span>
+              {editId === r.id ? (
+                <input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1"
+                />
+              ) : (
+                <span className={r.completed ? "text-[var(--vo-muted)] line-through" : ""}>{r.title}</span>
+              )}
             </label>
-            <span className="text-xs text-[var(--vo-muted)]">{r.dueDate}</span>
-            <button
-              type="button"
-              disabled={!dbConfigured}
-              className="text-xs text-red-500 hover:underline disabled:opacity-40"
-              onClick={() => void remove(r.id)}
-            >
-              Izbriši
-            </button>
+            {editId === r.id ? (
+              <input
+                type="date"
+                value={editDue}
+                onChange={(e) => setEditDue(e.target.value)}
+                className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1 text-xs"
+              />
+            ) : (
+              <span className="text-xs text-[var(--vo-muted)]">{r.dueDate}</span>
+            )}
+            <div className="flex items-center gap-3">
+              {editId === r.id ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={!dbConfigured || busy}
+                    className="text-xs text-[var(--vo-accent)] hover:underline disabled:opacity-40"
+                    onClick={() => void saveEdit(r.id)}
+                  >
+                    Shrani
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs text-[var(--vo-muted)] hover:underline"
+                    onClick={() => setEditId(null)}
+                  >
+                    Prekliči
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!dbConfigured}
+                  className="text-xs text-[var(--vo-accent)] hover:underline disabled:opacity-40"
+                  onClick={() => {
+                    setEditId(r.id);
+                    setEditTitle(r.title);
+                    setEditDue(r.dueDate);
+                  }}
+                >
+                  Uredi
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={!dbConfigured}
+                className="text-xs text-red-500 hover:underline disabled:opacity-40"
+                onClick={() => void remove(r.id)}
+              >
+                Izbriši
+              </button>
+            </div>
           </li>
         ))}
       </ul>

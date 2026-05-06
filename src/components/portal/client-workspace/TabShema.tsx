@@ -129,6 +129,9 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   };
 
   const clearBg = () => setTopo((t) => ({ ...t, backgroundSrc: null }));
+  const clearAll = () => setTopo((t) => ({ ...t, nodes: [], edges: [] }));
+  const removeEdge = (idx: number) =>
+    setTopo((t) => ({ ...t, edges: t.edges.filter((_, i) => i !== idx) }));
 
   const onBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -221,6 +224,13 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           <button type="button" onClick={clearBg} className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)]">
             Odstrani ozadje
           </button>
+          <button
+            type="button"
+            onClick={clearAll}
+            className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)]"
+          >
+            Počisti platno
+          </button>
           <span className="ml-auto text-xs text-[var(--vo-muted)]">Čvorov ({topo.nodes.length})</span>
           <button
             type="button"
@@ -300,6 +310,27 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
               ) : null}
             </div>
           ))}
+        </div>
+
+        <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs">
+          <p className="font-medium text-[var(--vo-fg)]">Povezave</p>
+          <ul className="mt-2 space-y-1">
+            {topo.edges.map((e, i) => {
+              const from = topo.nodes.find((n) => n.id === e.from)?.label ?? e.from;
+              const to = topo.nodes.find((n) => n.id === e.to)?.label ?? e.to;
+              return (
+                <li key={`${e.from}-${e.to}-${i}`} className="flex items-center justify-between gap-2 rounded border border-[var(--vo-border)] px-2 py-1">
+                  <span className="truncate text-[var(--vo-muted)]">{from} → {to}</span>
+                  <button type="button" className="text-red-500 hover:underline" onClick={() => removeEdge(i)}>
+                    Izbriši
+                  </button>
+                </li>
+              );
+            })}
+            {topo.edges.length === 0 ? (
+              <li className="text-[var(--vo-muted)]">Ni povezav.</li>
+            ) : null}
+          </ul>
         </div>
       </div>
     </div>
