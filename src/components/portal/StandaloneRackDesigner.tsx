@@ -119,6 +119,18 @@ export function StandaloneRackDesigner({ dbConfigured }: { dbConfigured: boolean
     setUnits((u) => u.filter((_, j) => j !== i));
   }
 
+  function move(i: number, delta: -1 | 1) {
+    setUnits((prev) => {
+      const n = [...prev];
+      const j = i + delta;
+      if (j < 0 || j >= n.length) return prev;
+      const x = n[i];
+      n[i] = n[j];
+      n[j] = x;
+      return n;
+    });
+  }
+
   if (!dbConfigured) {
     return (
       <p className="rounded-lg border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-sm">
@@ -229,9 +241,17 @@ export function StandaloneRackDesigner({ dbConfigured }: { dbConfigured: boolean
                   <span>
                     U{u.uStart}+{u.uSpan} · {u.label}
                   </span>
-                  <button type="button" className="text-red-500 hover:underline" onClick={() => remove(i)}>
-                    ✕
-                  </button>
+                  <span className="flex items-center gap-2">
+                    <button type="button" className="text-[var(--vo-muted)] hover:underline" onClick={() => move(i, -1)}>
+                      ↑
+                    </button>
+                    <button type="button" className="text-[var(--vo-muted)] hover:underline" onClick={() => move(i, 1)}>
+                      ↓
+                    </button>
+                    <button type="button" className="text-red-500 hover:underline" onClick={() => remove(i)}>
+                      ✕
+                    </button>
+                  </span>
                 </li>
               ))}
             </ul>

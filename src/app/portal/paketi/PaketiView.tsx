@@ -18,6 +18,8 @@ export function PaketiView({ packages, dbConfigured }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [createSeed, setCreateSeed] = useState({ name: "", price: 0, description: "" });
+  const [formKey, setFormKey] = useState(0);
 
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,14 +118,16 @@ export function PaketiView({ packages, dbConfigured }: Props) {
 
       {showForm && isAdmin ? (
         <form
+          key={formKey}
           onSubmit={handleCreate}
           className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]"
         >
           <div className="grid gap-3 md:grid-cols-2">
-            <input name="name" required placeholder="Ime paketa" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <input name="price" type="number" step="0.01" min="0" required placeholder="Cena (€)" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <input name="name" required defaultValue={createSeed.name} placeholder="Ime paketa" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <input name="price" type="number" step="0.01" min="0" defaultValue={createSeed.price} required placeholder="Cena (€)" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
             <textarea
               name="description"
+              defaultValue={createSeed.description}
               placeholder="Opis paketa"
               className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
               rows={2}
@@ -138,6 +142,46 @@ export function PaketiView({ packages, dbConfigured }: Props) {
             {submitting ? "Shranjujem…" : "Shrani"}
           </button>
         </form>
+      ) : null}
+
+      {isAdmin ? (
+        <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4">
+          <p className="text-sm font-semibold text-[var(--vo-fg)]">Predlogi razširjenih paketov</p>
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
+            {[
+              {
+                name: "Basic Care",
+                price: 39,
+                description: "Mesečni health-check, 1x oddaljena diagnostika, poročilo stanja kamer in snemalnika.",
+              },
+              {
+                name: "Pro Care",
+                price: 89,
+                description: "Vse iz Basic + 24/7 watchdog, 2x mesečni pregled, prednostni odziv in Telegram alarmi.",
+              },
+              {
+                name: "Enterprise Care",
+                price: 149,
+                description: "Vse iz Pro + kvartalni onsite pregled, SLA, napredni backup konfiguracij in varnostni audit.",
+              },
+            ].map((p) => (
+              <button
+                key={p.name}
+                type="button"
+                className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-left text-xs hover:bg-[var(--vo-surface-2)]"
+                onClick={() => {
+                  setCreateSeed(p);
+                  setShowForm(true);
+                  setFormKey((k) => k + 1);
+                }}
+              >
+                <p className="font-semibold text-[var(--vo-fg)]">{p.name}</p>
+                <p className="text-[var(--vo-accent)]">{p.price} € / mesec</p>
+                <p className="mt-1 text-[var(--vo-muted)]">{p.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-3">

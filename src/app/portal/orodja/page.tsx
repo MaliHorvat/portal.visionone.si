@@ -72,6 +72,9 @@ export default function OrodjaPage() {
   const [lccCapex, setLccCapex] = useState(2500);
   const [lccOpex, setLccOpex] = useState(300);
   const [lccYears, setLccYears] = useState(5);
+  const [clients, setClients] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [pingCards, setPingCards] = useState<Array<{ id: string; name: string; ip: string; status: "online" | "offline" }>>([]);
 
   useEffect(() => {
     try {
@@ -87,6 +90,51 @@ export default function OrodjaPage() {
       localStorage.setItem("vo_ipam", JSON.stringify(ipam));
     } catch {}
   }, [ipam]);
+
+  useEffect(() => {
+    if (tool !== "ping") return;
+    void fetch("/api/clients")
+      .then((r) => r.json())
+      .then((j: { clients?: Array<{ id: string; name: string }> }) => {
+        const rows = j.clients ?? [];
+        setClients(rows);
+        if (!selectedClientId && rows[0]?.id) setSelectedClientId(rows[0].id);
+      })
+      .catch(() => setClients([]));
+  }, [selectedClientId, tool]);
+
+  useEffect(() => {
+    if (tool !== "ping" || !selectedClientId) return;
+    let stopped = false;
+    const load = async () => {
+      try {
+        const [clientRes, liveRes] = await Promise.all([
+          fetch(`/api/clients/${selectedClientId}`, { cache: "no-store" }),
+          fetch(`/api/clients/${selectedClientId}/device-status`, { cache: "no-store" }),
+        ]);
+        if (!clientRes.ok) return;
+        const clientJson = (await clientRes.json()) as {
+          client?: { cameras?: Array<{ id: string; name: string; ip: string; status: string }> };
+        };
+        const liveJson = liveRes.ok
+          ? ((await liveRes.json()) as { cameras: Record<string, { status: string }> })
+          : { cameras: {} };
+        const cards: Array<{ id: string; name: string; ip: string; status: "online" | "offline" }> = (clientJson.client?.cameras ?? []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          ip: c.ip,
+          status: (liveJson.cameras?.[c.id]?.status ?? c.status) === "online" ? "online" : "offline",
+        }));
+        if (!stopped) setPingCards(cards);
+      } catch {}
+    };
+    void load();
+    const id = window.setInterval(load, 10_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+    };
+  }, [selectedClientId, tool]);
 
   const poeTotal = poePorts * poePerPortW;
   const poeMargin = poeBudgetW - poeTotal;
@@ -415,7 +463,60 @@ export default function OrodjaPage() {
         </section>
       ) : null}
 
-      {["wifi", "ping", "nvr", "lpr", "bulk", "qr"].includes(tool) ? (
+      {tool === "ping" ? (
+        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold text-[var(--vo-fg)]">Ping watchdog (kamere)</h2>
+            <select
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1.5 text-sm"
+            >
+              <option value="">— izberi stranko —</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="mt-2 text-xs text-[var(--vo-muted)]">Osvežitev statusa na 10 sekund.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {pingCards.map((c) => (
+              <div
+                key={c.id}
+                className={`rounded-lg border p-3 ${
+                  c.status === "online"
+                    ? "border-emerald-400/30 bg-emerald-500/10"
+                    : "border-red-400/30 bg-red-500/10"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-semibold text-[var(--vo-fg)]">{c.name}</p>
+                  <span
+                    className={`inline-flex h-2.5 w-2.5 rounded-full ${
+                      c.status === "online" ? "bg-[var(--vo-ok)]" : "bg-[var(--vo-danger)]"
+                    }`}
+                  />
+                </div>
+                <p className="mt-1 font-mono text-xs text-[var(--vo-muted)]">{c.ip || "—"}</p>
+                <p className="mt-2 text-xs font-medium">
+                  {c.status === "online" ? (
+                    <span className="text-[var(--vo-ok)]">ONLINE</span>
+                  ) : (
+                    <span className="text-[var(--vo-danger)]">OFFLINE</span>
+                  )}
+                </p>
+              </div>
+            ))}
+            {selectedClientId && pingCards.length === 0 ? (
+              <p className="text-sm text-[var(--vo-muted)]">Za to stranko ni kamer.</p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {["wifi", "nvr", "lpr", "bulk", "qr"].includes(tool) ? (
         <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
           <div className="flex items-center gap-2 text-[var(--vo-fg)]">
             <Wifi className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />

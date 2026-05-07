@@ -65,6 +65,22 @@ export default function ObvestilaPage() {
     await load();
   }
 
+  async function sendTest(id: string) {
+    setMsg(null);
+    const res = await fetch("/api/telegram-bots/test", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      setMsg(data.error ?? "Test pošiljanje ni uspelo.");
+      return;
+    }
+    setMsg("Test obvestilo poslano.");
+  }
+
   return (
     <AdminGate>
       <div className="mx-auto max-w-xl space-y-6">
@@ -142,6 +158,9 @@ export default function ObvestilaPage() {
                 >
                   <span className="font-medium text-[var(--vo-fg)]">{b.name}</span>
                   <span className="flex gap-2">
+                    <button type="button" className="text-emerald-400 text-xs" onClick={() => void sendTest(b.id)}>
+                      Test
+                    </button>
                     <button type="button" className="text-[var(--vo-accent)] text-xs" onClick={() => startEdit(b)}>
                       Uredi
                     </button>

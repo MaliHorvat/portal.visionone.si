@@ -45,6 +45,18 @@ export function TabRack({ ctx }: { ctx: WorkspaceCtx }) {
     setUnits((u) => u.filter((_, j) => j !== i));
   }
 
+  function move(i: number, delta: -1 | 1) {
+    setUnits((prev) => {
+      const n = [...prev];
+      const j = i + delta;
+      if (j < 0 || j >= n.length) return prev;
+      const x = n[i];
+      n[i] = n[j];
+      n[j] = x;
+      return n;
+    });
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="space-y-4 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
@@ -60,7 +72,11 @@ export function TabRack({ ctx }: { ctx: WorkspaceCtx }) {
           {units.map((u, i) => (
             <li key={`${u.label}-${i}`} className="flex items-center justify-between gap-2 rounded border border-[var(--vo-border)] px-2 py-1">
               <span>U{u.uStart}+{u.uSpan} · {u.label}</span>
-              <button type="button" className="text-red-500 hover:underline" onClick={() => remove(i)}>✕</button>
+              <span className="flex items-center gap-2">
+                <button type="button" className="text-[var(--vo-muted)] hover:underline" onClick={() => move(i, -1)}>↑</button>
+                <button type="button" className="text-[var(--vo-muted)] hover:underline" onClick={() => move(i, 1)}>↓</button>
+                <button type="button" className="text-red-500 hover:underline" onClick={() => remove(i)}>✕</button>
+              </span>
             </li>
           ))}
         </ul>
