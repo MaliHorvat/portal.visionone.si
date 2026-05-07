@@ -146,8 +146,8 @@ export interface TopologyCanvasEdge {
 export interface ClientTopologyState {
   nodes: TopologyCanvasNode[];
   edges: TopologyCanvasEdge[];
-  /** Opcijsko ozadje (data URL ali zunanji URL) */
-  backgroundSrc?: string | null;
+  /** Ročno narisane linije tlorisa v shemi. */
+  floorPlanPaths?: Array<{ points: Array<{ x: number; y: number }> }>;
 }
 
 export interface InventoryItem {

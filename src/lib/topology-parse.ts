@@ -18,10 +18,11 @@ function parseDeviceRef(
 }
 
 export function parseTopologyState(raw: unknown): ClientTopologyState {
-  if (!raw || typeof raw !== "object") return { nodes: [], edges: [], backgroundSrc: null };
+  if (!raw || typeof raw !== "object") return { nodes: [], edges: [], floorPlanPaths: [] };
   const o = raw as Record<string, unknown>;
   const nodesRaw = Array.isArray(o.nodes) ? o.nodes : [];
   const edgesRaw = Array.isArray(o.edges) ? o.edges : [];
+  const pathsRaw = Array.isArray(o.floorPlanPaths) ? o.floorPlanPaths : [];
   const nodes: TopologyCanvasNode[] = nodesRaw
     .filter((n): n is Record<string, unknown> => !!n && typeof n === "object")
     .map((n, i) => ({
@@ -40,10 +41,22 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
     }))
     .filter((e) => e.from && e.to);
 
-  const bg = o.backgroundSrc;
+  const floorPlanPaths = pathsRaw
+    .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
+    .map((p) => {
+      const pointsRaw = Array.isArray(p.points) ? p.points : [];
+      const points = pointsRaw
+        .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+        .map((x) => ({
+          x: typeof x.x === "number" ? x.x : 0,
+          y: typeof x.y === "number" ? x.y : 0,
+        }));
+      return { points };
+    })
+    .filter((p) => p.points.length > 1);
   return {
     nodes,
     edges,
-    backgroundSrc: typeof bg === "string" ? bg : bg === null ? null : undefined,
+    floorPlanPaths,
   };
 }

@@ -27,12 +27,16 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
   const { client, clientId, dbConfigured, reload, applyClient } = ctx;
   const [topo, setTopo] = useState<ClientTopologyState>(() => parseTopologyState(client.topologyData));
-  const [liveCamStatus, setLiveCamStatus] = useState<
-    Record<string, { status: string; lastSeenAt: string | null; latencyMs: number | null; lastError: string }>
-  >({});
+  const [liveStatus, setLiveStatus] = useState<{
+    cameras: Record<string, { status: string }>;
+    recorders: Record<string, { status: string }>;
+    switches: Record<string, { status: string }>;
+  }>({ cameras: {}, recorders: {}, switches: {} });
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ id: string; dx: number; dy: number } | null>(null);
+  const [drawMode, setDrawMode] = useState(false);
+  const [drawingPath, setDrawingPath] = useState<Array<{ x: number; y: number }> | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,15 +48,14 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     let stopped = false;
     const tick = async () => {
       try {
-        const r = await fetch(`/api/clients/${clientId}/camera-status`, { cache: "no-store" });
+        const r = await fetch(`/api/clients/${clientId}/device-status`, { cache: "no-store" });
         if (!r.ok) return;
         const j = (await r.json()) as {
-          statusByCameraId: Record<
-            string,
-            { status: string; lastSeenAt: string | null; latencyMs: number | null; lastError: string }
-          >;
+          cameras: Record<string, { status: string }>;
+          recorders: Record<string, { status: string }>;
+          switches: Record<string, { status: string }>;
         };
-        if (!stopped) setLiveCamStatus(j.statusByCameraId ?? {});
+        if (!stopped) setLiveStatus(j);
       } catch {
         // ignore intermittent poll errors
       }
@@ -110,6 +113,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   };
 
   const onCanvasDrop = (e: React.DragEvent) => {
+    if (drawMode) return;
     e.preventDefault();
     const raw = e.dataTransfer.getData("application/json");
     if (!raw || !canvasRef.current) return;
@@ -133,6 +137,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   };
 
   const onNodeClick = (id: string) => {
+    if (drawMode) return;
     if (!connectFrom) {
       setConnectFrom(id);
       return;
@@ -159,8 +164,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     if (selectedNodeId === id) setSelectedNodeId(null);
   };
 
-  const clearBg = () => setTopo((t) => ({ ...t, backgroundSrc: null }));
-  const clearAll = () => setTopo((t) => ({ ...t, nodes: [], edges: [] }));
+  const clearAll = () => setTopo((t) => ({ ...t, nodes: [], edges: [], floorPlanPaths: [] }));
   const removeEdge = (idx: number) =>
     setTopo((t) => ({ ...t, edges: t.edges.filter((_, i) => i !== idx) }));
 
@@ -173,22 +177,41 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     }));
   };
 
-  const getCameraStatus = (cameraId: string): "online" | "offline" => {
-    const live = liveCamStatus[cameraId]?.status;
-    if (live) return live === "online" ? "online" : "offline";
-    return client.cameras.find((c) => c.id === cameraId)?.status === "online" ? "online" : "offline";
+  const getDeviceStatus = (kind: TopologyDeviceKind, id: string): "online" | "offline" => {
+    if (kind === "camera") {
+      const st = liveStatus.cameras[id]?.status ?? client.cameras.find((c) => c.id === id)?.status;
+      return st === "online" ? "online" : "offline";
+    }
+    if (kind === "recorder") {
+      const st = liveStatus.recorders[id]?.status ?? client.nvrs.find((r) => r.id === id)?.status;
+      return st === "online" ? "online" : "offline";
+    }
+    if (kind === "switch") {
+      const st = liveStatus.switches[id]?.status ?? client.switches.find((s) => s.id === id)?.status;
+      return st === "online" ? "online" : "offline";
+    }
+    return "offline";
   };
 
-  const onBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const src = typeof reader.result === "string" ? reader.result : null;
-      setTopo((t) => ({ ...t, backgroundSrc: src }));
-    };
-    reader.readAsDataURL(file);
+  const startDraw = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!drawMode || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    setDrawingPath([{ x: e.clientX - rect.left, y: e.clientY - rect.top }]);
   };
+  const moveDraw = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!drawMode || !drawingPath || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const p = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    setDrawingPath((prev) => (prev ? [...prev, p] : [p]));
+  };
+  const endDraw = () => {
+    if (!drawMode || !drawingPath) return;
+    if (drawingPath.length > 1) {
+      setTopo((t) => ({ ...t, floorPlanPaths: [...(t.floorPlanPaths ?? []), { points: drawingPath }] }));
+    }
+    setDrawingPath(null);
+  };
+  const clearDrawing = () => setTopo((t) => ({ ...t, floorPlanPaths: [] }));
 
   const save = useCallback(async () => {
     if (!dbConfigured) return;
@@ -248,7 +271,9 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             <div className="mt-2 font-medium text-[var(--vo-muted)]">{g.title}</div>
             <ul className="mt-1 space-y-1">
               {g.items.map((item) => {
-                const status = item.kind === "camera" ? getCameraStatus(item.id) : item.status;
+                const status = item.kind === "camera" || item.kind === "recorder" || item.kind === "switch"
+                  ? getDeviceStatus(item.kind, item.id)
+                  : item.status;
                 return (
                 <li
                   key={`${item.kind}-${item.id}`}
@@ -268,12 +293,17 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
 
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <label className="rounded-lg border border-[var(--vo-border)] px-2 py-1 text-xs hover:bg-[var(--vo-surface-2)]">
-            Izberi ozadje
-            <input type="file" accept="image/*" className="hidden" onChange={onBgFile} />
-          </label>
-          <button type="button" onClick={clearBg} className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)]">
-            Odstrani ozadje
+          <button
+            type="button"
+            onClick={() => setDrawMode((v) => !v)}
+            className={`rounded-lg border px-2 py-1 text-xs ${
+              drawMode ? "border-[var(--vo-accent)] text-[var(--vo-accent)]" : "border-[var(--vo-border)] text-[var(--vo-muted)]"
+            }`}
+          >
+            {drawMode ? "Risar: VKLOPLJEN" : "Risar: IZKLOPLJEN"}
+          </button>
+          <button type="button" onClick={clearDrawing} className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)]">
+            Počisti risbo
           </button>
           <button
             type="button"
@@ -316,17 +346,33 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           className="relative min-h-[420px] overflow-hidden rounded-xl border border-[var(--vo-border)] bg-[var(--vo-bg)]"
           onDragOver={(e) => e.preventDefault()}
           onDrop={onCanvasDrop}
+          onPointerDown={startDraw}
+          onPointerMove={moveDraw}
+          onPointerUp={endDraw}
+          onPointerLeave={endDraw}
         >
-          {topo.backgroundSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={topo.backgroundSrc}
-              alt=""
-              className="pointer-events-none absolute inset-0 h-full w-full object-contain opacity-35"
-            />
-          ) : null}
-
           <svg className="absolute inset-0 h-full w-full">
+            {(topo.floorPlanPaths ?? []).map((path, i) => (
+              <polyline
+                key={`fp-${i}`}
+                points={path.points.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none"
+                stroke="rgba(148, 163, 184, 0.8)"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ))}
+            {drawingPath && drawingPath.length > 1 ? (
+              <polyline
+                points={drawingPath.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none"
+                stroke="rgba(56, 189, 248, 0.9)"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ) : null}
             {topo.edges.map((edge, i) => {
               const a = topo.nodes.find((n) => n.id === edge.from);
               const b = topo.nodes.find((n) => n.id === edge.to);
@@ -347,16 +393,21 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           </svg>
 
           {topo.nodes.map((n) => {
-            const isCamera = n.deviceRef?.kind === "camera";
-            const camStatus = isCamera && n.deviceRef ? getCameraStatus(n.deviceRef.id) : "offline";
-            const camColor = camStatus === "online" ? "var(--vo-ok)" : "var(--vo-danger)";
+            const kind = n.deviceRef?.kind;
+            const isCamera = kind === "camera";
+            const isRecorder = kind === "recorder";
+            const isSwitch = kind === "switch";
+            const st = kind && n.deviceRef ? getDeviceStatus(kind, n.deviceRef.id) : "offline";
+            const color = st === "online" ? "var(--vo-ok)" : "var(--vo-danger)";
             return (
               <div
                 key={n.id}
                 role="button"
                 tabIndex={0}
                 className={`absolute cursor-pointer select-none ${
-                  isCamera ? "w-16" : "w-28 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-[11px] shadow-md"
+                  isCamera || isRecorder || isSwitch
+                    ? "w-16"
+                    : "w-28 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-[11px] shadow-md"
                 } ${connectFrom === n.id ? "ring-2 ring-[var(--vo-accent)]" : ""} ${
                   selectedNodeId === n.id ? "ring-2 ring-[var(--vo-accent)]" : ""
                 }`}
@@ -380,7 +431,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   });
                 }}
               >
-                {isCamera ? (
+                {isCamera || isRecorder || isSwitch ? (
                   <div className="flex flex-col items-center">
                     <svg
                       viewBox="0 0 24 24"
@@ -388,10 +439,40 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                       aria-hidden="true"
                       style={{ transform: `rotate(${n.rotationDeg ?? 0}deg)` }}
                     >
-                      <rect x="3" y="7" width="14" height="10" rx="2" fill={camColor} opacity="0.2" />
-                      <rect x="3" y="7" width="14" height="10" rx="2" fill="none" stroke={camColor} strokeWidth="1.7" />
-                      <path d="M17 10l4-2v8l-4-2z" fill={camColor} opacity="0.35" />
-                      <path d="M7 7V5h6v2" fill="none" stroke={camColor} strokeWidth="1.4" strokeLinecap="round" />
+                      {isCamera ? (
+                        <>
+                          <rect x="3" y="7" width="14" height="10" rx="2" fill={color} opacity="0.2" />
+                          <rect x="3" y="7" width="14" height="10" rx="2" fill="none" stroke={color} strokeWidth="1.7" />
+                          <path d="M17 10l4-2v8l-4-2z" fill={color} opacity="0.35" />
+                          <path d="M7 7V5h6v2" fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
+                        </>
+                      ) : null}
+                      {isRecorder ? (
+                        <>
+                          <path d="M3 9h18l-1.5 8H4.5z" fill={color} opacity="0.18" />
+                          <path d="M3 9h18l-1.5 8H4.5z" fill="none" stroke={color} strokeWidth="1.5" />
+                          <path d="M6 9l2.5-3h7L18 9" fill="none" stroke={color} strokeWidth="1.4" />
+                          <circle cx="14.8" cy="13" r="0.8" fill={color} />
+                          <circle cx="17.4" cy="13" r="0.8" fill={color} />
+                        </>
+                      ) : null}
+                      {isSwitch ? (
+                        <>
+                          <rect x="3" y="7" width="18" height="10" rx="2" fill={color} opacity="0.16" />
+                          <rect x="3" y="7" width="18" height="10" rx="2" fill="none" stroke={color} strokeWidth="1.5" />
+                          {Array.from({ length: 8 }).map((_, i) => (
+                            <rect
+                              key={i}
+                              x={5 + (i % 4) * 4}
+                              y={10 + Math.floor(i / 4) * 3}
+                              width="2.2"
+                              height="1.6"
+                              rx="0.4"
+                              fill={color}
+                            />
+                          ))}
+                        </>
+                      ) : null}
                     </svg>
                     <div className="mt-1 w-full truncate text-center text-[10px] font-medium text-[var(--vo-fg)]">{n.label}</div>
                     <div className="w-full truncate text-center font-mono text-[10px] text-[var(--vo-muted)]">
