@@ -55,38 +55,54 @@ function isDiskOk(h: string): boolean {
   return h === "ok";
 }
 
+function diskAgeLevel(installedAt: string): "ok" | "warn" | "fail" {
+  const raw = installedAt.trim();
+  if (!raw) return "ok";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return "ok";
+  const years = (Date.now() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+  if (years >= 3) return "fail";
+  if (years >= 2) return "warn";
+  return "ok";
+}
+
 function buildCardFromDetail(c: {
   id: string;
   name: string;
   health: string;
-  cameras: Array<{ name: string; ip: string; status: string }>;
-  nvrs: Array<{ name: string; status: string }>;
-  switches: Array<{ name: string; status: string }>;
-  disks: Array<{ label: string; health: string }>;
+  cameras: Array<{ id?: string; name: string; ip: string; status: string }>;
+  nvrs: Array<{ id?: string; name: string; status: string }>;
+  switches: Array<{ id?: string; name: string; status: string }>;
+  disks: Array<{ label: string; health: string; installedAt?: string }>;
+  live?: Record<string, string>;
 }): ClientDashboardCard {
   const camerasTotal = c.cameras.length;
-  const camerasOnline = c.cameras.filter((x) => x.status === "online").length;
+  const camerasOnline = c.cameras.filter((x) => (x.id ? (c.live?.[`cam:${x.id}`] ?? x.status) : x.status) === "online").length;
   const nvrsTotal = c.nvrs.length;
-  const nvrsOnline = c.nvrs.filter((x) => x.status === "online").length;
+  const nvrsOnline = c.nvrs.filter((x) => (x.id ? (c.live?.[`nvr:${x.id}`] ?? x.status) : x.status) === "online").length;
   const switchesTotal = c.switches.length;
-  const switchesOnline = c.switches.filter((x) => x.status === "online").length;
+  const switchesOnline = c.switches.filter((x) => (x.id ? (c.live?.[`sw:${x.id}`] ?? x.status) : x.status) === "online").length;
   const disksTotal = c.disks.length;
-  const disksOk = c.disks.filter((d) => isDiskOk(d.health)).length;
+  const disksOk = c.disks.filter((d) => isDiskOk(d.health) && diskAgeLevel(d.installedAt ?? "") === "ok").length;
 
   const issues: string[] = [];
   for (const cam of c.cameras) {
-    if (cam.status !== "online") {
+    const st = cam.id ? (c.live?.[`cam:${cam.id}`] ?? cam.status) : cam.status;
+    if (st !== "online") {
       issues.push(`Kamera ${cam.name || cam.ip || "?"} — offline`);
     }
   }
   for (const n of c.nvrs) {
-    if (n.status !== "online") issues.push(`NVR ${n.name} — offline`);
+    const st = n.id ? (c.live?.[`nvr:${n.id}`] ?? n.status) : n.status;
+    if (st !== "online") issues.push(`NVR ${n.name} — offline`);
   }
   for (const s of c.switches) {
-    if (s.status !== "online") issues.push(`Switch ${s.name} — offline`);
+    const st = s.id ? (c.live?.[`sw:${s.id}`] ?? s.status) : s.status;
+    if (st !== "online") issues.push(`Switch ${s.name} — offline`);
   }
   for (const d of c.disks) {
-    if (!isDiskOk(d.health)) issues.push(`Disk ${d.label} — ${d.health}`);
+    const age = diskAgeLevel(d.installedAt ?? "");
+    if (!isDiskOk(d.health) || age !== "ok") issues.push(`Disk ${d.label} — ${age === "fail" ? "nujna menjava" : age === "warn" ? "priporočena menjava" : d.health}`);
   }
 
   const alarm =
@@ -186,12 +202,27 @@ export async function getPortalDashboard(
       id: true,
       name: true,
       health: true,
-      cameras: { select: { name: true, ip: true, status: true } },
-      recorders: { select: { name: true, status: true } },
-      switches: { select: { name: true, status: true } },
-      disks: { select: { label: true, health: true } },
+      cameras: { select: { id: true, name: true, ip: true, status: true } },
+      recorders: { select: { id: true, name: true, status: true } },
+      switches: { select: { id: true, name: true, status: true } },
+      disks: { select: { label: true, health: true, installedAt: true } },
     },
   });
+
+  const probes = await prisma.deviceProbe.findMany({
+    where: {
+      ...(session && session.role !== "admin" ? { client: { ownerUsername: session.username } } : {}),
+      OR: [{ kind: "camera" }, { kind: "nvr" }, { kind: "switch" }],
+    },
+    select: { clientId: true, deviceKey: true, status: true },
+  });
+  const liveByClient = new Map<string, Record<string, string>>();
+  for (const p of probes) {
+    if (!p.clientId) continue;
+    const curr = liveByClient.get(p.clientId) ?? {};
+    curr[p.deviceKey] = p.status;
+    liveByClient.set(p.clientId, curr);
+  }
 
   const clients = rows.map((row) =>
     buildCardFromDetail({
@@ -199,13 +230,15 @@ export async function getPortalDashboard(
       name: row.name,
       health: row.health,
       cameras: row.cameras.map((cam) => ({
+        id: cam.id,
         name: cam.name,
         ip: cam.ip,
         status: cam.status,
       })),
-      nvrs: row.recorders.map((n) => ({ name: n.name, status: n.status })),
-      switches: row.switches.map((s) => ({ name: s.name, status: s.status })),
-      disks: row.disks.map((d) => ({ label: d.label, health: d.health })),
+      nvrs: row.recorders.map((n) => ({ id: n.id, name: n.name, status: n.status })),
+      switches: row.switches.map((s) => ({ id: s.id, name: s.name, status: s.status })),
+      disks: row.disks.map((d) => ({ label: d.label, health: d.health, installedAt: d.installedAt })),
+      live: liveByClient.get(row.id),
     }),
   );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { WorkspaceCtx } from "./types";
 
 function Dot({ status }: { status: string }) {
@@ -15,6 +15,34 @@ function Dot({ status }: { status: string }) {
 export function TabOprema({ ctx }: { ctx: WorkspaceCtx }) {
   const { dbConfigured, reload } = ctx;
   const [busy, setBusy] = useState(false);
+  const [live, setLive] = useState<{
+    cameras: Record<string, { status: string }>;
+    recorders: Record<string, { status: string }>;
+    switches: Record<string, { status: string }>;
+  }>({ cameras: {}, recorders: {}, switches: {} });
+
+  useEffect(() => {
+    if (!dbConfigured) return;
+    let stopped = false;
+    const tick = async () => {
+      try {
+        const r = await fetch(`/api/clients/${ctx.clientId}/device-status`, { cache: "no-store" });
+        if (!r.ok) return;
+        const j = (await r.json()) as {
+          cameras: Record<string, { status: string }>;
+          recorders: Record<string, { status: string }>;
+          switches: Record<string, { status: string }>;
+        };
+        if (!stopped) setLive(j);
+      } catch {}
+    };
+    void tick();
+    const id = window.setInterval(tick, 10000);
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+    };
+  }, [ctx.clientId, dbConfigured]);
 
   async function pingAll() {
     if (!dbConfigured) return;
@@ -64,8 +92,8 @@ export function TabOprema({ ctx }: { ctx: WorkspaceCtx }) {
         </button>
       </div>
 
-      <RecorderBlock ctx={ctx} busy={busy} setBusy={setBusy} post={post} patch={patch} del={del} reload={reload} dbConfigured={dbConfigured} />
-      <SwitchBlock ctx={ctx} busy={busy} setBusy={setBusy} post={post} patch={patch} del={del} reload={reload} dbConfigured={dbConfigured} />
+      <RecorderBlock ctx={ctx} busy={busy} setBusy={setBusy} post={post} patch={patch} del={del} reload={reload} dbConfigured={dbConfigured} live={live} />
+      <SwitchBlock ctx={ctx} busy={busy} setBusy={setBusy} post={post} patch={patch} del={del} reload={reload} dbConfigured={dbConfigured} live={live} />
       <DiskBlock ctx={ctx} busy={busy} setBusy={setBusy} post={post} patch={patch} del={del} reload={reload} dbConfigured={dbConfigured} />
     </div>
   );
@@ -80,6 +108,7 @@ function RecorderBlock({
   del,
   reload,
   dbConfigured,
+  live,
 }: {
   ctx: WorkspaceCtx;
   busy: boolean;
@@ -89,6 +118,11 @@ function RecorderBlock({
   del: (p: string) => Promise<void>;
   reload: () => Promise<void>;
   dbConfigured: boolean;
+  live: {
+    cameras: Record<string, { status: string }>;
+    recorders: Record<string, { status: string }>;
+    switches: Record<string, { status: string }>;
+  };
 }) {
   const [f, setF] = useState({ name: "", ip: "", model: "", comment: "" });
   const [edit, setEdit] = useState<string | null>(null);
@@ -126,9 +160,11 @@ function RecorderBlock({
             </tr>
           </thead>
           <tbody>
-            {ctx.client.nvrs.map((r) => (
-              <tr key={r.id} className={`border-b border-[var(--vo-border)] ${r.status !== "online" ? "bg-red-950/15" : ""}`}>
-                <td className="px-2 py-2"><Dot status={r.status} /></td>
+            {ctx.client.nvrs.map((r) => {
+                const status = live.recorders[r.id]?.status || r.status;
+                return (
+              <tr key={r.id} className={`border-b border-[var(--vo-border)] ${status !== "online" ? "bg-red-950/15" : ""}`}>
+                <td className="px-2 py-2"><Dot status={status} /></td>
                 <td className="px-2 py-2 text-[var(--vo-fg)]">
                 {edit === r.id ? (
                   <input defaultValue={r.name} id={`rn-${r.id}`} className="w-full rounded border border-[var(--vo-border)] bg-transparent px-1" />
@@ -191,7 +227,8 @@ function RecorderBlock({
                 </button>
               </td>
             </tr>
-          ))}
+                );
+            })}
           </tbody>
         </table>
       </div>
@@ -208,6 +245,7 @@ function SwitchBlock({
   del,
   reload,
   dbConfigured,
+  live,
 }: {
   ctx: WorkspaceCtx;
   busy: boolean;
@@ -217,6 +255,11 @@ function SwitchBlock({
   del: (p: string) => Promise<void>;
   reload: () => Promise<void>;
   dbConfigured: boolean;
+  live: {
+    cameras: Record<string, { status: string }>;
+    recorders: Record<string, { status: string }>;
+    switches: Record<string, { status: string }>;
+  };
 }) {
   const [f, setF] = useState({ name: "", ip: "", model: "", comment: "", ports: 0 });
   const [edit, setEdit] = useState<string | null>(null);
@@ -255,9 +298,11 @@ function SwitchBlock({
             </tr>
           </thead>
           <tbody>
-            {ctx.client.switches.map((s) => (
-              <tr key={s.id} className={`border-b border-[var(--vo-border)] ${s.status !== "online" ? "bg-red-950/15" : ""}`}>
-                <td className="px-2 py-2"><Dot status={s.status} /></td>
+            {ctx.client.switches.map((s) => {
+                const status = live.switches[s.id]?.status || s.status;
+                return (
+              <tr key={s.id} className={`border-b border-[var(--vo-border)] ${status !== "online" ? "bg-red-950/15" : ""}`}>
+                <td className="px-2 py-2"><Dot status={status} /></td>
                 <td className="px-2 py-2">
                 {edit === s.id ? <input defaultValue={s.name} id={`sn-${s.id}`} className="rounded border border-[var(--vo-border)] bg-transparent px-1" /> : s.name}
               </td>
@@ -286,7 +331,8 @@ function SwitchBlock({
                 <button type="button" disabled={!dbConfigured} className="ml-2 text-red-500 hover:underline disabled:opacity-40" onClick={() => { if (confirm("Izbris?")) void del(`/switches/${s.id}`).then(() => reload()); }}>Izbriši</button>
               </td>
             </tr>
-          ))}
+                );
+            })}
           </tbody>
         </table>
       </div>
@@ -326,6 +372,17 @@ function DiskBlock({
     await reload();
   }
 
+  function getDiskHealthByAge(installedAt?: string) {
+    const raw = (installedAt ?? "").trim();
+    if (!raw) return { level: "ok" as const, label: "V redu" };
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return { level: "ok" as const, label: "V redu" };
+    const years = (Date.now() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+    if (years >= 3) return { level: "critical" as const, label: "Nujna menjava" };
+    if (years >= 2) return { level: "warn" as const, label: "Priporočena menjava" };
+    return { level: "ok" as const, label: "V redu" };
+  }
+
   return (
     <section className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
       <h3 className="text-sm font-semibold text-[var(--vo-fg)]">Diski</h3>
@@ -354,9 +411,12 @@ function DiskBlock({
             </tr>
           </thead>
           <tbody>
-            {ctx.client.disks.map((d) => (
-              <tr key={d.id} className={`border-b border-[var(--vo-border)] ${d.health !== "ok" ? "bg-red-950/15" : ""}`}>
-                <td className="px-2 py-2"><Dot status={d.health === "ok" ? "online" : "offline"} /></td>
+            {ctx.client.disks.map((d) => {
+              const age = getDiskHealthByAge(d.installedAt);
+              const level = d.health === "fail" ? "critical" : age.level;
+              return (
+              <tr key={d.id} className={`border-b border-[var(--vo-border)] ${level !== "ok" ? "bg-red-950/15" : ""}`}>
+                <td className="px-2 py-2"><Dot status={level === "ok" ? "online" : "offline"} /></td>
                 <td className="px-2 py-2 text-[var(--vo-fg)]">
                 {edit === d.id ? <input defaultValue={d.label} id={`dl-${d.id}`} className="rounded border px-1" /> : d.label}
               </td>
@@ -369,8 +429,14 @@ function DiskBlock({
               <td className="px-2 py-2">{d.sizeTb}</td>
               <td className="px-2 py-2 text-[var(--vo-muted)]">{d.installedAt || <span className="italic">Ni datuma</span>}</td>
               <td className="px-2 py-2">
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${d.health === "ok" ? "bg-[var(--vo-ok-muted)] text-[var(--vo-ok)]" : "bg-[var(--vo-danger-muted)] text-[var(--vo-danger)]"}`}>
-                  {d.health === "ok" ? "Vse OK" : d.health}
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                  level === "ok"
+                    ? "bg-[var(--vo-ok-muted)] text-[var(--vo-ok)]"
+                    : level === "warn"
+                      ? "bg-amber-500/20 text-amber-300"
+                      : "bg-[var(--vo-danger-muted)] text-[var(--vo-danger)]"
+                }`}>
+                  {level === "critical" ? "Nujna menjava" : level === "warn" ? "Priporočena menjava" : "V redu"}
                 </span>
               </td>
               <td className="px-2 py-2 text-right">
@@ -388,7 +454,8 @@ function DiskBlock({
                 <button type="button" disabled={!dbConfigured} className="ml-2 text-red-500 hover:underline disabled:opacity-40" onClick={() => { if (confirm("Izbris?")) void del(`/disks/${d.id}`).then(() => reload()); }}>Izbriši</button>
               </td>
             </tr>
-          ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
