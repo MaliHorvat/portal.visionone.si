@@ -4,6 +4,7 @@ import {
   LEGACY_PORTAL_SESSION_VALUE,
   PORTAL_SESSION_COOKIE,
 } from "@/lib/portal-auth";
+import { getDefaultNavPermissions } from "@/lib/nav-permissions";
 import { getPortalSessionSecret } from "@/lib/portal-session-secret";
 import { verifyPortalSessionToken, type PortalSessionPayload } from "@/lib/portal-session-verify";
 
@@ -16,6 +17,7 @@ export async function getPortalSession(): Promise<PortalSessionPayload | null> {
       username: DEFAULT_PORTAL_USERNAME,
       role: "admin",
       mustChangePassword: false,
+      navPermissions: getDefaultNavPermissions("admin"),
       exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 365,
     };
   }

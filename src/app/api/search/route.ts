@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
+import { getPortalSession } from "@/lib/get-portal-session";
 
 type SearchItem = {
   id: string;
@@ -13,6 +14,8 @@ type SearchItem = {
 export async function GET(request: Request) {
   const guard = await requirePortalSession();
   if (guard) return guard;
+  const session = await getPortalSession();
+  const scope = session?.role === "admin" ? {} : { ownerUsername: session?.username ?? "" };
   const url = new URL(request.url);
   const q = (url.searchParams.get("q") ?? "").trim();
   if (q.length < 2) return NextResponse.json({ items: [] as SearchItem[] });
@@ -21,6 +24,7 @@ export async function GET(request: Request) {
   const [clients, users, reminders] = await Promise.all([
     prisma.client.findMany({
       where: {
+        ...scope,
         OR: [
           { name: { contains: q } },
           { email: { contains: q } },
@@ -39,7 +43,10 @@ export async function GET(request: Request) {
       orderBy: { username: "asc" },
     }),
     prisma.maintenanceReminder.findMany({
-      where: { OR: [{ title: { contains: q } }, { client: { name: { contains: q } } }] },
+      where: {
+        OR: [{ title: { contains: q } }, { client: { name: { contains: q } } }],
+        ...(session?.role === "admin" ? {} : { client: { ownerUsername: session?.username ?? "" } }),
+      },
       take: 8,
       include: { client: { select: { id: true, slug: true, name: true } } },
       orderBy: { dueDate: "asc" },

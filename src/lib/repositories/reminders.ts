@@ -1,5 +1,6 @@
 import { prisma, isDbConfigured } from "@/lib/db";
 import { mockReminders } from "@/lib/mock-data";
+import type { PortalSessionPayload } from "@/lib/portal-session-verify";
 import type { MaintenanceReminder, ReminderKind } from "@/lib/types";
 
 function mapKind(k: string): ReminderKind {
@@ -14,6 +15,36 @@ export async function listReminders(clientId?: string): Promise<MaintenanceRemin
   }
   const rows = await prisma.maintenanceReminder.findMany({
     where: clientId ? { clientId } : undefined,
+    include: { client: { select: { name: true } } },
+    orderBy: { dueDate: "asc" },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    clientId: r.clientId,
+    clientName: r.client?.name ?? "",
+    title: r.title,
+    dueDate: r.dueDate,
+    kind: mapKind(r.kind),
+    completed: r.completed,
+  }));
+}
+
+export async function listRemindersForSession(
+  session?: Pick<PortalSessionPayload, "role" | "username">,
+  clientId?: string,
+): Promise<MaintenanceReminder[]> {
+  if (!isDbConfigured() || !prisma) return listReminders(clientId);
+  const where =
+    session && session.role !== "admin"
+      ? {
+          ...(clientId ? { clientId } : {}),
+          client: { ownerUsername: session.username },
+        }
+      : clientId
+        ? { clientId }
+        : undefined;
+  const rows = await prisma.maintenanceReminder.findMany({
+    where,
     include: { client: { select: { name: true } } },
     orderBy: { dueDate: "asc" },
   });

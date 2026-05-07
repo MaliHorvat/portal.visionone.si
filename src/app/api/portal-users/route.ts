@@ -3,6 +3,7 @@ import type { PortalUserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { getPortalSession } from "@/lib/get-portal-session";
+import { normalizeNavPermissions } from "@/lib/nav-permissions";
 import { appendAuditLog } from "@/lib/repositories/audit-log";
 
 const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,32}$/;
@@ -17,9 +18,14 @@ export async function GET() {
   }
   const users = await prisma.appUserAccount.findMany({
     orderBy: { username: "asc" },
-    select: { id: true, username: true, email: true, role: true, mustChangePassword: true },
+    select: { id: true, username: true, email: true, role: true, mustChangePassword: true, navPermissions: true },
   });
-  return NextResponse.json({ users });
+  return NextResponse.json({
+    users: users.map((u) => ({
+      ...u,
+      navPermissions: normalizeNavPermissions(u.navPermissions, u.role),
+    })),
+  });
 }
 
 export async function POST(request: Request) {
@@ -31,7 +37,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Baza ni nastavljena." }, { status: 503 });
   }
 
-  let body: { username?: string; email?: string; password?: string; role?: PortalUserRole };
+  let body: {
+    username?: string;
+    email?: string;
+    password?: string;
+    role?: PortalUserRole;
+    navPermissions?: string[];
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -42,6 +54,7 @@ export async function POST(request: Request) {
   const email = String(body.email ?? "").trim();
   const password = String(body.password ?? "");
   const role = (body.role ?? "viewer") as PortalUserRole;
+  const navPermissions = normalizeNavPermissions(body.navPermissions, role);
 
   if (!USERNAME_RE.test(username)) {
     return NextResponse.json(
@@ -65,6 +78,7 @@ export async function POST(request: Request) {
         passwordHash,
         role,
         isAdmin: role === "admin",
+        navPermissions,
         mustChangePassword: false,
       },
     });

@@ -19,6 +19,7 @@ model Client {
   contact   String   @default("")
   phone     String   @default("")
   email     String   @default("")
+  ownerUsername String @default("admin")
   health    String   @default("ok")
   topologyData Json?
   rackData       Json?
@@ -41,6 +42,7 @@ model Client {
   updatedAt DateTime @updatedAt
 
   @@index([packageId])
+  @@index([ownerUsername])
 }
 
 model ClientCamera {
@@ -368,6 +370,7 @@ model AppUserAccount {
   failedLoginCount   Int      @default(0)
   lockedUntil        DateTime?
   lastLoginAt        DateTime?
+  navPermissions     Json?
   accessRequests     PortalAccessRequest[]
 }
 

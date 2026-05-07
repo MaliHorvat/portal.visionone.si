@@ -30,31 +30,33 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { usePortalRole } from "@/context/PortalRoleContext";
+import type { NavPermissionKey } from "@/lib/nav-permissions";
 import { roleLabel } from "@/lib/portal-roles";
 import { mockClientPortalSlug } from "@/lib/mock-data";
 
-type NavItem = { href: string; label: string; icon: React.ElementType; adminOnly?: boolean };
+type NavItem = { href: string; label: string; icon: React.ElementType; permission: NavPermissionKey; adminOnly?: boolean };
 type NavSection = { title: string; items: NavItem[] };
 
 const navSections: NavSection[] = [
   {
     title: "PREGLED",
     items: [
-      { href: "/portal", label: "Nadzorna plošča", icon: LayoutDashboard },
-      { href: "/portal/racun", label: "Moj račun", icon: UserCircle },
+      { href: "/portal", label: "Nadzorna plošča", icon: LayoutDashboard, permission: "dashboard" },
+      { href: "/portal/racun", label: "Moj račun", icon: UserCircle, permission: "my-account" },
     ],
   },
   {
     title: "VODENJE PROJEKTOV",
     items: [
-      { href: "/portal/stranke", label: "Objekti & stranke", icon: Users, adminOnly: true },
-      { href: "/portal/ponudbe", label: "Ponudbe", icon: FileText, adminOnly: true },
-      { href: "/portal/cas", label: "Sledenje času", icon: ClipboardList, adminOnly: true },
-      { href: "/portal/opomniki", label: "Vzdrževanje", icon: CalendarClock },
+      { href: "/portal/stranke", label: "Objekti & stranke", icon: Users, permission: "clients", adminOnly: true },
+      { href: "/portal/ponudbe", label: "Ponudbe", icon: FileText, permission: "offers", adminOnly: true },
+      { href: "/portal/cas", label: "Sledenje času", icon: ClipboardList, permission: "time-tracking", adminOnly: true },
+      { href: "/portal/opomniki", label: "Vzdrževanje", icon: CalendarClock, permission: "maintenance" },
       {
         href: `/portal/stranke/${mockClientPortalSlug}`,
         label: "Moj objekt",
         icon: Camera,
+        permission: "my-site",
         adminOnly: false,
       },
     ],
@@ -62,52 +64,52 @@ const navSections: NavSection[] = [
   {
     title: "NAČRTOVANJE",
     items: [
-      { href: "/portal/rack-dizajner", label: "Rack dizajner", icon: Layers, adminOnly: true },
-      { href: "/portal/orodja?tool=poe", label: "PoE kalkulator", icon: PlugZap, adminOnly: true },
-      { href: "/portal/orodja?tool=storage", label: "Kalkulator shrambe", icon: Boxes, adminOnly: true },
-      { href: "/portal/orodja?tool=lcc", label: "Kalkulator LCC", icon: SlidersHorizontal, adminOnly: true },
+      { href: "/portal/rack-dizajner", label: "Rack dizajner", icon: Layers, permission: "rack-designer", adminOnly: true },
+      { href: "/portal/orodja?tool=poe", label: "PoE kalkulator", icon: PlugZap, permission: "tools", adminOnly: true },
+      { href: "/portal/orodja?tool=storage", label: "Kalkulator shrambe", icon: Boxes, permission: "tools", adminOnly: true },
+      { href: "/portal/orodja?tool=lcc", label: "Kalkulator LCC", icon: SlidersHorizontal, permission: "tools", adminOnly: true },
     ],
   },
   {
     title: "OMREŽJE & DIAGNOSTIKA",
     items: [
-      { href: "/portal/orodja?tool=ip-scan", label: "IP scanner", icon: Router, adminOnly: true },
-      { href: "/portal/orodja?tool=wifi", label: "Wi‑Fi analizator", icon: Network, adminOnly: true },
-      { href: "/portal/orodja?tool=ping", label: "Ping watchdog", icon: Cpu, adminOnly: true },
-      { href: "/portal/orodja?tool=ipam", label: "IPAM (IP manager)", icon: Network, adminOnly: true },
-      { href: "/portal/orodja?tool=mac", label: "MAC lookup", icon: Network, adminOnly: true },
-      { href: "/portal/orodja?tool=wol", label: "Wake on LAN", icon: Wifi, adminOnly: true },
+      { href: "/portal/orodja?tool=ip-scan", label: "IP scanner", icon: Router, permission: "network-diagnostics", adminOnly: true },
+      { href: "/portal/orodja?tool=wifi", label: "Wi‑Fi analizator", icon: Network, permission: "network-diagnostics", adminOnly: true },
+      { href: "/portal/orodja?tool=ping", label: "Ping watchdog", icon: Cpu, permission: "network-diagnostics", adminOnly: true },
+      { href: "/portal/orodja?tool=ipam", label: "IPAM (IP manager)", icon: Network, permission: "network-diagnostics", adminOnly: true },
+      { href: "/portal/orodja?tool=mac", label: "MAC lookup", icon: Network, permission: "network-diagnostics", adminOnly: true },
+      { href: "/portal/orodja?tool=wol", label: "Wake on LAN", icon: Wifi, permission: "network-diagnostics", adminOnly: true },
     ],
   },
   {
     title: "ORODJA & NAPRAVE",
     items: [
-      { href: "/portal/orodja?tool=nvr", label: "NVR manager", icon: Video, adminOnly: true },
-      { href: "/portal/orodja?tool=lpr", label: "LPR prepoznava", icon: Camera, adminOnly: true },
-      { href: "/portal/orodja?tool=bulk", label: "Bulk config", icon: Wrench, adminOnly: true },
-      { href: "/portal/orodja?tool=qr", label: "QR generator", icon: Layers, adminOnly: true },
-      { href: "/portal/orodja?tool=pw", label: "Generator gesel", icon: Shield, adminOnly: true },
+      { href: "/portal/orodja?tool=nvr", label: "NVR manager", icon: Video, permission: "devices-tools", adminOnly: true },
+      { href: "/portal/orodja?tool=lpr", label: "LPR prepoznava", icon: Camera, permission: "devices-tools", adminOnly: true },
+      { href: "/portal/orodja?tool=bulk", label: "Bulk config", icon: Wrench, permission: "devices-tools", adminOnly: true },
+      { href: "/portal/orodja?tool=qr", label: "QR generator", icon: Layers, permission: "devices-tools", adminOnly: true },
+      { href: "/portal/orodja?tool=pw", label: "Generator gesel", icon: Shield, permission: "devices-tools", adminOnly: true },
     ],
   },
   {
     title: "BAZA ZNANJA",
     items: [
-      { href: "/portal/belezke?tab=dokumentacija", label: "Dokumentacija", icon: BookOpen, adminOnly: true },
-      { href: "/portal/belezke?tab=belezke", label: "Beležke", icon: BookOpen, adminOnly: true },
-      { href: "/portal/belezke?tab=privzeta-gesla", label: "Privzeta gesla", icon: Shield, adminOnly: true },
-      { href: "/portal/belezke?tab=firmware", label: "Firmware baza", icon: Package, adminOnly: true },
+      { href: "/portal/belezke?tab=dokumentacija", label: "Dokumentacija", icon: BookOpen, permission: "knowledge-base", adminOnly: true },
+      { href: "/portal/belezke?tab=belezke", label: "Beležke", icon: BookOpen, permission: "knowledge-base", adminOnly: true },
+      { href: "/portal/belezke?tab=privzeta-gesla", label: "Privzeta gesla", icon: Shield, permission: "knowledge-base", adminOnly: true },
+      { href: "/portal/belezke?tab=firmware", label: "Firmware baza", icon: Package, permission: "knowledge-base", adminOnly: true },
     ],
   },
   {
     title: "SISTEM",
     items: [
-      { href: "/portal/inventar", label: "Skladišče", icon: Boxes, adminOnly: true },
-      { href: "/portal/agents", label: "Agenti", icon: RadioTower, adminOnly: true },
-      { href: "/portal/obvestila", label: "Obvestila (Telegram)", icon: Bell, adminOnly: true },
-      { href: "/portal/kamera-definicije", label: "RTSP definicije", icon: Video, adminOnly: true },
-      { href: "/portal/audit", label: "Audit log", icon: Shield, adminOnly: true },
-      { href: "/portal/paketi", label: "Naročniški paketi", icon: Package, adminOnly: true },
-      { href: "/portal/nastavitve", label: "Nastavitve", icon: Settings, adminOnly: true },
+      { href: "/portal/inventar", label: "Skladišče", icon: Boxes, permission: "inventory", adminOnly: true },
+      { href: "/portal/agents", label: "Agenti", icon: RadioTower, permission: "agents", adminOnly: true },
+      { href: "/portal/obvestila", label: "Obvestila (Telegram)", icon: Bell, permission: "notifications", adminOnly: true },
+      { href: "/portal/kamera-definicije", label: "RTSP definicije", icon: Video, permission: "camera-definitions", adminOnly: true },
+      { href: "/portal/audit", label: "Audit log", icon: Shield, permission: "audit-log", adminOnly: true },
+      { href: "/portal/paketi", label: "Naročniški paketi", icon: Package, permission: "packages", adminOnly: true },
+      { href: "/portal/nastavitve", label: "Nastavitve", icon: Settings, permission: "settings", adminOnly: true },
     ],
   },
 ];
@@ -116,7 +118,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { role, setRole, canSwitchRoles } = usePortalRole();
+  const { role, setRole, canSwitchRoles, navPermissions } = usePortalRole();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Array<{ id: string; label: string; href: string; meta?: string }>>([]);
   const [showResults, setShowResults] = useState(false);
@@ -131,13 +133,14 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       navSections.map((s) => ({
         ...s,
         items: s.items.filter((item) => {
+          if (!navPermissions.includes(item.permission)) return false;
           if (item.label === "Moj objekt") return role !== "admin";
           if (item.adminOnly) return role === "admin";
           if (item.href === "/portal/stranke") return role === "admin";
           return true;
         }),
       })),
-    [role],
+    [navPermissions, role],
   );
 
   useEffect(() => {

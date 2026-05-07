@@ -1,8 +1,9 @@
-import { listClients } from "@/lib/repositories/clients";
 import { listPackages } from "@/lib/repositories/packages";
 import { isDbConfigured } from "@/lib/db";
+import { getPortalSession } from "@/lib/get-portal-session";
 import { getMockClients, mockPackages } from "@/lib/mock-data";
 import { StrankeView } from "./StrankeView";
+import { listClientsForSession } from "@/lib/repositories/clients";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ function mockSummaries() {
 }
 
 export default async function StrankeListPage() {
+  const session = await getPortalSession();
   const envDb = isDbConfigured();
   let clients = mockSummaries();
   let packages = mockPackages;
@@ -28,7 +30,7 @@ export default async function StrankeListPage() {
   let dbConfigured = envDb;
 
   try {
-    [clients, packages] = await Promise.all([listClients(), listPackages()]);
+    [clients, packages] = await Promise.all([listClientsForSession(session ?? undefined), listPackages()]);
   } catch (err) {
     console.error("[portal/stranke] DB load failed:", err);
     clients = mockSummaries();

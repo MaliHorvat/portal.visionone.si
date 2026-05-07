@@ -4,8 +4,9 @@ import { ClientWorkspace } from "@/components/portal/ClientWorkspace";
 import { parseWorkspaceTab } from "@/components/portal/client-workspace/types";
 import { ClientProfileGate } from "./ClientProfileGate";
 import { ProfileBackNav } from "./ProfileBackNav";
-import { getClient } from "@/lib/repositories/clients";
 import { isDbConfigured } from "@/lib/db";
+import { getPortalSession } from "@/lib/get-portal-session";
+import { getClientForSession } from "@/lib/repositories/clients";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +17,10 @@ type Props = {
 
 export default async function StrankaProfilPage({ params, searchParams }: Props) {
   const { slug: slugParam } = await params;
+  const session = await getPortalSession();
   const sp = await searchParams;
   const initialTab = parseWorkspaceTab(sp?.tab);
-  const client = await getClient(slugParam);
+  const client = await getClientForSession(slugParam, session ?? undefined);
   if (!client) notFound();
 
   if (client.slug && slugParam === client.id) {

@@ -2,9 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { PortalRole } from "@/context/PortalRoleContext";
+import {
+  NAV_PERMISSION_KEYS,
+  NAV_PERMISSION_LABELS,
+  getDefaultNavPermissions,
+  type NavPermissionKey,
+} from "@/lib/nav-permissions";
 import { roleLabel } from "@/lib/portal-roles";
 
-type Row = { id: string; username: string; email: string; role: PortalRole };
+type Row = { id: string; username: string; email: string; role: PortalRole; navPermissions: NavPermissionKey[] };
 
 export function NastavitveUporabniki() {
   const [users, setUsers] = useState<Row[]>([]);
@@ -16,6 +22,7 @@ export function NastavitveUporabniki() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<PortalRole>("viewer");
+  const [navPermissions, setNavPermissions] = useState<NavPermissionKey[]>(getDefaultNavPermissions("viewer"));
 
   const refresh = useCallback(async () => {
     setLoadError(null);
@@ -32,7 +39,15 @@ export function NastavitveUporabniki() {
       return;
     }
     const data = (await res.json()) as { users: Array<Row & { mustChangePassword?: boolean }> };
-    setUsers((data.users ?? []).map(({ id, username, email, role }) => ({ id, username, email, role })));
+    setUsers(
+      (data.users ?? []).map(({ id, username, email, role, navPermissions }) => ({
+        id,
+        username,
+        email,
+        role,
+        navPermissions,
+      })),
+    );
   }, []);
 
   useEffect(() => {
@@ -46,7 +61,7 @@ export function NastavitveUporabniki() {
     const res = await fetch("/api/portal-users", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username, email, password, role }),
+      body: JSON.stringify({ username, email, password, role, navPermissions }),
     });
     setBusy(false);
     const data = await res.json().catch(() => ({}));
@@ -58,7 +73,12 @@ export function NastavitveUporabniki() {
     setEmail("");
     setPassword("");
     setRole("viewer");
+    setNavPermissions(getDefaultNavPermissions("viewer"));
     await refresh();
+  }
+
+  function togglePermission(key: NavPermissionKey) {
+    setNavPermissions((curr) => (curr.includes(key) ? curr.filter((x) => x !== key) : [...curr, key]));
   }
 
   async function handleDelete(id: string) {
@@ -118,13 +138,32 @@ export function NastavitveUporabniki() {
         />
         <select
           value={role}
-          onChange={(ev) => setRole(ev.target.value as PortalRole)}
+          onChange={(ev) => {
+            const nextRole = ev.target.value as PortalRole;
+            setRole(nextRole);
+            setNavPermissions(getDefaultNavPermissions(nextRole));
+          }}
           className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
         >
           <option value="viewer">Pregled</option>
           <option value="operator">Operater</option>
           <option value="admin">Administrator</option>
         </select>
+        <div className="rounded-lg border border-[var(--vo-border)] p-3 md:col-span-3">
+          <p className="mb-2 text-sm font-medium text-[var(--vo-fg)]">Dostop do sklopov (levi meni)</p>
+          <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
+            {NAV_PERMISSION_KEYS.map((key) => (
+              <label key={key} className="flex items-center gap-2 text-sm text-[var(--vo-muted)]">
+                <input
+                  type="checkbox"
+                  checked={navPermissions.includes(key)}
+                  onChange={() => togglePermission(key)}
+                />
+                <span>{NAV_PERMISSION_LABELS[key]}</span>
+              </label>
+            ))}
+          </div>
+        </div>
         {formError ? <p className="text-sm text-red-700 md:col-span-3">{formError}</p> : null}
         <button
           type="submit"
@@ -144,13 +183,14 @@ export function NastavitveUporabniki() {
                 <th className="px-3 py-2 font-medium">Uporabnik</th>
                 <th className="px-3 py-2 font-medium">E-pošta</th>
                 <th className="px-3 py-2 font-medium">Vloga</th>
+                <th className="px-3 py-2 font-medium">Dostopi</th>
                 <th className="px-3 py-2 font-medium" />
               </tr>
             </thead>
             <tbody>
               {users.length === 0 && !loadError ? (
                 <tr>
-                  <td colSpan={4} className="px-3 py-6 text-center text-[var(--vo-muted)]">
+                  <td colSpan={5} className="px-3 py-6 text-center text-[var(--vo-muted)]">
                     Ni vpisanih uporabnikov v bazi.
                   </td>
                 </tr>
@@ -160,6 +200,7 @@ export function NastavitveUporabniki() {
                   <td className="px-3 py-2 font-medium text-[var(--vo-fg)]">{u.username}</td>
                   <td className="px-3 py-2 text-[var(--vo-muted)]">{u.email || "—"}</td>
                   <td className="px-3 py-2 text-[var(--vo-muted)]">{roleLabel(u.role)}</td>
+                  <td className="px-3 py-2 text-xs text-[var(--vo-muted)]">{u.navPermissions.length} sklopov</td>
                   <td className="px-3 py-2 text-right">
                     {u.username === "admin" ? (
                       <span className="text-xs text-[var(--vo-muted)]">—</span>

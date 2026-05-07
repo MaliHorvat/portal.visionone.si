@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { getMockClient, getMockClients } from "@/lib/mock-data";
+import type { PortalSessionPayload } from "@/lib/portal-session-verify";
 import { slugifyName } from "@/lib/slug";
 import type {
   CameraDevice,
@@ -195,6 +196,23 @@ export async function listClients(): Promise<ClientSummary[]> {
   return rows.map(mapClientSummary);
 }
 
+function scopeWhere(session?: Pick<PortalSessionPayload, "role" | "username">) {
+  if (!session || session.role === "admin") return {};
+  return { ownerUsername: session.username };
+}
+
+export async function listClientsForSession(
+  session?: Pick<PortalSessionPayload, "role" | "username">,
+): Promise<ClientSummary[]> {
+  if (!isDbConfigured() || !prisma) return listClients();
+  const rows = await prisma.client.findMany({
+    where: scopeWhere(session),
+    orderBy: { name: "asc" },
+    include: { package: true },
+  });
+  return rows.map(mapClientSummary);
+}
+
 export async function getClient(slugOrId: string): Promise<ClientDetail | null> {
   if (!isDbConfigured() || !prisma) {
     return getMockClient(slugOrId) ?? null;
@@ -219,6 +237,33 @@ export async function getClient(slugOrId: string): Promise<ClientDetail | null> 
   if (!row) return null;
   // Ne izvajamo samodejnega UPDATE tukaj, da profil ne čaka dodatne DB mutacije.
   // Če stranka še nima sluga, stran ostane dostopna tudi preko id.
+  return mapClientDetail(row);
+}
+
+export async function getClientForSession(
+  slugOrId: string,
+  session?: Pick<PortalSessionPayload, "role" | "username">,
+): Promise<ClientDetail | null> {
+  if (!isDbConfigured() || !prisma) return getClient(slugOrId);
+  const include = {
+    package: true,
+    cameras: true,
+    recorders: true,
+    switches: true,
+    disks: true,
+  } as const;
+  const whereScope = scopeWhere(session);
+  let row = await prisma.client.findFirst({
+    where: { id: slugOrId, ...whereScope },
+    include,
+  });
+  if (!row) {
+    row = await prisma.client.findFirst({
+      where: { slug: slugOrId, ...whereScope },
+      include,
+    });
+  }
+  if (!row) return null;
   return mapClientDetail(row);
 }
 
@@ -249,6 +294,35 @@ export async function createClient(data: UpsertClientInput): Promise<ClientDetai
       email: data.email ?? "",
       health: data.health ?? "ok",
       packageId: data.packageId ?? null,
+    },
+    include: {
+      package: true,
+      cameras: true,
+      recorders: true,
+      switches: true,
+      disks: true,
+    },
+  });
+  return mapClientDetail(row);
+}
+
+export async function createClientForSession(
+  data: UpsertClientInput,
+  session?: Pick<PortalSessionPayload, "role" | "username">,
+): Promise<ClientDetail> {
+  if (!isDbConfigured() || !prisma) throw new Error("DB ni nastavljena.");
+  const slug = await allocateUniqueClientSlug(data.name);
+  const row = await prisma.client.create({
+    data: {
+      name: data.name,
+      slug,
+      address: data.address ?? "",
+      contact: data.contact ?? "",
+      phone: data.phone ?? "",
+      email: data.email ?? "",
+      health: data.health ?? "ok",
+      packageId: data.packageId ?? null,
+      ownerUsername: session?.role === "admin" ? (session.username || "admin") : (session?.username || "admin"),
     },
     include: {
       package: true,

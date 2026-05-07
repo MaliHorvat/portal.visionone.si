@@ -5,6 +5,7 @@ import { prisma, isDbConfigured } from "@/lib/db";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
 import { getPortalSessionSecret } from "@/lib/portal-session-secret";
 import { signPortalSessionToken } from "@/lib/portal-session-sign";
+import { normalizeNavPermissions } from "@/lib/nav-permissions";
 import { appendAuditLog } from "@/lib/repositories/audit-log";
 import { logger } from "@/lib/logger";
 
@@ -21,7 +22,14 @@ export async function POST(request: Request) {
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  let granted: { username: string; role: "admin" | "operator" | "viewer"; mustChangePassword: boolean } | null = null;
+  let granted:
+    | {
+        username: string;
+        role: "admin" | "operator" | "viewer";
+        mustChangePassword: boolean;
+        navPermissions: ReturnType<typeof normalizeNavPermissions>;
+      }
+    | null = null;
 
   if (username && password && isDbConfigured() && prisma) {
     const row = await prisma.appUserAccount.findUnique({ where: { username } });
@@ -33,7 +41,12 @@ export async function POST(request: Request) {
       // V preteklosti so lahko obstajali zapisi z `isAdmin = true` in `role = viewer`.
       // Za prijavo vedno obravnavamo tak račun kot admin.
       const effectiveRole: "admin" | "operator" | "viewer" = row.isAdmin ? "admin" : row.role;
-      granted = { username: row.username, role: effectiveRole, mustChangePassword: row.mustChangePassword };
+      granted = {
+        username: row.username,
+        role: effectiveRole,
+        mustChangePassword: row.mustChangePassword,
+        navPermissions: normalizeNavPermissions(row.navPermissions, effectiveRole),
+      };
       await prisma.appUserAccount.update({
         where: { id: row.id },
         data: {

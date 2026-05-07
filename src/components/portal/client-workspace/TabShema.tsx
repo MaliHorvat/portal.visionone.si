@@ -31,6 +31,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     Record<string, { status: string; lastSeenAt: string | null; latencyMs: number | null; lastError: string }>
   >({});
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ id: string; dx: number; dy: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -155,12 +156,22 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
       nodes: t.nodes.filter((n) => n.id !== id),
       edges: t.edges.filter((e) => e.from !== id && e.to !== id),
     }));
+    if (selectedNodeId === id) setSelectedNodeId(null);
   };
 
   const clearBg = () => setTopo((t) => ({ ...t, backgroundSrc: null }));
   const clearAll = () => setTopo((t) => ({ ...t, nodes: [], edges: [] }));
   const removeEdge = (idx: number) =>
     setTopo((t) => ({ ...t, edges: t.edges.filter((_, i) => i !== idx) }));
+
+  const rotateNode = (id: string, delta: number) => {
+    setTopo((t) => ({
+      ...t,
+      nodes: t.nodes.map((n) =>
+        n.id === id ? { ...n, rotationDeg: (((n.rotationDeg ?? 0) + delta) % 360 + 360) % 360 } : n,
+      ),
+    }));
+  };
 
   const getCameraStatus = (cameraId: string): "online" | "offline" => {
     const live = liveCamStatus[cameraId]?.status;
@@ -236,10 +247,9 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           <div key={g.title}>
             <div className="mt-2 font-medium text-[var(--vo-muted)]">{g.title}</div>
             <ul className="mt-1 space-y-1">
-              {g.items.map((item) => (
-                (() => {
-                  const status = item.kind === "camera" ? getCameraStatus(item.id) : item.status;
-                  return (
+              {g.items.map((item) => {
+                const status = item.kind === "camera" ? getCameraStatus(item.id) : item.status;
+                return (
                 <li
                   key={`${item.kind}-${item.id}`}
                   draggable={dbConfigured}
@@ -249,9 +259,8 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   <Dot status={status} />
                   {item.label}
                 </li>
-                  );
-                })()
-              ))}
+                );
+              })}
             </ul>
           </div>
         ))}
@@ -274,6 +283,24 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             Počisti platno
           </button>
           <span className="ml-auto text-xs text-[var(--vo-muted)]">Čvorov ({topo.nodes.length})</span>
+          {selectedNodeId ? (
+            <>
+              <button
+                type="button"
+                onClick={() => rotateNode(selectedNodeId, -15)}
+                className="rounded border border-[var(--vo-border)] px-2 py-1 text-xs text-[var(--vo-muted)] hover:text-[var(--vo-fg)]"
+              >
+                Obrni -15°
+              </button>
+              <button
+                type="button"
+                onClick={() => rotateNode(selectedNodeId, 15)}
+                className="rounded border border-[var(--vo-border)] px-2 py-1 text-xs text-[var(--vo-muted)] hover:text-[var(--vo-fg)]"
+              >
+                Obrni +15°
+              </button>
+            </>
+          ) : null}
           <button
             type="button"
             disabled={!dbConfigured}
@@ -329,10 +356,15 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                 role="button"
                 tabIndex={0}
                 className={`absolute cursor-pointer select-none ${
-                  isCamera ? "w-20" : "w-28 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-[11px] shadow-md"
-                } ${connectFrom === n.id ? "ring-2 ring-[var(--vo-accent)]" : ""}`}
+                  isCamera ? "w-16" : "w-28 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-[11px] shadow-md"
+                } ${connectFrom === n.id ? "ring-2 ring-[var(--vo-accent)]" : ""} ${
+                  selectedNodeId === n.id ? "ring-2 ring-[var(--vo-accent)]" : ""
+                }`}
                 style={{ left: n.x, top: n.y }}
-                onClick={() => onNodeClick(n.id)}
+                onClick={() => {
+                  setSelectedNodeId(n.id);
+                  onNodeClick(n.id);
+                }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   removeNode(n.id);
@@ -350,13 +382,18 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
               >
                 {isCamera ? (
                   <div className="flex flex-col items-center">
-                    <svg viewBox="0 0 24 24" className="h-10 w-10 drop-shadow-md" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-8 w-8 drop-shadow-md"
+                      aria-hidden="true"
+                      style={{ transform: `rotate(${n.rotationDeg ?? 0}deg)` }}
+                    >
                       <rect x="3" y="7" width="14" height="10" rx="2" fill={camColor} opacity="0.2" />
                       <rect x="3" y="7" width="14" height="10" rx="2" fill="none" stroke={camColor} strokeWidth="1.7" />
                       <path d="M17 10l4-2v8l-4-2z" fill={camColor} opacity="0.35" />
                       <path d="M7 7V5h6v2" fill="none" stroke={camColor} strokeWidth="1.4" strokeLinecap="round" />
                     </svg>
-                    <div className="mt-1 w-full truncate text-center text-[11px] font-medium text-[var(--vo-fg)]">{n.label}</div>
+                    <div className="mt-1 w-full truncate text-center text-[10px] font-medium text-[var(--vo-fg)]">{n.label}</div>
                     <div className="w-full truncate text-center font-mono text-[10px] text-[var(--vo-muted)]">
                       {n.deviceRef ? client.cameras.find((c) => c.id === n.deviceRef?.id)?.ip ?? "" : ""}
                     </div>

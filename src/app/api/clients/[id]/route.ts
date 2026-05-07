@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
-import { deleteClient, getClient, updateClient } from "@/lib/repositories/clients";
+import { getPortalSession } from "@/lib/get-portal-session";
+import { deleteClient, getClientForSession, updateClient } from "@/lib/repositories/clients";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -8,8 +9,9 @@ export async function GET(_request: Request, ctx: Ctx) {
   const guard = await requirePortalSession();
   if (guard) return guard;
   try {
+    const session = await getPortalSession();
     const { id } = await ctx.params;
-    const client = await getClient(id);
+    const client = await getClientForSession(id, session ?? undefined);
     if (!client) return jsonError("Stranka ne obstaja.", 404);
     return NextResponse.json({ client });
   } catch (e) {
@@ -22,7 +24,10 @@ export async function PUT(request: Request, ctx: Ctx) {
   const guard = await requirePortalSession();
   if (guard) return guard;
   try {
+    const session = await getPortalSession();
     const { id } = await ctx.params;
+    const allowed = await getClientForSession(id, session ?? undefined);
+    if (!allowed) return jsonError("Stranka ne obstaja.", 404);
     const body = await request.json();
     const updated = await updateClient(id, {
       name: body?.name,
@@ -46,7 +51,10 @@ export async function DELETE(_request: Request, ctx: Ctx) {
   const guard = await requirePortalSession();
   if (guard) return guard;
   try {
+    const session = await getPortalSession();
     const { id } = await ctx.params;
+    const allowed = await getClientForSession(id, session ?? undefined);
+    if (!allowed) return jsonError("Stranka ne obstaja.", 404);
     await deleteClient(id);
     return NextResponse.json({ ok: true });
   } catch (e) {

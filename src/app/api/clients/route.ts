@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
-import { createClient, listClients } from "@/lib/repositories/clients";
+import { getPortalSession } from "@/lib/get-portal-session";
+import { createClientForSession, listClientsForSession } from "@/lib/repositories/clients";
 
 export async function GET() {
   const guard = await requirePortalSession();
   if (guard) return guard;
   try {
-    const clients = await listClients();
+    const session = await getPortalSession();
+    const clients = await listClientsForSession(session ?? undefined);
     return NextResponse.json({ clients });
   } catch (e) {
     console.error(e);
@@ -18,10 +20,11 @@ export async function POST(request: Request) {
   const guard = await requirePortalSession();
   if (guard) return guard;
   try {
+    const session = await getPortalSession();
     const body = await request.json();
     const name = String(body?.name ?? "").trim();
     if (!name) return jsonError("Polje 'name' je obvezno.");
-    const created = await createClient({
+    const created = await createClientForSession({
       name,
       address: body?.address ?? "",
       contact: body?.contact ?? "",
@@ -29,7 +32,7 @@ export async function POST(request: Request) {
       email: body?.email ?? "",
       health: body?.health === "alarm" ? "alarm" : "ok",
       packageId: body?.packageId ?? null,
-    });
+    }, session ?? undefined);
     return NextResponse.json({ client: created }, { status: 201 });
   } catch (e) {
     console.error(e);

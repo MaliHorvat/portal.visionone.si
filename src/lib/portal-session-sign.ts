@@ -12,6 +12,7 @@ export function signPortalSessionToken(
     username: payload.username,
     role: payload.role,
     mustChangePassword: payload.mustChangePassword,
+    navPermissions: payload.navPermissions,
     exp: Math.floor(Date.now() / 1000) + maxAgeSec,
   };
   const body = Buffer.from(JSON.stringify(bodyObj), "utf8").toString("base64url");

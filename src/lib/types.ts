@@ -134,6 +134,7 @@ export interface TopologyCanvasNode {
   label: string;
   x: number;
   y: number;
+  rotationDeg?: number;
   deviceRef?: { kind: TopologyDeviceKind; id: string };
 }
 

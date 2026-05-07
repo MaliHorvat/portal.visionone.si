@@ -1,11 +1,13 @@
 import { LEGACY_PORTAL_SESSION_VALUE } from "@/lib/portal-auth";
 import { getPortalSessionSecret } from "@/lib/portal-session-secret";
+import { getDefaultNavPermissions, type NavPermissionKey } from "@/lib/nav-permissions";
 import type { PortalUserRole } from "@/lib/portal-roles";
 
 export type PortalSessionPayload = {
   username: string;
   role: PortalUserRole;
   mustChangePassword: boolean;
+  navPermissions: NavPermissionKey[];
   /** UNIX sekunde */
   exp: number;
 };
@@ -67,10 +69,14 @@ export async function verifyPortalSessionToken(
     typeof parsed.username !== "string" ||
     !roleOk ||
     typeof parsed.mustChangePassword !== "boolean" ||
+    !Array.isArray(parsed.navPermissions) ||
     typeof parsed.exp !== "number"
   ) {
     return null;
   }
+  parsed.navPermissions = parsed.navPermissions
+    .map((v) => String(v))
+    .filter((v): v is NavPermissionKey => getDefaultNavPermissions("admin").includes(v as NavPermissionKey));
   if (Math.floor(Date.now() / 1000) >= parsed.exp) return null;
   return parsed;
 }

@@ -29,6 +29,7 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
       label: typeof n.label === "string" ? n.label : "Naprava",
       x: typeof n.x === "number" ? n.x : 80 + (i % 5) * 120,
       y: typeof n.y === "number" ? n.y : 80 + Math.floor(i / 5) * 100,
+      rotationDeg: typeof n.rotationDeg === "number" ? n.rotationDeg : 0,
       deviceRef: parseDeviceRef(n.deviceRef),
     }));
   const edges: TopologyCanvasEdge[] = edgesRaw
