@@ -75,6 +75,10 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
     router.refresh();
   }
 
+  function prefetchProfile(client: ClientSummary) {
+    router.prefetch(clientProfilePath(client));
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -152,7 +156,73 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
         </form>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] shadow-[var(--vo-card-shadow)]">
+      <div className="space-y-3 md:hidden">
+        {clients.length === 0 ? (
+          <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-6 text-center text-sm text-[var(--vo-muted)]">
+            Ni strank.
+          </div>
+        ) : null}
+        {clients.map((c) => (
+          <div
+            key={`m-${c.id}`}
+            className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 shadow-[var(--vo-card-shadow)]"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold text-[var(--vo-fg)]">{c.name}</p>
+                <p className="text-xs text-[var(--vo-muted)]">{c.address || "—"}</p>
+              </div>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                  c.health === "ok"
+                    ? "bg-[var(--vo-ok-muted)] text-[var(--vo-ok)]"
+                    : "bg-[var(--vo-danger-muted)] text-[var(--vo-danger)]"
+                }`}
+              >
+                {c.health === "ok" ? "V redu" : "Alarm"}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-[var(--vo-muted)]">
+              {c.contact || "—"}
+              {c.phone ? ` · ${c.phone}` : ""}
+            </p>
+            <div className="mt-3 flex items-center justify-end gap-3">
+              <Link
+                href={clientProfilePath(c)}
+                prefetch
+                onMouseEnter={() => prefetchProfile(c)}
+                onTouchStart={() => prefetchProfile(c)}
+                className="rounded-md border border-[var(--vo-border)] px-2 py-1 text-xs font-medium text-[var(--vo-accent)]"
+              >
+                Profil
+              </Link>
+              <button
+                type="button"
+                className="text-xs font-medium text-[var(--vo-fg)] hover:underline"
+                onClick={() => {
+                  setError(null);
+                  setNotice(null);
+                  setEditClientId(c.id);
+                  setShowForm(true);
+                }}
+              >
+                Uredi
+              </button>
+              {dbConfigured ? (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(c.id)}
+                  className="text-xs font-medium text-red-600 hover:underline"
+                >
+                  Izbriši
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-hidden rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] shadow-[var(--vo-card-shadow)] md:block">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
             <tr>
@@ -206,6 +276,8 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                 <td className="px-4 py-3 text-right">
                   <Link
                     href={clientProfilePath(c)}
+                    prefetch
+                    onMouseEnter={() => prefetchProfile(c)}
                     className="font-medium text-[var(--vo-accent)] hover:underline"
                   >
                     Profil

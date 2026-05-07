@@ -1,7 +1,8 @@
 import { prisma, isDbConfigured } from "@/lib/db";
 import { getMockClients, mockReminders, mockSystemEvents } from "@/lib/mock-data";
 import { listAuditLogs } from "@/lib/repositories/audit-log";
-import { listReminders } from "@/lib/repositories/reminders";
+import { listRemindersForSession } from "@/lib/repositories/reminders";
+import type { PortalSessionPayload } from "@/lib/portal-session-verify";
 
 export type ClientDashboardCard = {
   id: string;
@@ -111,7 +112,9 @@ function buildCardFromDetail(c: {
   };
 }
 
-export async function getPortalDashboard(): Promise<PortalDashboardPayload> {
+export async function getPortalDashboard(
+  session?: Pick<PortalSessionPayload, "role" | "username">,
+): Promise<PortalDashboardPayload> {
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.2.0";
 
   if (!isDbConfigured() || !prisma) {
@@ -174,13 +177,19 @@ export async function getPortalDashboard(): Promise<PortalDashboardPayload> {
     };
   }
 
+  const clientWhere =
+    session && session.role !== "admin" ? { ownerUsername: session.username } : undefined;
   const rows = await prisma.client.findMany({
+    where: clientWhere,
     orderBy: { name: "asc" },
-    include: {
-      cameras: true,
-      recorders: true,
-      switches: true,
-      disks: true,
+    select: {
+      id: true,
+      name: true,
+      health: true,
+      cameras: { select: { name: true, ip: true, status: true } },
+      recorders: { select: { name: true, status: true } },
+      switches: { select: { name: true, status: true } },
+      disks: { select: { label: true, health: true } },
     },
   });
 
@@ -225,7 +234,7 @@ export async function getPortalDashboard(): Promise<PortalDashboardPayload> {
     },
   );
 
-  const remindersRaw = await listReminders();
+  const remindersRaw = await listRemindersForSession(session ?? undefined);
   const reminders = remindersRaw
     .filter((r) => !r.completed)
     .slice(0, 12)
@@ -237,7 +246,7 @@ export async function getPortalDashboard(): Promise<PortalDashboardPayload> {
       completed: r.completed,
     }));
 
-  const audits = await listAuditLogs(14);
+  const audits = await listAuditLogs(8);
   const activities: DashboardActivity[] = audits.map((a) => {
     let level: DashboardActivity["level"] = "info";
     if (/delete|error|fail|403|401/i.test(a.action + a.details)) level = "error";
