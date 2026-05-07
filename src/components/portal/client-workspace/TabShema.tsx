@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, HardDrive, Network, Server } from "lucide-react";
+import { EthernetPort, HardDrive, Video } from "lucide-react";
 import { usePortalToast } from "@/context/PortalToastContext";
 import { parseTopologyState } from "@/lib/topology-parse";
 import type { ClientTopologyState, TopologyCanvasNode, TopologyDeviceKind } from "@/lib/types";
@@ -36,9 +36,8 @@ function DeviceGlyph({
   const color = status === "online" ? "var(--vo-ok)" : "var(--vo-danger)";
   const className = "h-8 w-8 drop-shadow-md";
   const style = { color, transform: `rotate(${rotationDeg ?? 0}deg)` };
-  if (kind === "camera") return <Camera className={className} style={style} aria-hidden />;
-  if (kind === "recorder") return <Server className={className} style={style} aria-hidden />;
-  if (kind === "switch") return <Network className={className} style={style} aria-hidden />;
+  if (kind === "camera") return <Video className={className} style={style} aria-hidden />;
+  if (kind === "switch") return <EthernetPort className={className} style={style} aria-hidden />;
   return <HardDrive className={className} style={style} aria-hidden />;
 }
 
@@ -57,6 +56,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const [editMode, setEditMode] = useState(false);
   const [lineStart, setLineStart] = useState<{ x: number; y: number } | null>(null);
   const [linePreview, setLinePreview] = useState<{ x: number; y: number } | null>(null);
+  const [selectedPathIdx, setSelectedPathIdx] = useState<number | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -252,6 +252,16 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     if (!editMode) return;
     if (!confirm("Res želite počistiti narisan tloris?")) return;
     setTopo((t) => ({ ...t, floorPlanPaths: [] }));
+    setSelectedPathIdx(null);
+  };
+
+  const removeSelectedPath = () => {
+    if (!editMode || selectedPathIdx === null) return;
+    setTopo((t) => ({
+      ...t,
+      floorPlanPaths: (t.floorPlanPaths ?? []).filter((_, i) => i !== selectedPathIdx),
+    }));
+    setSelectedPathIdx(null);
   };
 
   const save = useCallback(async () => {
@@ -353,6 +363,14 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           </button>
           <button
             type="button"
+            disabled={!editMode || selectedPathIdx === null}
+            onClick={removeSelectedPath}
+            className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)] disabled:opacity-40"
+          >
+            Izbriši izbrano črto
+          </button>
+          <button
+            type="button"
             onClick={clearAll}
             disabled={!editMode}
             className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)] disabled:opacity-40"
@@ -404,10 +422,16 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                 key={`fp-${i}`}
                 points={path.points.map((p) => `${p.x},${p.y}`).join(" ")}
                 fill="none"
-                stroke="rgba(148, 163, 184, 0.8)"
-                strokeWidth={2}
+                stroke={selectedPathIdx === i ? "rgba(56, 189, 248, 0.95)" : "rgba(148, 163, 184, 0.8)"}
+                strokeWidth={selectedPathIdx === i ? 3 : 2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                className={editMode ? "cursor-pointer" : undefined}
+                onClick={(e) => {
+                  if (!editMode) return;
+                  e.stopPropagation();
+                  setSelectedPathIdx(i);
+                }}
               />
             ))}
             {lineStart && linePreview ? (
@@ -489,7 +513,13 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                     <DeviceGlyph kind={kind} status={st} rotationDeg={n.rotationDeg} />
                     <div className="mt-1 w-full truncate text-center text-[10px] font-medium text-[var(--vo-fg)]">{n.label}</div>
                     <div className="w-full truncate text-center font-mono text-[10px] text-[var(--vo-muted)]">
-                      {n.deviceRef ? client.cameras.find((c) => c.id === n.deviceRef?.id)?.ip ?? "" : ""}
+                      {n.deviceRef?.kind === "camera"
+                        ? client.cameras.find((c) => c.id === n.deviceRef?.id)?.ip ?? ""
+                        : n.deviceRef?.kind === "recorder"
+                          ? client.nvrs.find((r) => r.id === n.deviceRef?.id)?.ip ?? ""
+                          : n.deviceRef?.kind === "switch"
+                            ? client.switches.find((s) => s.id === n.deviceRef?.id)?.ip ?? ""
+                            : ""}
                     </div>
                   </div>
                 ) : (
