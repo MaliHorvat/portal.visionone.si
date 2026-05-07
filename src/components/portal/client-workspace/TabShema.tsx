@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera, HardDrive, Network, Server } from "lucide-react";
 import { usePortalToast } from "@/context/PortalToastContext";
 import { parseTopologyState } from "@/lib/topology-parse";
 import type { ClientTopologyState, TopologyCanvasNode, TopologyDeviceKind } from "@/lib/types";
@@ -23,6 +24,24 @@ function newId() {
   return typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `n-${Date.now()}`;
 }
 
+function DeviceGlyph({
+  kind,
+  status,
+  rotationDeg,
+}: {
+  kind: TopologyDeviceKind | undefined;
+  status: "online" | "offline";
+  rotationDeg?: number;
+}) {
+  const color = status === "online" ? "var(--vo-ok)" : "var(--vo-danger)";
+  const className = "h-8 w-8 drop-shadow-md";
+  const style = { color, transform: `rotate(${rotationDeg ?? 0}deg)` };
+  if (kind === "camera") return <Camera className={className} style={style} aria-hidden />;
+  if (kind === "recorder") return <Server className={className} style={style} aria-hidden />;
+  if (kind === "switch") return <Network className={className} style={style} aria-hidden />;
+  return <HardDrive className={className} style={style} aria-hidden />;
+}
+
 export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
   const { client, clientId, dbConfigured, reload, applyClient } = ctx;
@@ -35,8 +54,9 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ id: string; dx: number; dy: number } | null>(null);
-  const [drawMode, setDrawMode] = useState(false);
-  const [drawingPath, setDrawingPath] = useState<Array<{ x: number; y: number }> | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [lineStart, setLineStart] = useState<{ x: number; y: number } | null>(null);
+  const [linePreview, setLinePreview] = useState<{ x: number; y: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -108,12 +128,13 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   ];
 
   const onPaletteDragStart = (e: React.DragEvent, item: DragPayload) => {
+    if (!editMode) return;
     e.dataTransfer.setData("application/json", JSON.stringify(item));
     e.dataTransfer.effectAllowed = "copy";
   };
 
   const onCanvasDrop = (e: React.DragEvent) => {
-    if (drawMode) return;
+    if (!editMode) return;
     e.preventDefault();
     const raw = e.dataTransfer.getData("application/json");
     if (!raw || !canvasRef.current) return;
@@ -137,7 +158,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   };
 
   const onNodeClick = (id: string) => {
-    if (drawMode) return;
+    if (!editMode) return;
     if (!connectFrom) {
       setConnectFrom(id);
       return;
@@ -164,7 +185,11 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     if (selectedNodeId === id) setSelectedNodeId(null);
   };
 
-  const clearAll = () => setTopo((t) => ({ ...t, nodes: [], edges: [], floorPlanPaths: [] }));
+  const clearAll = () => {
+    if (!editMode) return;
+    if (!confirm("Res želite počistiti celotno shemo (vozlišča + povezave + risbo)?")) return;
+    setTopo((t) => ({ ...t, nodes: [], edges: [], floorPlanPaths: [] }));
+  };
   const removeEdge = (idx: number) =>
     setTopo((t) => ({ ...t, edges: t.edges.filter((_, i) => i !== idx) }));
 
@@ -194,24 +219,40 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   };
 
   const startDraw = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!drawMode || !canvasRef.current) return;
+    if (!editMode || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    setDrawingPath([{ x: e.clientX - rect.left, y: e.clientY - rect.top }]);
+    const start = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    setLineStart(start);
+    setLinePreview(start);
   };
   const moveDraw = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!drawMode || !drawingPath || !canvasRef.current) return;
+    if (!editMode || !lineStart || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const p = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    setDrawingPath((prev) => (prev ? [...prev, p] : [p]));
+    setLinePreview({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
   const endDraw = () => {
-    if (!drawMode || !drawingPath) return;
-    if (drawingPath.length > 1) {
-      setTopo((t) => ({ ...t, floorPlanPaths: [...(t.floorPlanPaths ?? []), { points: drawingPath }] }));
+    if (!editMode || !lineStart || !linePreview) return;
+    const dx = Math.abs(linePreview.x - lineStart.x);
+    const dy = Math.abs(linePreview.y - lineStart.y);
+    // Snap na ravno horizontalno ali vertikalno črto.
+    const snapped =
+      dx >= dy
+        ? { x: linePreview.x, y: lineStart.y }
+        : { x: lineStart.x, y: linePreview.y };
+    if (Math.hypot(snapped.x - lineStart.x, snapped.y - lineStart.y) > 2) {
+      setTopo((t) => ({
+        ...t,
+        floorPlanPaths: [...(t.floorPlanPaths ?? []), { points: [lineStart, snapped] }],
+      }));
     }
-    setDrawingPath(null);
+    setLineStart(null);
+    setLinePreview(null);
   };
-  const clearDrawing = () => setTopo((t) => ({ ...t, floorPlanPaths: [] }));
+  const clearDrawing = () => {
+    if (!editMode) return;
+    if (!confirm("Res želite počistiti narisan tloris?")) return;
+    setTopo((t) => ({ ...t, floorPlanPaths: [] }));
+  };
 
   const save = useCallback(async () => {
     if (!dbConfigured) return;
@@ -295,20 +336,26 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => setDrawMode((v) => !v)}
+            onClick={() => setEditMode((v) => !v)}
             className={`rounded-lg border px-2 py-1 text-xs ${
-              drawMode ? "border-[var(--vo-accent)] text-[var(--vo-accent)]" : "border-[var(--vo-border)] text-[var(--vo-muted)]"
+              editMode ? "border-[var(--vo-accent)] text-[var(--vo-accent)]" : "border-[var(--vo-border)] text-[var(--vo-muted)]"
             }`}
           >
-            {drawMode ? "Risar: VKLOPLJEN" : "Risar: IZKLOPLJEN"}
+            {editMode ? "Način urejanja: VKLOPLJEN" : "Način urejanja: IZKLOPLJEN"}
           </button>
-          <button type="button" onClick={clearDrawing} className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)]">
+          <button
+            type="button"
+            disabled={!editMode}
+            onClick={clearDrawing}
+            className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)] disabled:opacity-40"
+          >
             Počisti risbo
           </button>
           <button
             type="button"
             onClick={clearAll}
-            className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)]"
+            disabled={!editMode}
+            className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)] disabled:opacity-40"
           >
             Počisti platno
           </button>
@@ -363,9 +410,13 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                 strokeLinejoin="round"
               />
             ))}
-            {drawingPath && drawingPath.length > 1 ? (
+            {lineStart && linePreview ? (
               <polyline
-                points={drawingPath.map((p) => `${p.x},${p.y}`).join(" ")}
+                points={`${lineStart.x},${lineStart.y} ${
+                  Math.abs(linePreview.x - lineStart.x) >= Math.abs(linePreview.y - lineStart.y)
+                    ? `${linePreview.x},${lineStart.y}`
+                    : `${lineStart.x},${linePreview.y}`
+                }`}
                 fill="none"
                 stroke="rgba(56, 189, 248, 0.9)"
                 strokeWidth={2}
@@ -417,10 +468,12 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   onNodeClick(n.id);
                 }}
                 onContextMenu={(e) => {
+                  if (!editMode) return;
                   e.preventDefault();
                   removeNode(n.id);
                 }}
                 onPointerDown={(e) => {
+                  if (!editMode) return;
                   if (e.button !== 0) return;
                   e.stopPropagation();
                   const rect = e.currentTarget.getBoundingClientRect();
@@ -433,47 +486,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
               >
                 {isCamera || isRecorder || isSwitch ? (
                   <div className="flex flex-col items-center">
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="h-8 w-8 drop-shadow-md"
-                      aria-hidden="true"
-                      style={{ transform: `rotate(${n.rotationDeg ?? 0}deg)` }}
-                    >
-                      {isCamera ? (
-                        <>
-                          <rect x="3" y="7" width="14" height="10" rx="2" fill={color} opacity="0.2" />
-                          <rect x="3" y="7" width="14" height="10" rx="2" fill="none" stroke={color} strokeWidth="1.7" />
-                          <path d="M17 10l4-2v8l-4-2z" fill={color} opacity="0.35" />
-                          <path d="M7 7V5h6v2" fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-                        </>
-                      ) : null}
-                      {isRecorder ? (
-                        <>
-                          <path d="M3 9h18l-1.5 8H4.5z" fill={color} opacity="0.18" />
-                          <path d="M3 9h18l-1.5 8H4.5z" fill="none" stroke={color} strokeWidth="1.5" />
-                          <path d="M6 9l2.5-3h7L18 9" fill="none" stroke={color} strokeWidth="1.4" />
-                          <circle cx="14.8" cy="13" r="0.8" fill={color} />
-                          <circle cx="17.4" cy="13" r="0.8" fill={color} />
-                        </>
-                      ) : null}
-                      {isSwitch ? (
-                        <>
-                          <rect x="3" y="7" width="18" height="10" rx="2" fill={color} opacity="0.16" />
-                          <rect x="3" y="7" width="18" height="10" rx="2" fill="none" stroke={color} strokeWidth="1.5" />
-                          {Array.from({ length: 8 }).map((_, i) => (
-                            <rect
-                              key={i}
-                              x={5 + (i % 4) * 4}
-                              y={10 + Math.floor(i / 4) * 3}
-                              width="2.2"
-                              height="1.6"
-                              rx="0.4"
-                              fill={color}
-                            />
-                          ))}
-                        </>
-                      ) : null}
-                    </svg>
+                    <DeviceGlyph kind={kind} status={st} rotationDeg={n.rotationDeg} />
                     <div className="mt-1 w-full truncate text-center text-[10px] font-medium text-[var(--vo-fg)]">{n.label}</div>
                     <div className="w-full truncate text-center font-mono text-[10px] text-[var(--vo-muted)]">
                       {n.deviceRef ? client.cameras.find((c) => c.id === n.deviceRef?.id)?.ip ?? "" : ""}
