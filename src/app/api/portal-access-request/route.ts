@@ -1,7 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { appendAuditLog } from "@/lib/repositories/audit-log";
-import { sendPortalAccessNotifyEmail } from "@/lib/send-portal-access-notify";
 import { upsertPortalAccessRequest } from "@/lib/repositories/portal-access-requests";
 import { logger } from "@/lib/logger";
 
@@ -33,15 +32,12 @@ export async function POST() {
     clerkName: name,
   });
 
-  const subject = `VisionOne portal — nova zahteva za dostop (${email || userId})`;
-  const text = `Nova zahteva za portalni dostop.\n\nIme: ${name}\nE-pošta: ${email || "—"}\nClerk ID: ${userId}\n\nRočno ustvarite zapis v AppUserAccount in obvestite uporabnika.`;
-
-  const { sent: emailSent } = await sendPortalAccessNotifyEmail({
-    subject,
-    text,
-    replyTo: email || undefined,
+  logger.info("portal_access_request", {
+    clerkUserId: userId,
+    email,
+    notify: "portal_only",
+    requestId: request?.id ?? null,
   });
-  logger.info("portal_access_request", { clerkUserId: userId, email, emailSent, requestId: request?.id ?? null });
 
-  return NextResponse.json({ ok: true, emailSent, requestId: request?.id ?? null });
+  return NextResponse.json({ ok: true, requestId: request?.id ?? null });
 }

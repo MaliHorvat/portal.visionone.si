@@ -72,12 +72,12 @@ export function PortalAccessRequestsPanel() {
       }),
     });
     setBusyId("");
-    const data = (await res.json().catch(() => ({}))) as { error?: string; mailSent?: boolean };
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
       setMsg(data.error ?? "Ustvarjanje uporabnika ni uspelo.");
       return;
     }
-    setMsg(data.mailSent ? "Uporabnik je ustvarjen, obvestilo poslano." : "Uporabnik je ustvarjen.");
+    setMsg("Uporabnik je ustvarjen.");
     await refresh();
   }
 

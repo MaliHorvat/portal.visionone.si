@@ -122,6 +122,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Array<{ id: string; label: string; href: string; meta?: string }>>([]);
   const [showResults, setShowResults] = useState(false);
+  const [pendingAccessRequests, setPendingAccessRequests] = useState(0);
 
   const current = useMemo(() => {
     const qs = searchParams.toString();
@@ -166,6 +167,22 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
     }, 200);
     return () => window.clearTimeout(id);
   }, [query]);
+
+  useEffect(() => {
+    if (role !== "admin") return;
+    const load = async () => {
+      const res = await fetch("/api/portal-access-requests");
+      if (!res.ok) return;
+      const data = (await res.json().catch(() => ({}))) as {
+        requests?: Array<{ status: "new" | "approved" | "rejected" }>;
+      };
+      const pending = (data.requests ?? []).filter((r) => r.status === "new").length;
+      setPendingAccessRequests(pending);
+    };
+    void load();
+    const id = window.setInterval(load, 10000);
+    return () => window.clearInterval(id);
+  }, [role]);
 
   return (
     <div className="flex min-h-screen bg-[var(--vo-bg)]">
@@ -265,6 +282,20 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 <option value="operator">operator</option>
                 <option value="viewer">viewer</option>
               </select>
+            ) : null}
+            {role === "admin" ? (
+              <Link
+                href="/portal/nastavitve"
+                className="relative rounded-lg border border-[var(--vo-border)] p-1.5 text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)]"
+                title="Novi zahtevki za dostop"
+              >
+                <Bell className="h-4 w-4" aria-hidden />
+                {pendingAccessRequests > 0 ? (
+                  <span className="absolute -right-1 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+                    {pendingAccessRequests}
+                  </span>
+                ) : null}
+              </Link>
             ) : null}
             <ThemeToggle />
             <form action="/api/portal-logout" method="post">

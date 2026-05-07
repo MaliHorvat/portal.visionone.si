@@ -9,7 +9,6 @@ import {
   listPortalAccessRequests,
   setPortalAccessRequestStatus,
 } from "@/lib/repositories/portal-access-requests";
-import { sendPortalEmail } from "@/lib/send-portal-access-notify";
 
 const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,32}$/;
 
@@ -105,15 +104,5 @@ export async function POST(request: Request) {
   }
   await appendAuditLog(adminUser, "portal_user_create_from_request", `${username}|${target.clerkEmail}`);
 
-  let mailSent = false;
-  if (target.clerkEmail) {
-    const mail = await sendPortalEmail({
-      to: target.clerkEmail,
-      subject: "VisionOne portal — vaš račun je pripravljen",
-      text: `Pozdravljeni,\n\nvaš portalni račun je pripravljen.\n\nUporabniško ime: ${username}\nZačasno geslo: ${password}\n\nPo prijavi ga takoj spremenite na strani Moj račun.\n\nLep pozdrav,\nVisionOne`,
-    });
-    mailSent = mail.sent;
-  }
-
-  return NextResponse.json({ ok: true, user: created?.user, mailSent });
+  return NextResponse.json({ ok: true, user: created?.user });
 }
