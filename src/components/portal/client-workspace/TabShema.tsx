@@ -27,6 +27,9 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
   const { client, clientId, dbConfigured, reload, applyClient } = ctx;
   const [topo, setTopo] = useState<ClientTopologyState>(() => parseTopologyState(client.topologyData));
+  const [liveCamStatus, setLiveCamStatus] = useState<
+    Record<string, { status: string; lastSeenAt: string | null; latencyMs: number | null; lastError: string }>
+  >({});
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ id: string; dx: number; dy: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -34,6 +37,32 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   useEffect(() => {
     setTopo(parseTopologyState(client.topologyData));
   }, [client.topologyData]);
+
+  useEffect(() => {
+    if (!dbConfigured) return;
+    let stopped = false;
+    const tick = async () => {
+      try {
+        const r = await fetch(`/api/clients/${clientId}/camera-status`, { cache: "no-store" });
+        if (!r.ok) return;
+        const j = (await r.json()) as {
+          statusByCameraId: Record<
+            string,
+            { status: string; lastSeenAt: string | null; latencyMs: number | null; lastError: string }
+          >;
+        };
+        if (!stopped) setLiveCamStatus(j.statusByCameraId ?? {});
+      } catch {
+        // ignore intermittent poll errors
+      }
+    };
+    void tick();
+    const id = window.setInterval(tick, 10_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+    };
+  }, [clientId, dbConfigured]);
 
   const palette: { title: string; items: PaletteItem[] }[] = [
     {
@@ -133,6 +162,12 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const removeEdge = (idx: number) =>
     setTopo((t) => ({ ...t, edges: t.edges.filter((_, i) => i !== idx) }));
 
+  const getCameraStatus = (cameraId: string): "online" | "offline" => {
+    const live = liveCamStatus[cameraId]?.status;
+    if (live) return live === "online" ? "online" : "offline";
+    return client.cameras.find((c) => c.id === cameraId)?.status === "online" ? "online" : "offline";
+  };
+
   const onBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -202,15 +237,20 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             <div className="mt-2 font-medium text-[var(--vo-muted)]">{g.title}</div>
             <ul className="mt-1 space-y-1">
               {g.items.map((item) => (
+                (() => {
+                  const status = item.kind === "camera" ? getCameraStatus(item.id) : item.status;
+                  return (
                 <li
                   key={`${item.kind}-${item.id}`}
                   draggable={dbConfigured}
                   onDragStart={(e) => onPaletteDragStart(e, item)}
                   className="flex cursor-grab items-center gap-2 rounded border border-[var(--vo-border)] px-2 py-1 active:cursor-grabbing"
                 >
-                  <Dot status={item.status} />
+                  <Dot status={status} />
                   {item.label}
                 </li>
+                  );
+                })()
               ))}
             </ul>
           </div>
@@ -279,39 +319,56 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             })}
           </svg>
 
-          {topo.nodes.map((n) => (
-            <div
-              key={n.id}
-              role="button"
-              tabIndex={0}
-              className={`absolute w-28 cursor-pointer select-none rounded-lg border px-2 py-2 text-[11px] shadow-md ${
-                connectFrom === n.id ? "border-[var(--vo-accent)] ring-2 ring-[var(--vo-accent)]" : "border-[var(--vo-border)] bg-[var(--vo-surface)]"
-              }`}
-              style={{ left: n.x, top: n.y }}
-              onClick={() => onNodeClick(n.id)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                removeNode(n.id);
-              }}
-              onPointerDown={(e) => {
-                if (e.button !== 0) return;
-                e.stopPropagation();
-                const rect = e.currentTarget.getBoundingClientRect();
-                setDragging({
-                  id: n.id,
-                  dx: e.clientX - rect.left,
-                  dy: e.clientY - rect.top,
-                });
-              }}
-            >
-              <div className="truncate font-medium text-[var(--vo-fg)]">{n.label}</div>
-              {n.deviceRef?.kind === "camera" ? (
-                <div className="mt-0.5 truncate font-mono text-[10px] text-[var(--vo-muted)]">
-                  {client.cameras.find((c) => c.id === n.deviceRef?.id)?.ip ?? ""}
-                </div>
-              ) : null}
-            </div>
-          ))}
+          {topo.nodes.map((n) => {
+            const isCamera = n.deviceRef?.kind === "camera";
+            const camStatus = isCamera && n.deviceRef ? getCameraStatus(n.deviceRef.id) : "offline";
+            const camColor = camStatus === "online" ? "var(--vo-ok)" : "var(--vo-danger)";
+            return (
+              <div
+                key={n.id}
+                role="button"
+                tabIndex={0}
+                className={`absolute cursor-pointer select-none ${
+                  isCamera ? "w-20" : "w-28 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-[11px] shadow-md"
+                } ${connectFrom === n.id ? "ring-2 ring-[var(--vo-accent)]" : ""}`}
+                style={{ left: n.x, top: n.y }}
+                onClick={() => onNodeClick(n.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  removeNode(n.id);
+                }}
+                onPointerDown={(e) => {
+                  if (e.button !== 0) return;
+                  e.stopPropagation();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setDragging({
+                    id: n.id,
+                    dx: e.clientX - rect.left,
+                    dy: e.clientY - rect.top,
+                  });
+                }}
+              >
+                {isCamera ? (
+                  <div className="flex flex-col items-center">
+                    <svg viewBox="0 0 24 24" className="h-10 w-10 drop-shadow-md" aria-hidden="true">
+                      <rect x="3" y="7" width="14" height="10" rx="2" fill={camColor} opacity="0.2" />
+                      <rect x="3" y="7" width="14" height="10" rx="2" fill="none" stroke={camColor} strokeWidth="1.7" />
+                      <path d="M17 10l4-2v8l-4-2z" fill={camColor} opacity="0.35" />
+                      <path d="M7 7V5h6v2" fill="none" stroke={camColor} strokeWidth="1.4" strokeLinecap="round" />
+                    </svg>
+                    <div className="mt-1 w-full truncate text-center text-[11px] font-medium text-[var(--vo-fg)]">{n.label}</div>
+                    <div className="w-full truncate text-center font-mono text-[10px] text-[var(--vo-muted)]">
+                      {n.deviceRef ? client.cameras.find((c) => c.id === n.deviceRef?.id)?.ip ?? "" : ""}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="truncate font-medium text-[var(--vo-fg)]">{n.label}</div>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs">
