@@ -1,20 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Shield } from "lucide-react";
 import { PortalLoginFlow } from "../PortalLoginFlow";
 
 type PortalLoginPageProps = {
   searchParams?: Promise<{ error?: string }>;
 };
-
-function ShieldLogo() {
-  return (
-    <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
-      <Shield className="h-8 w-8 text-white" strokeWidth={1.25} aria-hidden />
-      <span className="pointer-events-none absolute text-[12px] font-black leading-none text-neutral-900">V</span>
-    </div>
-  );
-}
 
 export default async function PortalLoginPage({ searchParams }: PortalLoginPageProps) {
   const params = await searchParams;
@@ -28,9 +18,9 @@ export default async function PortalLoginPage({ searchParams }: PortalLoginPageP
       <div className="flex w-full flex-col justify-between px-8 py-10 sm:px-12 lg:max-w-md lg:min-h-screen lg:shrink-0 xl:max-w-lg">
         <div>
           <div className="flex items-start gap-3">
-            <ShieldLogo />
+            <img src="/visionone-mark.png" alt="VisionOne znak" className="h-12 w-12 shrink-0 rounded object-contain" />
             <div>
-              <span className="text-xl font-bold tracking-tight">VisionOne</span>
+              <img src="/visionone-wordmark.png" alt="VisionOne" className="h-8 w-auto object-contain" />
               <p className="mt-1 max-w-xs text-xs leading-relaxed text-zinc-500">
                 Profesionalna platforma za načrtovanje in upravljanje videonadzornih sistemov.
               </p>

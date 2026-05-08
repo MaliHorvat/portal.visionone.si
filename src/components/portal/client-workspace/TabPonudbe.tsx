@@ -106,6 +106,22 @@ function escapeHtml(s: string) {
     .replaceAll("'", "&#039;");
 }
 
+async function imageToDataUrl(url: string): Promise<string | null> {
+  try {
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) return null;
+    const blob = await r.blob();
+    return await new Promise<string | null>((resolve) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(typeof fr.result === "string" ? fr.result : null);
+      fr.onerror = () => resolve(null);
+      fr.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
   const { client, clientId, dbConfigured } = ctx;
@@ -292,6 +308,10 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
     }
     const html = `
       <!doctype html><html><head>${head}</head><body>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <img src="/visionone-mark.png" alt="" style="height:34px;width:34px;object-fit:contain" />
+          <img src="/visionone-wordmark.png" alt="" style="height:18px;object-fit:contain" />
+        </div>
         <h1>Ponudba</h1>
         <div class="meta">
           <div><b>Stranka:</b> ${escapeHtml(client.name)}</div>
@@ -320,10 +340,16 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       const [{ jsPDF }, autoTableMod] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
       const autoTable = autoTableMod.default;
       const doc = new jsPDF();
+      const [markData, wordmarkData] = await Promise.all([
+        imageToDataUrl("/visionone-mark.png"),
+        imageToDataUrl("/visionone-wordmark.png"),
+      ]);
+      if (markData) doc.addImage(markData, "PNG", 14, 8, 12, 12);
+      if (wordmarkData) doc.addImage(wordmarkData, "PNG", 28, 9.5, 44, 9);
       doc.setFontSize(14);
-      doc.text("Ponudba", 14, 18);
+      doc.text("Ponudba", 14, 26);
       doc.setFontSize(10);
-      let y = 26;
+      let y = 34;
       doc.text(`Stranka: ${client.name}`, 14, y);
       y += 6;
       doc.text(`Datum: ${draft.offerDate}`, 14, y);

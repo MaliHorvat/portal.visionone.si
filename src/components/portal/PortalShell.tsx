@@ -235,9 +235,12 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-2">
           <div className="flex min-w-0 items-center gap-3">
-            <img src="/visionone-mark.png" alt="VisionOne" className="h-5 w-5 shrink-0 rounded object-contain md:hidden" />
+            <div className="flex min-w-0 items-center gap-2 md:hidden">
+              <img src="/visionone-mark.png" alt="VisionOne" className="h-5 w-5 shrink-0 rounded object-contain" />
+              <img src="/visionone-wordmark.png" alt="VisionOne" className="h-4 w-auto shrink-0 object-contain" />
+            </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-[var(--vo-fg)]">VisionOne portal</p>
+              <p className="hidden truncate text-sm font-semibold text-[var(--vo-fg)] md:block">VisionOne portal</p>
               <p className="truncate text-xs text-[var(--vo-muted)]">
                 Pogled:{" "}
                 <span className="font-medium text-[var(--vo-accent)]">

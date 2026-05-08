@@ -64,8 +64,9 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
 
   return (
     <div className="mt-10">
-      <div className="mb-6 flex justify-center">
-        <img src="/visionone-logo.png" alt="VisionOne" className="h-20 w-20 rounded object-contain" />
+      <div className="mb-6 flex items-center justify-center gap-2">
+        <img src="/visionone-mark.png" alt="VisionOne znak" className="h-12 w-12 rounded object-contain" />
+        <img src="/visionone-wordmark.png" alt="VisionOne napis" className="h-7 w-auto object-contain" />
       </div>
       {clerkError ? (
         <p className="mb-4 rounded-lg border border-amber-500/35 bg-amber-950/80 px-3 py-2 text-sm text-amber-50">
