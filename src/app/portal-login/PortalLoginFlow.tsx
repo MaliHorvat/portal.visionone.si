@@ -64,6 +64,9 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
 
   return (
     <div className="mt-10">
+      <div className="mb-6 flex justify-center">
+        <img src="/visionone-logo.png" alt="VisionOne" className="h-20 w-20 rounded object-contain" />
+      </div>
       {clerkError ? (
         <p className="mb-4 rounded-lg border border-amber-500/35 bg-amber-950/80 px-3 py-2 text-sm text-amber-50">
           Najprej se prijavite z Clerk (varnostna prijava). Brez nje portalna prijava ni na voljo.
