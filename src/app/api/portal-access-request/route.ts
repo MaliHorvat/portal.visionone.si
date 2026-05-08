@@ -26,7 +26,7 @@ export async function POST() {
   });
 
   await appendAuditLog(email || userId, "portal_access_request", details);
-  const request = await upsertPortalAccessRequest({
+  const result = await upsertPortalAccessRequest({
     clerkUserId: userId,
     clerkEmail: email,
     clerkName: name,
@@ -36,8 +36,13 @@ export async function POST() {
     clerkUserId: userId,
     email,
     notify: "portal_only",
-    requestId: request?.id ?? null,
+    requestId: result?.request?.id ?? null,
+    isNew: result?.isNew ?? false,
   });
 
-  return NextResponse.json({ ok: true, requestId: request?.id ?? null });
+  return NextResponse.json({
+    ok: true,
+    requestId: result?.request?.id ?? null,
+    isNew: result?.isNew ?? false,
+  });
 }

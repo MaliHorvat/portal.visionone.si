@@ -11,17 +11,18 @@ export async function upsertPortalAccessRequest(input: {
     where: { clerkUserId: input.clerkUserId },
   });
   if (!existing) {
-    return prisma.portalAccessRequest.create({
+    const request = await prisma.portalAccessRequest.create({
       data: {
         clerkUserId: input.clerkUserId,
         clerkEmail: input.clerkEmail,
         clerkName: input.clerkName,
       },
     });
+    return { request, isNew: true as const };
   }
   const status: PortalAccessRequestStatus =
     existing.status === "rejected" ? "new" : existing.status;
-  return prisma.portalAccessRequest.update({
+  const request = await prisma.portalAccessRequest.update({
     where: { id: existing.id },
     data: {
       clerkEmail: input.clerkEmail,
@@ -30,6 +31,7 @@ export async function upsertPortalAccessRequest(input: {
       ...(status === "new" ? { requestedAt: new Date() } : {}),
     },
   });
+  return { request, isNew: false as const };
 }
 
 export async function listPortalAccessRequests() {
