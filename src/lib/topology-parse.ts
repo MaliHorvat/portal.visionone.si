@@ -1,6 +1,8 @@
 import type {
   CameraPlanOverlay,
   ClientTopologyState,
+  FloorPlanPathEntry,
+  FloorPlanStrokeKind,
   TopologyCanvasEdge,
   TopologyCanvasNode,
   TopologyDeviceKind,
@@ -27,9 +29,19 @@ function parseCameraPlan(raw: unknown): CameraPlanOverlay | undefined {
   const tiltDeg = typeof p.tiltDeg === "number" && Number.isFinite(p.tiltDeg) ? p.tiltDeg : undefined;
   const fovDeg = typeof p.fovDeg === "number" && Number.isFinite(p.fovDeg) ? p.fovDeg : undefined;
   const reachPx = typeof p.reachPx === "number" && Number.isFinite(p.reachPx) ? p.reachPx : undefined;
-  if (badge === undefined && mountHeightM === undefined && tiltDeg === undefined && fovDeg === undefined && reachPx === undefined)
+  const showDoriZones = typeof p.showDoriZones === "boolean" ? p.showDoriZones : undefined;
+  const irReachPx = typeof p.irReachPx === "number" && Number.isFinite(p.irReachPx) ? p.irReachPx : undefined;
+  if (
+    badge === undefined &&
+    mountHeightM === undefined &&
+    tiltDeg === undefined &&
+    fovDeg === undefined &&
+    reachPx === undefined &&
+    showDoriZones === undefined &&
+    irReachPx === undefined
+  )
     return undefined;
-  return { badge, mountHeightM, tiltDeg, fovDeg, reachPx };
+  return { badge, mountHeightM, tiltDeg, fovDeg, reachPx, showDoriZones, irReachPx };
 }
 
 export function parseTopologyState(raw: unknown): ClientTopologyState {
@@ -37,6 +49,19 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
   const o = raw as Record<string, unknown>;
   const planBackgroundUrl =
     typeof o.planBackgroundUrl === "string" && o.planBackgroundUrl.trim() ? o.planBackgroundUrl.trim() : undefined;
+  const planBackgroundDataUrl =
+    typeof o.planBackgroundDataUrl === "string" && o.planBackgroundDataUrl.startsWith("data:")
+      ? o.planBackgroundDataUrl
+      : undefined;
+  const snapGridPx =
+    typeof o.snapGridPx === "number" && Number.isFinite(o.snapGridPx) && o.snapGridPx >= 0 ? o.snapGridPx : undefined;
+  let planCalibration: ClientTopologyState["planCalibration"] = undefined;
+  if (o.planCalibration && typeof o.planCalibration === "object") {
+    const c = o.planCalibration as { metersPerPx?: unknown };
+    const metersPerPx =
+      typeof c.metersPerPx === "number" && Number.isFinite(c.metersPerPx) && c.metersPerPx > 0 ? c.metersPerPx : undefined;
+    planCalibration = metersPerPx !== undefined ? { metersPerPx } : undefined;
+  }
   const nodesRaw = Array.isArray(o.nodes) ? o.nodes : [];
   const edgesRaw = Array.isArray(o.edges) ? o.edges : [];
   const pathsRaw = Array.isArray(o.floorPlanPaths) ? o.floorPlanPaths : [];
@@ -59,7 +84,7 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
     }))
     .filter((e) => e.from && e.to);
 
-  const floorPlanPaths = pathsRaw
+  const floorPlanPaths: FloorPlanPathEntry[] = pathsRaw
     .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
     .map((p) => {
       const pointsRaw = Array.isArray(p.points) ? p.points : [];
@@ -69,7 +94,10 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
           x: typeof x.x === "number" ? x.x : 0,
           y: typeof x.y === "number" ? x.y : 0,
         }));
-      return { points };
+      const kind: FloorPlanStrokeKind | undefined =
+        p.kind === "cable" ? "cable" : p.kind === "wall" ? "wall" : undefined;
+      const cableType = typeof p.cableType === "string" ? p.cableType : undefined;
+      return { points, kind, cableType };
     })
     .filter((p) => p.points.length > 1);
   return {
@@ -77,5 +105,8 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
     edges,
     floorPlanPaths,
     planBackgroundUrl,
+    planBackgroundDataUrl,
+    planCalibration,
+    snapGridPx,
   };
 }

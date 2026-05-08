@@ -139,6 +139,10 @@ export interface CameraPlanOverlay {
   fovDeg?: number;
   /** Dolžina „stožca“ na platnu v slikovnih pikah. */
   reachPx?: number;
+  /** Poenostavljen prikaz „DORI“ obročev znotraj FOV (orientacijski model, ne certifikacija). */
+  showDoriZones?: boolean;
+  /** Dodaten črtkan lok za oceno IR/nočnega dosega (px na platnu). */
+  irReachPx?: number;
 }
 
 export interface TopologyCanvasNode {
@@ -156,13 +160,33 @@ export interface TopologyCanvasEdge {
   to: string;
 }
 
+/** Segment risbe: stena/tloris ali pot kabla (kot pri CCTV design kablih). */
+export type FloorPlanStrokeKind = "wall" | "cable";
+
+export interface FloorPlanPathEntry {
+  points: Array<{ x: number; y: number }>;
+  kind?: FloorPlanStrokeKind;
+  /** Npr. Cat6, coax */
+  cableType?: string;
+}
+
+/** Merilo načrta: metre na slikovno piko (za oceno dolžin kablov na risbi). */
+export interface PlanCalibration {
+  metersPerPx?: number;
+}
+
 export interface ClientTopologyState {
   nodes: TopologyCanvasNode[];
   edges: TopologyCanvasEdge[];
-  /** Ročno narisane linije tlorisa v shemi. */
-  floorPlanPaths?: Array<{ points: Array<{ x: number; y: number }> }>;
-  /** Opcijsko satelitsko / ortofoto ozadje (URL). */
+  /** Ročno narisane črte (tloris, stene, kabli …). */
+  floorPlanPaths?: FloorPlanPathEntry[];
+  /** Ozadje kot HTTPS URL. */
   planBackgroundUrl?: string;
+  /** Ozadje kot data URL (naložena slika JPG/PNG — omejena velikost v UI). */
+  planBackgroundDataUrl?: string;
+  planCalibration?: PlanCalibration;
+  /** 0 = izklop mreže snap; npr. 16 ali 24 */
+  snapGridPx?: number;
 }
 
 export interface InventoryItem {

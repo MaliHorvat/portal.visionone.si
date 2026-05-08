@@ -51,13 +51,23 @@ export async function POST(request: Request, ctx: Ctx) {
         hours: 0,
         hourlyRate,
         note,
+        timeRangeLabel: "",
         startedAt: new Date(),
         endedAt: null,
       });
       return NextResponse.json({ log }, { status: 201 });
     }
     if (Number.isNaN(hours) || hours < 0) return jsonError("Neveljavne ure.");
-    const log = await createTimeLog(clientId, { workDate, technician, hours, hourlyRate, note });
+    const timeRangeLabel =
+      body?.timeRangeLabel !== undefined ? String(body.timeRangeLabel).trim().slice(0, 80) : "";
+    const log = await createTimeLog(clientId, {
+      workDate,
+      technician,
+      hours,
+      hourlyRate,
+      note,
+      timeRangeLabel,
+    });
     return NextResponse.json({ log }, { status: 201 });
   } catch (e) {
     console.error(e);

@@ -182,6 +182,8 @@ model ClientTimeLog {
   workDate     String   @default("")
   technician   String   @default("")
   note         String   @db.Text @default("")
+  /** Pri ročnem vnosu npr. „10:00–12:00“; prazno če timer ali samo decimalne ure. */
+  timeRangeLabel String @default("")
   startedAt    DateTime?
   endedAt      DateTime?
   hours        Float    @default(0)

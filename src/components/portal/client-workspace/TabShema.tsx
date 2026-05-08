@@ -1,12 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EthernetPort, HardDrive, Video } from "lucide-react";
 import { usePortalToast } from "@/context/PortalToastContext";
 import { parseTopologyState } from "@/lib/topology-parse";
+import {
+  buildDesignBomCsv,
+  cameraLensVertex,
+  downloadTextFile,
+  polylineLengthPx,
+  snapCoord,
+  sumCableLengthM,
+  svgArcOpen,
+} from "@/lib/schema-design-tools";
 import type {
   CameraPlanOverlay,
   ClientTopologyState,
+  FloorPlanPathEntry,
   TopologyCanvasNode,
   TopologyDeviceKind,
 } from "@/lib/types";
@@ -29,20 +39,30 @@ function newId() {
   return typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `n-${Date.now()}`;
 }
 
-/** Kot pokritosti v slogu načrtovalskih risb (stožec okoli pozicije kamere). */
-function cameraFovPath(cx: number, cy: number, rotationDeg: number, fovDeg: number, reach: number) {
+/**
+ * Polje vidnosti: vrh stožca na „objektivu“ (rahlo pred središčem ikone v smeri pogleda),
+ * ne v geometrijskem središču ikone.
+ */
+function cameraFovPath(
+  iconCx: number,
+  iconCy: number,
+  rotationDeg: number,
+  fovDeg: number,
+  reach: number,
+  lensForwardPx = 18,
+) {
+  const { vx, vy, br } = cameraLensVertex(iconCx, iconCy, rotationDeg, lensForwardPx);
   const fov = Number.isFinite(fovDeg) && fovDeg > 0 ? Math.min(fovDeg, 359) : 70;
   const half = (fov * Math.PI) / 360;
-  const br = ((rotationDeg ?? 0) - 90) * (Math.PI / 180);
   const a1 = br - half;
   const a2 = br + half;
   const r = Number.isFinite(reach) && reach > 20 ? reach : 150;
-  const x1 = cx + r * Math.cos(a1);
-  const y1 = cy + r * Math.sin(a1);
-  const x2 = cx + r * Math.cos(a2);
-  const y2 = cy + r * Math.sin(a2);
+  const x1 = vx + r * Math.cos(a1);
+  const y1 = vy + r * Math.sin(a1);
+  const x2 = vx + r * Math.cos(a2);
+  const y2 = vy + r * Math.sin(a2);
   const largeArc = fov > 180 ? 1 : 0;
-  return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+  return `M ${vx} ${vy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
 }
 
 function DeviceGlyph({
@@ -78,7 +98,21 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const [lineStart, setLineStart] = useState<{ x: number; y: number } | null>(null);
   const [linePreview, setLinePreview] = useState<{ x: number; y: number } | null>(null);
   const [selectedPathIdx, setSelectedPathIdx] = useState<number | null>(null);
+  const [drawStrokeKind, setDrawStrokeKind] = useState<"wall" | "cable">("wall");
+  const [cableTypeDraft, setCableTypeDraft] = useState("Cat6");
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  const cableTotalM = useMemo(
+    () => sumCableLengthM(topo.floorPlanPaths, topo.planCalibration?.metersPerPx),
+    [topo.floorPlanPaths, topo.planCalibration?.metersPerPx],
+  );
+
+  const selectedPathLenM = useMemo(() => {
+    if (selectedPathIdx === null || !topo.floorPlanPaths?.[selectedPathIdx] || !topo.planCalibration?.metersPerPx)
+      return null;
+    const px = polylineLengthPx(topo.floorPlanPaths[selectedPathIdx].points);
+    return Math.round(px * topo.planCalibration.metersPerPx * 100) / 100;
+  }, [selectedPathIdx, topo.floorPlanPaths, topo.planCalibration?.metersPerPx]);
 
   useEffect(() => {
     setTopo(parseTopologyState(client.topologyData));
@@ -166,13 +200,14 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
       return;
     }
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = Math.round(e.clientX - rect.left - 48);
-    const y = Math.round(e.clientY - rect.top - 20);
+    const g = topo.snapGridPx;
+    const x = Math.max(20, snapCoord(Math.round(e.clientX - rect.left - 48), g));
+    const y = Math.max(20, snapCoord(Math.round(e.clientY - rect.top - 20), g));
     const node: TopologyCanvasNode = {
       id: newId(),
       label: payload.label,
-      x: Math.max(20, x),
-      y: Math.max(20, y),
+      x,
+      y,
       deviceRef: { kind: payload.kind, id: payload.id },
     };
     setTopo((t) => ({ ...t, nodes: [...t.nodes, node] }));
@@ -270,10 +305,18 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
       dx >= dy
         ? { x: linePreview.x, y: lineStart.y }
         : { x: lineStart.x, y: linePreview.y };
-    if (Math.hypot(snapped.x - lineStart.x, snapped.y - lineStart.y) > 2) {
+    const g = topo.snapGridPx;
+    const p0 = { x: snapCoord(lineStart.x, g), y: snapCoord(lineStart.y, g) };
+    const p1 = { x: snapCoord(snapped.x, g), y: snapCoord(snapped.y, g) };
+    if (Math.hypot(p1.x - p0.x, p1.y - p0.y) > 2) {
+      const entry: FloorPlanPathEntry = {
+        points: [p0, p1],
+        kind: drawStrokeKind === "cable" ? "cable" : "wall",
+      };
+      if (drawStrokeKind === "cable" && cableTypeDraft.trim()) entry.cableType = cableTypeDraft.trim();
       setTopo((t) => ({
         ...t,
-        floorPlanPaths: [...(t.floorPlanPaths ?? []), { points: [lineStart, snapped] }],
+        floorPlanPaths: [...(t.floorPlanPaths ?? []), entry],
       }));
     }
     setLineStart(null);
@@ -314,12 +357,13 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
 
   useEffect(() => {
     if (!dragging || !canvasRef.current) return;
+    const g = topo.snapGridPx;
     const move = (e: PointerEvent) => {
       const el = canvasRef.current;
       if (!el) return;
       const parent = el.getBoundingClientRect();
-      const x = Math.round(e.clientX - parent.left - dragging.dx);
-      const y = Math.round(e.clientY - parent.top - dragging.dy);
+      const x = snapCoord(Math.round(e.clientX - parent.left - dragging.dx), g);
+      const y = snapCoord(Math.round(e.clientY - parent.top - dragging.dy), g);
       setTopo((t) => ({
         ...t,
         nodes: t.nodes.map((n) =>
@@ -334,7 +378,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
     };
-  }, [dragging]);
+  }, [dragging, topo.snapGridPx]);
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row">
@@ -435,7 +479,110 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           >
             Shrani načrt
           </button>
+          <button
+            type="button"
+            className="rounded border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)] hover:text-[var(--vo-fg)]"
+            onClick={() =>
+              downloadTextFile(
+                `visionone-bom-${client.slug ?? client.id}.csv`,
+                buildDesignBomCsv(client, topo.nodes),
+              )
+            }
+          >
+            Izvoži BOM (CSV)
+          </button>
         </div>
+
+        {editMode ? (
+          <div className="space-y-2 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-3 py-2 text-xs">
+            <p className="font-semibold text-[var(--vo-fg)]">Načrtovalska orodja (podobno CCTV Design Tool)</p>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="flex flex-col text-[var(--vo-muted)]">
+                Merilo (m / px)
+                <input
+                  type="number"
+                  step="any"
+                  placeholder="npr. 0.02"
+                  value={topo.planCalibration?.metersPerPx ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    const n = Number(v);
+                    setTopo((t) => ({
+                      ...t,
+                      planCalibration:
+                        v.trim() === "" || !Number.isFinite(n) || n <= 0 ? undefined : { metersPerPx: n },
+                    }));
+                  }}
+                  className="mt-0.5 w-28 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
+                />
+              </label>
+              <label className="flex flex-col text-[var(--vo-muted)]">
+                Snap mreža (px)
+                <select
+                  value={topo.snapGridPx ?? 0}
+                  onChange={(e) =>
+                    setTopo((t) => ({
+                      ...t,
+                      snapGridPx: Number(e.target.value) || undefined,
+                    }))
+                  }
+                  className="mt-0.5 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
+                >
+                  <option value={0}>Brez</option>
+                  <option value={8}>8</option>
+                  <option value={16}>16</option>
+                  <option value={24}>24</option>
+                  <option value={32}>32</option>
+                </select>
+              </label>
+              <div className="flex flex-col text-[var(--vo-muted)]">
+                Risba črte
+                <div className="mt-0.5 flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setDrawStrokeKind("wall")}
+                    className={`rounded border px-2 py-1 ${drawStrokeKind === "wall" ? "border-[var(--vo-accent)] bg-[var(--vo-accent-muted)]" : "border-[var(--vo-border)]"}`}
+                  >
+                    Stena / tloris
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDrawStrokeKind("cable")}
+                    className={`rounded border px-2 py-1 ${drawStrokeKind === "cable" ? "border-amber-500/70 bg-amber-500/15" : "border-[var(--vo-border)]"}`}
+                  >
+                    Kabel
+                  </button>
+                </div>
+              </div>
+              {drawStrokeKind === "cable" ? (
+                <label className="flex flex-col text-[var(--vo-muted)]">
+                  Tip kabla
+                  <input
+                    value={cableTypeDraft}
+                    onChange={(e) => setCableTypeDraft(e.target.value)}
+                    placeholder="Cat6"
+                    className="mt-0.5 w-28 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
+                  />
+                </label>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2 border-t border-[var(--vo-border)] pt-2 text-[var(--vo-muted)]">
+              {topo.planCalibration?.metersPerPx ? (
+                <span>
+                  Skupaj kabli (ocena):{" "}
+                  <strong className="text-amber-200">{cableTotalM.toFixed(2)} m</strong>
+                </span>
+              ) : (
+                <span>Vnesite merilo za izračun dolžin kablov.</span>
+              )}
+              {selectedPathLenM != null ? (
+                <span className="text-[var(--vo-fg)]">
+                  Izbrana črta: <strong>{selectedPathLenM} m</strong>
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         {editMode ? (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-3 py-2 text-xs">
@@ -445,14 +592,48 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
               placeholder="https://…"
               value={topo.planBackgroundUrl ?? ""}
               onChange={(e) =>
-                setTopo((t) => ({ ...t, planBackgroundUrl: e.target.value.trim() || undefined }))
+                setTopo((t) => ({
+                  ...t,
+                  planBackgroundUrl: e.target.value.trim() || undefined,
+                  planBackgroundDataUrl: e.target.value.trim() ? undefined : t.planBackgroundDataUrl,
+                }))
               }
               className="min-w-[200px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1 text-[var(--vo-fg)]"
             />
+            <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-[var(--vo-border)] px-2 py-1 hover:bg-[var(--vo-surface-2)]">
+              Naloži sliko
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  if (file.size > 2_400_000) {
+                    showToast("Slika je prevelika za shranjevanje v načrt (max ~2,4 MB). Uporabi URL ali zmanjšaj.", "err");
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const url = typeof reader.result === "string" ? reader.result : "";
+                    if (!url.startsWith("data:")) return;
+                    setTopo((t) => ({
+                      ...t,
+                      planBackgroundDataUrl: url,
+                      planBackgroundUrl: undefined,
+                    }));
+                  };
+                  reader.readAsDataURL(file);
+                }}
+              />
+            </label>
             <button
               type="button"
               className="rounded border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)] hover:text-[var(--vo-danger)]"
-              onClick={() => setTopo((t) => ({ ...t, planBackgroundUrl: undefined }))}
+              onClick={() =>
+                setTopo((t) => ({ ...t, planBackgroundUrl: undefined, planBackgroundDataUrl: undefined }))
+              }
             >
               Odstrani ozadje
             </button>
@@ -534,9 +715,33 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                       className="mt-0.5 w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
                     />
                   </label>
+                  <label className="flex cursor-pointer items-end gap-2 pb-1 text-[var(--vo-muted)]">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(cp?.showDoriZones)}
+                      onChange={(e) =>
+                        patchCameraPlan({ showDoriZones: e.target.checked ? true : undefined })
+                      }
+                      className="rounded border-[var(--vo-border)]"
+                    />
+                    DORI obroči (poenostavljeno)
+                  </label>
+                  <label className="flex flex-col text-[var(--vo-muted)]">
+                    IR doseg (px)
+                    <input
+                      type="number"
+                      value={cp?.irReachPx ?? ""}
+                      placeholder="opcijsko"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        patchCameraPlan(v === "" ? { irReachPx: undefined } : { irReachPx: Number(v) });
+                      }}
+                      className="mt-0.5 w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
+                    />
+                  </label>
                 </div>
                 <p className="mt-2 text-[var(--vo-muted)]">
-                  Obrnite ikono (‑15° / +15°) za smer „streha“ polja vidnosti.
+                  Obrnite ikono (‑15° / +15°) za smer „streha“ polja vidnosti. DORI je orientacijski model (ne EN 62676 certifikacija).
                 </p>
               </div>
             );
@@ -553,10 +758,23 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           onPointerUp={endDraw}
           onPointerLeave={endDraw}
         >
-          {topo.planBackgroundUrl ? (
+          {(topo.planBackgroundDataUrl ?? topo.planBackgroundUrl) ? (
             <div
               className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.92]"
-              style={{ backgroundImage: `url(${topo.planBackgroundUrl})` }}
+              style={{
+                backgroundImage: `url(${topo.planBackgroundDataUrl ?? topo.planBackgroundUrl})`,
+              }}
+              aria-hidden
+            />
+          ) : null}
+          {editMode && (topo.snapGridPx ?? 0) > 0 ? (
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.42]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(to right, rgba(148,163,184,0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,0.5) 1px, transparent 1px)",
+                backgroundSize: `${topo.snapGridPx}px ${topo.snapGridPx}px`,
+              }}
               aria-hidden
             />
           ) : null}
@@ -564,22 +782,87 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             {topo.nodes.map((n) => {
               if (n.deviceRef?.kind !== "camera") return null;
               const cx = n.x + 32;
-              const cy = n.y + 18;
+              const cy = n.y + 20;
               const plan = n.cameraPlan;
-              const d = cameraFovPath(cx, cy, n.rotationDeg ?? 0, plan?.fovDeg ?? 70, plan?.reachPx ?? 150);
+              const fovDeg = plan?.fovDeg ?? 70;
+              const reach = plan?.reachPx ?? 150;
+              const d = cameraFovPath(cx, cy, n.rotationDeg ?? 0, fovDeg, reach);
               const st = getDeviceStatus("camera", n.deviceRef.id);
               const fill =
                 st === "online" ? "rgba(59, 130, 246, 0.28)" : "rgba(248, 113, 113, 0.22)";
               const stroke = st === "online" ? "rgba(59, 130, 246, 0.65)" : "rgba(248, 113, 113, 0.55)";
-              return <path key={`fov-${n.id}`} d={d} fill={fill} stroke={stroke} strokeWidth={1.5} />;
+              const { vx, vy, br } = cameraLensVertex(cx, cy, n.rotationDeg ?? 0);
+              const fov = Number.isFinite(fovDeg) && fovDeg > 0 ? Math.min(fovDeg, 359) : 70;
+              const half = (fov * Math.PI) / 360;
+              const a1 = br - half;
+              const a2 = br + half;
+              const ir = plan?.irReachPx;
+              return (
+                <g key={`cam-${n.id}`}>
+                  <path d={d} fill={fill} stroke={stroke} strokeWidth={1.5} />
+                  {plan?.showDoriZones ? (
+                    <>
+                      {[0.33, 0.55, 0.77].map((fr, idx) => (
+                        <path
+                          key={`dori-a-${idx}`}
+                          d={svgArcOpen(vx, vy, reach * fr, a1, a2)}
+                          fill="none"
+                          stroke="rgba(255,255,255,0.55)"
+                          strokeWidth={1.2}
+                          strokeDasharray="5 4"
+                        />
+                      ))}
+                      {[
+                        { fr: 0.28, t: "D" },
+                        { fr: 0.48, t: "O" },
+                        { fr: 0.68, t: "R" },
+                        { fr: 0.88, t: "I" },
+                      ].map(({ fr, t }) => (
+                        <text
+                          key={`dori-${t}-${n.id}`}
+                          x={vx + reach * fr * Math.cos(br)}
+                          y={vy + reach * fr * Math.sin(br)}
+                          fill="rgba(255,255,255,0.92)"
+                          fontSize={10}
+                          fontWeight={700}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          style={{ pointerEvents: "none" }}
+                        >
+                          {t}
+                        </text>
+                      ))}
+                    </>
+                  ) : null}
+                  {ir != null && Number.isFinite(ir) && ir > 25 ? (
+                    <path
+                      d={cameraFovPath(cx, cy, n.rotationDeg ?? 0, fovDeg, ir)}
+                      fill="none"
+                      stroke={stroke}
+                      strokeWidth={1.25}
+                      strokeDasharray="8 5"
+                      opacity={0.9}
+                    />
+                  ) : null}
+                </g>
+              );
             })}
-            {(topo.floorPlanPaths ?? []).map((path, i) => (
+            {(topo.floorPlanPaths ?? []).map((path, i) => {
+              const isCable = path.kind === "cable";
+              const sel = selectedPathIdx === i;
+              const strokeCol = sel
+                ? "rgba(56, 189, 248, 0.98)"
+                : isCable
+                  ? "rgba(251, 191, 36, 0.92)"
+                  : "rgba(148, 163, 184, 0.85)";
+              return (
               <polyline
                 key={`fp-${i}`}
                 points={path.points.map((p) => `${p.x},${p.y}`).join(" ")}
                 fill="none"
-                stroke={selectedPathIdx === i ? "rgba(56, 189, 248, 0.95)" : "rgba(148, 163, 184, 0.8)"}
-                strokeWidth={selectedPathIdx === i ? 3 : 2}
+                stroke={strokeCol}
+                strokeWidth={sel ? 3 : isCable ? 2.6 : 2}
+                strokeDasharray={isCable ? "7 5" : undefined}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className={editMode ? "cursor-pointer" : undefined}
@@ -589,7 +872,8 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   setSelectedPathIdx(i);
                 }}
               />
-            ))}
+              );
+            })}
             {lineStart && linePreview ? (
               <polyline
                 points={`${lineStart.x},${lineStart.y} ${

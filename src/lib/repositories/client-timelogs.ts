@@ -20,6 +20,7 @@ export async function createTimeLog(
     hours: number;
     hourlyRate: number;
     note?: string;
+    timeRangeLabel?: string;
     startedAt?: Date | null;
     endedAt?: Date | null;
   },
@@ -32,6 +33,7 @@ export async function createTimeLog(
       workDate: data.workDate,
       technician: data.technician,
       note: data.note ?? "",
+      timeRangeLabel: data.timeRangeLabel?.trim() ?? "",
       startedAt: data.startedAt ?? null,
       endedAt: data.endedAt ?? null,
       hours: data.hours,

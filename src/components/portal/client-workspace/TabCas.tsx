@@ -9,6 +9,7 @@ type Log = {
   workDate: string;
   technician: string;
   note: string;
+  timeRangeLabel?: string;
   startedAt?: string | null;
   endedAt?: string | null;
   hours: number;
@@ -21,6 +22,15 @@ function fmtH(hours: number) {
 }
 
 /** Obseg npr. 10:00-12:00 ali 10.00–12.30 */
+/** Lep prikaz v tabeli: 10:00–12:30 */
+function formatTimeRangeLabel(raw: string): string {
+  const s = raw.trim().replace(/\s+/g, "").replace(/–|—/g, "-");
+  const m = /^(\d{1,2})[:.](\d{2})-(\d{1,2})[:.](\d{2})$/.exec(s);
+  if (!m) return raw.trim().slice(0, 80);
+  const z = (x: string) => x.padStart(2, "0");
+  return `${z(m[1])}:${m[2]}–${z(m[3])}:${m[4]}`;
+}
+
 function parseTimeRangeToHours(raw: string): number | null {
   const s = raw.trim().replace(/\s+/g, "").replace(/–/g, "-");
   const m = /^(\d{1,2})[:.](\d{2})-(\d{1,2})[:.](\d{2})$/.exec(s);
@@ -111,6 +121,7 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
         hours,
         workDate: date,
         note,
+        timeRangeLabel: tr ? formatTimeRangeLabel(tr) : "",
       }),
     });
     setBusy(false);
@@ -287,12 +298,13 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
       ) : null}
 
       <div className="overflow-x-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)]">
-        <table className="w-full min-w-[860px] text-left text-sm">
+        <table className="w-full min-w-[960px] text-left text-sm">
           <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
             <tr>
               <th className="px-3 py-2">Datum</th>
               <th className="px-3 py-2">Tehnik</th>
               <th className="px-3 py-2">Opis</th>
+              <th className="px-3 py-2">Obseg časa</th>
               <th className="px-3 py-2">Ure</th>
               <th className="px-3 py-2">Strošek</th>
               <th className="px-3 py-2" />
@@ -308,6 +320,9 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
                   <td className="px-3 py-2">{l.workDate}</td>
                   <td className="px-3 py-2">{l.technician}</td>
                   <td className="px-3 py-2 text-[var(--vo-muted)]">{l.note || "—"}</td>
+                  <td className="px-3 py-2 font-mono text-[11px] text-sky-300/95">
+                    {(l.timeRangeLabel ?? "").trim() || "—"}
+                  </td>
                   <td className="px-3 py-2 text-amber-300">{fmtH(h)}</td>
                   <td className="px-3 py-2">{cost.toFixed(2)} €</td>
                   <td className="px-3 py-2 text-right">
@@ -326,7 +341,7 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
           </tbody>
           <tfoot>
             <tr className="bg-[var(--vo-surface-2)] font-semibold">
-              <td className="px-3 py-2" colSpan={3}>
+              <td className="px-3 py-2" colSpan={4}>
                 Skupaj
               </td>
               <td className="px-3 py-2 text-amber-300">{fmtH(sumH)}</td>
