@@ -27,6 +27,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
   const [notice, setNotice] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; clientId: string } | null>(null);
   const [orderedClients, setOrderedClients] = useState(clients);
+  const [dragId, setDragId] = useState<string | null>(null);
 
   useEffect(() => {
     setOrderedClients(clients);
@@ -116,6 +117,18 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
     const next = [...orderedClients];
     const [item] = next.splice(idx, 1);
     next.splice(target, 0, item);
+    await persistOrder(next);
+  }
+
+  async function moveClientBefore(sourceId: string, targetId: string) {
+    if (sourceId === targetId) return;
+    const sourceIdx = orderedClients.findIndex((c) => c.id === sourceId);
+    const targetIdx = orderedClients.findIndex((c) => c.id === targetId);
+    if (sourceIdx < 0 || targetIdx < 0) return;
+    const next = [...orderedClients];
+    const [item] = next.splice(sourceIdx, 1);
+    const insertAt = sourceIdx < targetIdx ? targetIdx - 1 : targetIdx;
+    next.splice(insertAt, 0, item);
     await persistOrder(next);
   }
 
@@ -326,11 +339,20 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                 </td>
               </tr>
             ) : null}
-            {orderedClients.map((c, idx) => (
+            {orderedClients.map((c) => (
               <tr
                 key={c.id}
                 className="border-b border-[var(--vo-border)] last:border-0"
                 onContextMenu={(e) => openClientMenu(e, c.id)}
+                draggable={!reordering}
+                onDragStart={() => setDragId(c.id)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => {
+                  if (!dragId) return;
+                  void moveClientBefore(dragId, c.id);
+                  setDragId(null);
+                }}
+                onDragEnd={() => setDragId(null)}
               >
                 <td className="px-4 py-3 font-medium text-[var(--vo-fg)]">{c.name}</td>
                 <td className="px-4 py-3 text-[var(--vo-muted)]">{c.address}</td>
@@ -362,22 +384,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    disabled={reordering || idx === 0}
-                    onClick={() => void moveClient(c.id, -1)}
-                    className="mr-3 text-xs font-medium text-[var(--vo-fg)] hover:underline disabled:opacity-40"
-                  >
-                    Gor
-                  </button>
-                  <button
-                    type="button"
-                    disabled={reordering || idx === orderedClients.length - 1}
-                    onClick={() => void moveClient(c.id, 1)}
-                    className="text-xs font-medium text-[var(--vo-fg)] hover:underline disabled:opacity-40"
-                  >
-                    Dol
-                  </button>
+                  <span className="mr-3 text-xs text-[var(--vo-muted)]">Povleci za premik</span>
                   <Link
                     href={clientProfilePath(c)}
                     prefetch

@@ -8,7 +8,6 @@ import {
   getDefaultNavPermissions,
   type NavPermissionKey,
 } from "@/lib/nav-permissions";
-import { roleLabel } from "@/lib/portal-roles";
 
 type Row = { id: string; username: string; email: string; role: PortalRole; navPermissions: NavPermissionKey[] };
 
@@ -89,6 +88,22 @@ export function NastavitveUporabniki() {
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       alert(data?.error ?? "Brisanje ni uspelo.");
+      return;
+    }
+    await refresh();
+  }
+
+  async function handleUpdateUser(id: string, nextRole: PortalRole, nextNavPermissions: NavPermissionKey[]) {
+    setBusy(true);
+    const res = await fetch("/api/portal-users", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, role: nextRole, navPermissions: nextNavPermissions }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data?.error ?? "Posodobitev ni uspela.");
       return;
     }
     await refresh();
@@ -199,8 +214,45 @@ export function NastavitveUporabniki() {
                 <tr key={u.id} className="border-b border-[var(--vo-border)] last:border-0">
                   <td className="px-3 py-2 font-medium text-[var(--vo-fg)]">{u.username}</td>
                   <td className="px-3 py-2 text-[var(--vo-muted)]">{u.email || "—"}</td>
-                  <td className="px-3 py-2 text-[var(--vo-muted)]">{roleLabel(u.role)}</td>
-                  <td className="px-3 py-2 text-xs text-[var(--vo-muted)]">{u.navPermissions.length} sklopov</td>
+                  <td className="px-3 py-2 text-[var(--vo-muted)]">
+                    <select
+                      value={u.role}
+                      disabled={busy || !!loadError || u.username === "admin"}
+                      onChange={(ev) =>
+                        void handleUpdateUser(
+                          u.id,
+                          ev.target.value as PortalRole,
+                          getDefaultNavPermissions(ev.target.value as PortalRole),
+                        )
+                      }
+                      className="rounded-md border border-[var(--vo-border)] bg-transparent px-2 py-1 text-xs"
+                    >
+                      <option value="viewer">Pregled</option>
+                      <option value="operator">Operater</option>
+                      <option value="admin">Administrator</option>
+                    </select>
+                  </td>
+                  <td className="px-3 py-2 text-xs text-[var(--vo-muted)]">
+                    <button
+                      type="button"
+                      disabled={busy || !!loadError}
+                      onClick={() => {
+                        const manual = prompt(
+                          "Vnesi dostope (ločeni z vejico), npr.: dashboard,my-account,clients",
+                          u.navPermissions.join(","),
+                        );
+                        if (manual === null) return;
+                        const parsed = manual
+                          .split(",")
+                          .map((x) => x.trim())
+                          .filter((x): x is NavPermissionKey => NAV_PERMISSION_KEYS.includes(x as NavPermissionKey));
+                        void handleUpdateUser(u.id, u.role, parsed);
+                      }}
+                      className="font-medium text-[var(--vo-accent)] hover:underline disabled:opacity-40"
+                    >
+                      Uredi dostope ({u.navPermissions.length})
+                    </button>
+                  </td>
                   <td className="px-3 py-2 text-right">
                     {u.username === "admin" ? (
                       <span className="text-xs text-[var(--vo-muted)]">—</span>

@@ -130,3 +130,51 @@ export async function DELETE(request: Request) {
   await appendAuditLog(session.username, "portal_user_delete", victim.username);
   return NextResponse.json({ ok: true });
 }
+
+export async function PATCH(request: Request) {
+  const session = await getPortalSession();
+  if (session?.role !== "admin") {
+    return NextResponse.json({ error: "Prepovedano" }, { status: 403 });
+  }
+  if (!isDbConfigured() || !prisma) {
+    return NextResponse.json({ error: "Baza ni nastavljena." }, { status: 503 });
+  }
+
+  let body: {
+    id?: string;
+    role?: PortalUserRole;
+    navPermissions?: string[];
+  };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return NextResponse.json({ error: "Neveljavna JSON telesa." }, { status: 400 });
+  }
+  const id = String(body.id ?? "");
+  const role = (body.role ?? "viewer") as PortalUserRole;
+  if (!id) return NextResponse.json({ error: "Manjka id." }, { status: 400 });
+  if (role !== "admin" && role !== "operator" && role !== "viewer") {
+    return NextResponse.json({ error: "Neveljavna vloga." }, { status: 400 });
+  }
+  const navPermissions = normalizeNavPermissions(body.navPermissions, role);
+
+  const victim = await prisma.appUserAccount.findUnique({ where: { id } });
+  if (!victim) return NextResponse.json({ error: "Uporabnik ne obstaja." }, { status: 404 });
+  if (victim.username === "admin" && role !== "admin") {
+    return NextResponse.json({ error: "Glavni admin mora ostati administrator." }, { status: 400 });
+  }
+  if (victim.username === session.username && role !== "admin") {
+    return NextResponse.json({ error: "Lastne vloge ne morete znižati." }, { status: 400 });
+  }
+
+  await prisma.appUserAccount.update({
+    where: { id },
+    data: {
+      role,
+      isAdmin: role === "admin",
+      navPermissions,
+    },
+  });
+  await appendAuditLog(session.username, "portal_user_update", `${victim.username}|${role}`);
+  return NextResponse.json({ ok: true });
+}
