@@ -28,11 +28,9 @@ import {
   Wifi,
   Wrench,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import type { NavPermissionKey } from "@/lib/nav-permissions";
 import { roleLabel } from "@/lib/portal-roles";
-import { mockClientPortalSlug } from "@/lib/mock-data";
 
 type NavItem = { href: string; label: string; icon: React.ElementType; permission: NavPermissionKey; adminOnly?: boolean };
 type NavSection = { title: string; items: NavItem[] };
@@ -53,7 +51,7 @@ const navSections: NavSection[] = [
       { href: "/portal/cas", label: "Sledenje času", icon: ClipboardList, permission: "time-tracking", adminOnly: true },
       { href: "/portal/opomniki", label: "Vzdrževanje", icon: CalendarClock, permission: "maintenance" },
       {
-        href: `/portal/stranke/${mockClientPortalSlug}`,
+        href: "/portal/stranke",
         label: "Moj objekt",
         icon: Camera,
         permission: "my-site",
@@ -135,19 +133,15 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         ...s,
         items: s.items.filter((item) => {
           if (!navPermissions.includes(item.permission)) return false;
-          if (item.label === "Moj objekt") return role !== "admin";
-          if (item.adminOnly) return role === "admin";
-          if (item.href === "/portal/stranke") return role === "admin";
           return true;
         }),
       })),
-    [navPermissions, role],
+    [navPermissions],
   );
 
   useEffect(() => {
-    for (const section of visible) {
-      for (const item of section.items) router.prefetch(item.href);
-    }
+    const prefetchable = visible.flatMap((section) => section.items).slice(0, 6);
+    for (const item of prefetchable) router.prefetch(item.href);
   }, [router, visible]);
 
   useEffect(() => {
@@ -301,7 +295,6 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 ) : null}
               </Link>
             ) : null}
-            <ThemeToggle />
             <form action="/api/portal-logout" method="post">
               <button
                 type="submit"

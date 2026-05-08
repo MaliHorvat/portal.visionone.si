@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { PortalContextMenu, type ContextMenuItem } from "@/components/portal/PortalContextMenu";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { clientProfilePath } from "@/lib/client-url";
-import { mockClientPortalSlug } from "@/lib/mock-data";
 import type { ClientSummary, SubscriptionPackageDto } from "@/lib/types";
 
 type Props = {
@@ -28,10 +27,11 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; clientId: string } | null>(null);
 
   useEffect(() => {
-    if (role !== "admin") {
-      router.replace(`/portal/stranke/${encodeURIComponent(mockClientPortalSlug)}`);
-    }
-  }, [role, router]);
+    if (role === "admin") return;
+    const first = clients[0];
+    if (!first) return;
+    router.replace(clientProfilePath(first));
+  }, [role, router, clients]);
 
   if (role !== "admin") {
     return <p className="text-sm text-[var(--vo-muted)]">Preusmerjam na vaš objekt …</p>;

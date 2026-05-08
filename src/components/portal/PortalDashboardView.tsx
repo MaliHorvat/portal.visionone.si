@@ -17,7 +17,6 @@ import {
   Wifi,
 } from "lucide-react";
 import { usePortalRole } from "@/context/PortalRoleContext";
-import { mockClientPortalClientId } from "@/lib/mock-data";
 import type {
   ClientDashboardCard,
   PortalDashboardPayload,
@@ -36,12 +35,7 @@ export function PortalDashboardView({ initial }: Props) {
     return () => window.clearInterval(id);
   }, []);
 
-  const clients = useMemo(() => {
-    if (role !== "admin") {
-      return initial.clients.filter((c) => c.id === mockClientPortalClientId);
-    }
-    return initial.clients;
-  }, [initial.clients, role]);
+  const clients = useMemo(() => initial.clients, [initial.clients]);
 
   const totals = initial.totals;
 

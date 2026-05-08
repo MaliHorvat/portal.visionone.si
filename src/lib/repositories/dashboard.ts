@@ -195,27 +195,30 @@ export async function getPortalDashboard(
 
   const clientWhere =
     session && session.role !== "admin" ? { ownerUsername: session.username } : undefined;
-  const rows = await prisma.client.findMany({
-    where: clientWhere,
-    orderBy: { name: "asc" },
-    select: {
-      id: true,
-      name: true,
-      health: true,
-      cameras: { select: { id: true, name: true, ip: true, status: true } },
-      recorders: { select: { id: true, name: true, status: true } },
-      switches: { select: { id: true, name: true, status: true } },
-      disks: { select: { label: true, health: true, installedAt: true } },
-    },
-  });
-
-  const probes = await prisma.deviceProbe.findMany({
-    where: {
-      ...(session && session.role !== "admin" ? { client: { ownerUsername: session.username } } : {}),
-      OR: [{ kind: "camera" }, { kind: "nvr" }, { kind: "switch" }],
-    },
-    select: { clientId: true, deviceKey: true, status: true },
-  });
+  const [rows, probes, remindersRaw, audits] = await Promise.all([
+    prisma.client.findMany({
+      where: clientWhere,
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        health: true,
+        cameras: { select: { id: true, name: true, ip: true, status: true } },
+        recorders: { select: { id: true, name: true, status: true } },
+        switches: { select: { id: true, name: true, status: true } },
+        disks: { select: { label: true, health: true, installedAt: true } },
+      },
+    }),
+    prisma.deviceProbe.findMany({
+      where: {
+        ...(session && session.role !== "admin" ? { client: { ownerUsername: session.username } } : {}),
+        OR: [{ kind: "camera" }, { kind: "nvr" }, { kind: "switch" }],
+      },
+      select: { clientId: true, deviceKey: true, status: true },
+    }),
+    listRemindersForSession(session ?? undefined),
+    listAuditLogs(8),
+  ]);
   const liveByClient = new Map<string, Record<string, string>>();
   for (const p of probes) {
     if (!p.clientId) continue;
@@ -267,7 +270,6 @@ export async function getPortalDashboard(
     },
   );
 
-  const remindersRaw = await listRemindersForSession(session ?? undefined);
   const reminders = remindersRaw
     .filter((r) => !r.completed)
     .slice(0, 12)
@@ -279,7 +281,6 @@ export async function getPortalDashboard(
       completed: r.completed,
     }));
 
-  const audits = await listAuditLogs(8);
   const activities: DashboardActivity[] = audits.map((a) => {
     let level: DashboardActivity["level"] = "info";
     if (/delete|error|fail|403|401/i.test(a.action + a.details)) level = "error";
