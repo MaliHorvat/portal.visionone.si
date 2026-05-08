@@ -20,6 +20,7 @@ model Client {
   phone     String   @default("")
   email     String   @default("")
   ownerUsername String @default("admin")
+  sortOrder Int @default(0)
   health    String   @default("ok")
   topologyData Json?
   rackData       Json?

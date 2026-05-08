@@ -189,10 +189,18 @@ export async function listClients(): Promise<ClientSummary[]> {
       health: c.health,
     }));
   }
-  const rows = await prisma.client.findMany({
-    orderBy: { name: "asc" },
-    include: { package: true },
-  });
+  let rows: Awaited<ReturnType<NonNullable<typeof prisma>["client"]["findMany"]>>;
+  try {
+    rows = await prisma.client.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: { package: true },
+    });
+  } catch {
+    rows = await prisma.client.findMany({
+      orderBy: { name: "asc" },
+      include: { package: true },
+    });
+  }
   return rows.map(mapClientSummary);
 }
 
@@ -205,11 +213,20 @@ export async function listClientsForSession(
   session?: Pick<PortalSessionPayload, "role" | "username">,
 ): Promise<ClientSummary[]> {
   if (!isDbConfigured() || !prisma) return listClients();
-  const rows = await prisma.client.findMany({
-    where: scopeWhere(session),
-    orderBy: { name: "asc" },
-    include: { package: true },
-  });
+  let rows: Awaited<ReturnType<NonNullable<typeof prisma>["client"]["findMany"]>>;
+  try {
+    rows = await prisma.client.findMany({
+      where: scopeWhere(session),
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: { package: true },
+    });
+  } catch {
+    rows = await prisma.client.findMany({
+      where: scopeWhere(session),
+      orderBy: { name: "asc" },
+      include: { package: true },
+    });
+  }
   return rows.map(mapClientSummary);
 }
 
@@ -283,6 +300,7 @@ export async function createClient(data: UpsertClientInput): Promise<ClientDetai
   if (!isDbConfigured() || !prisma) {
     throw new Error("DB ni nastavljena.");
   }
+  const max = await prisma.client.aggregate({ _max: { sortOrder: true } }).catch(() => ({ _max: { sortOrder: 0 } }));
   const slug = await allocateUniqueClientSlug(data.name);
   const row = await prisma.client.create({
     data: {
@@ -293,6 +311,7 @@ export async function createClient(data: UpsertClientInput): Promise<ClientDetai
       phone: data.phone ?? "",
       email: data.email ?? "",
       health: data.health ?? "ok",
+      sortOrder: (max._max.sortOrder ?? 0) + 1,
       packageId: data.packageId ?? null,
     },
     include: {
@@ -311,6 +330,10 @@ export async function createClientForSession(
   session?: Pick<PortalSessionPayload, "role" | "username">,
 ): Promise<ClientDetail> {
   if (!isDbConfigured() || !prisma) throw new Error("DB ni nastavljena.");
+  const max = await prisma.client.aggregate({
+    where: scopeWhere(session),
+    _max: { sortOrder: true },
+  }).catch(() => ({ _max: { sortOrder: 0 } }));
   const slug = await allocateUniqueClientSlug(data.name);
   const row = await prisma.client.create({
     data: {
@@ -321,6 +344,7 @@ export async function createClientForSession(
       phone: data.phone ?? "",
       email: data.email ?? "",
       health: data.health ?? "ok",
+      sortOrder: (max._max.sortOrder ?? 0) + 1,
       packageId: data.packageId ?? null,
       ownerUsername: session?.role === "admin" ? (session.username || "admin") : (session?.username || "admin"),
     },
@@ -376,4 +400,35 @@ export async function deleteClient(id: string): Promise<void> {
     throw new Error("DB ni nastavljena.");
   }
   await prisma.client.delete({ where: { id } });
+}
+
+export async function reorderClientsForSession(
+  orderedIds: string[],
+  session?: Pick<PortalSessionPayload, "role" | "username">,
+): Promise<void> {
+  if (!isDbConfigured() || !prisma) throw new Error("DB ni nastavljena.");
+  const db = prisma;
+  const rows = await db.client.findMany({
+    where: scopeWhere(session),
+    select: { id: true },
+  });
+  const allowed = new Set(rows.map((r) => r.id));
+  const filtered = orderedIds.filter((id) => allowed.has(id));
+  if (filtered.length === 0) return;
+  try {
+    await db.$transaction(
+      filtered.map((id, idx) =>
+        db.client.update({
+          where: { id },
+          data: { sortOrder: idx + 1 },
+        }),
+      ),
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/unknown column|sortOrder|doesn't exist|does not exist/i.test(msg)) {
+      throw new Error("Manjka stolpec sortOrder — zaženite: npx prisma db push");
+    }
+    throw e;
+  }
 }

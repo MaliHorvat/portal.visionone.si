@@ -201,10 +201,6 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
             </button>
           </form>
         </div>
-        <div className="mt-8 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-3 py-2 text-xs text-[var(--vo-muted)]">
-          <span className="mr-1 inline-block h-2 w-2 rounded-full bg-[var(--vo-danger)]" />
-          Status sistema: <span className="font-semibold text-[var(--vo-danger)]">Offline</span>
-        </div>
       </Show>
     </div>
   );

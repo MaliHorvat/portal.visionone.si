@@ -5,28 +5,15 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
-  BookOpen,
   Boxes,
-  CalendarClock,
-  Camera,
-  ClipboardList,
-  Cpu,
-  FileText,
-  Layers,
   LayoutDashboard,
-  Network,
   Package,
-  PlugZap,
-  Router,
   RadioTower,
   Settings,
   Shield,
-  SlidersHorizontal,
   UserCircle,
   Users,
   Video,
-  Wifi,
-  Wrench,
 } from "lucide-react";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import type { NavPermissionKey } from "@/lib/nav-permissions";
@@ -40,67 +27,18 @@ const navSections: NavSection[] = [
     title: "PREGLED",
     items: [
       { href: "/portal", label: "Nadzorna plošča", icon: LayoutDashboard, permission: "dashboard" },
-      { href: "/portal/racun", label: "Moj račun", icon: UserCircle, permission: "my-account" },
     ],
   },
   {
     title: "VODENJE PROJEKTOV",
     items: [
       { href: "/portal/stranke", label: "Objekti & stranke", icon: Users, permission: "clients", adminOnly: true },
-      { href: "/portal/ponudbe", label: "Ponudbe", icon: FileText, permission: "offers", adminOnly: true },
-      { href: "/portal/cas", label: "Sledenje času", icon: ClipboardList, permission: "time-tracking", adminOnly: true },
-      { href: "/portal/opomniki", label: "Vzdrževanje", icon: CalendarClock, permission: "maintenance" },
-      {
-        href: "/portal/stranke",
-        label: "Moj objekt",
-        icon: Camera,
-        permission: "my-site",
-        adminOnly: false,
-      },
-    ],
-  },
-  {
-    title: "NAČRTOVANJE",
-    items: [
-      { href: "/portal/rack-dizajner", label: "Rack dizajner", icon: Layers, permission: "rack-designer", adminOnly: true },
-      { href: "/portal/orodja?tool=poe", label: "PoE kalkulator", icon: PlugZap, permission: "tools", adminOnly: true },
-      { href: "/portal/orodja?tool=storage", label: "Kalkulator shrambe", icon: Boxes, permission: "tools", adminOnly: true },
-      { href: "/portal/orodja?tool=lcc", label: "Kalkulator LCC", icon: SlidersHorizontal, permission: "tools", adminOnly: true },
-    ],
-  },
-  {
-    title: "OMREŽJE & DIAGNOSTIKA",
-    items: [
-      { href: "/portal/orodja?tool=ip-scan", label: "IP scanner", icon: Router, permission: "network-diagnostics", adminOnly: true },
-      { href: "/portal/orodja?tool=wifi", label: "Wi‑Fi analizator", icon: Network, permission: "network-diagnostics", adminOnly: true },
-      { href: "/portal/orodja?tool=ping", label: "Ping watchdog", icon: Cpu, permission: "network-diagnostics", adminOnly: true },
-      { href: "/portal/orodja?tool=ipam", label: "IPAM (IP manager)", icon: Network, permission: "network-diagnostics", adminOnly: true },
-      { href: "/portal/orodja?tool=mac", label: "MAC lookup", icon: Network, permission: "network-diagnostics", adminOnly: true },
-      { href: "/portal/orodja?tool=wol", label: "Wake on LAN", icon: Wifi, permission: "network-diagnostics", adminOnly: true },
-    ],
-  },
-  {
-    title: "ORODJA & NAPRAVE",
-    items: [
-      { href: "/portal/orodja?tool=nvr", label: "NVR manager", icon: Video, permission: "devices-tools", adminOnly: true },
-      { href: "/portal/orodja?tool=lpr", label: "LPR prepoznava", icon: Camera, permission: "devices-tools", adminOnly: true },
-      { href: "/portal/orodja?tool=bulk", label: "Bulk config", icon: Wrench, permission: "devices-tools", adminOnly: true },
-      { href: "/portal/orodja?tool=qr", label: "QR generator", icon: Layers, permission: "devices-tools", adminOnly: true },
-      { href: "/portal/orodja?tool=pw", label: "Generator gesel", icon: Shield, permission: "devices-tools", adminOnly: true },
-    ],
-  },
-  {
-    title: "BAZA ZNANJA",
-    items: [
-      { href: "/portal/belezke?tab=dokumentacija", label: "Dokumentacija", icon: BookOpen, permission: "knowledge-base", adminOnly: true },
-      { href: "/portal/belezke?tab=belezke", label: "Beležke", icon: BookOpen, permission: "knowledge-base", adminOnly: true },
-      { href: "/portal/belezke?tab=privzeta-gesla", label: "Privzeta gesla", icon: Shield, permission: "knowledge-base", adminOnly: true },
-      { href: "/portal/belezke?tab=firmware", label: "Firmware baza", icon: Package, permission: "knowledge-base", adminOnly: true },
     ],
   },
   {
     title: "SISTEM",
     items: [
+      { href: "/portal/racun", label: "Moj račun", icon: UserCircle, permission: "my-account" },
       { href: "/portal/inventar", label: "Skladišče", icon: Boxes, permission: "inventory", adminOnly: true },
       { href: "/portal/agents", label: "Agenti", icon: RadioTower, permission: "agents", adminOnly: true },
       { href: "/portal/obvestila", label: "Obvestila (Telegram)", icon: Bell, permission: "notifications", adminOnly: true },

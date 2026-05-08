@@ -22,9 +22,15 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
   const [showForm, setShowForm] = useState(false);
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; clientId: string } | null>(null);
+  const [orderedClients, setOrderedClients] = useState(clients);
+
+  useEffect(() => {
+    setOrderedClients(clients);
+  }, [clients]);
 
   useEffect(() => {
     if (role === "admin") return;
@@ -84,6 +90,33 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
   function openClientMenu(e: React.MouseEvent, clientId: string) {
     e.preventDefault();
     setCtxMenu({ x: e.clientX, y: e.clientY, clientId });
+  }
+
+  async function persistOrder(next: ClientSummary[]) {
+    setOrderedClients(next);
+    setReordering(true);
+    const res = await fetch("/api/clients/reorder", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ orderedIds: next.map((c) => c.id) }),
+    });
+    setReordering(false);
+    if (!res.ok) {
+      setNotice("Napaka pri shranjevanju vrstnega reda.");
+      router.refresh();
+      return;
+    }
+  }
+
+  async function moveClient(id: string, direction: -1 | 1) {
+    const idx = orderedClients.findIndex((c) => c.id === id);
+    if (idx < 0) return;
+    const target = idx + direction;
+    if (target < 0 || target >= orderedClients.length) return;
+    const next = [...orderedClients];
+    const [item] = next.splice(idx, 1);
+    next.splice(target, 0, item);
+    await persistOrder(next);
   }
 
   function contextItems(client: ClientSummary): ContextMenuItem[] {
@@ -191,12 +224,12 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
       ) : null}
 
       <div className="space-y-3 md:hidden">
-        {clients.length === 0 ? (
+        {orderedClients.length === 0 ? (
           <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-6 text-center text-sm text-[var(--vo-muted)]">
             Ni strank.
           </div>
         ) : null}
-        {clients.map((c) => (
+        {orderedClients.map((c, idx) => (
           <div
             key={`m-${c.id}`}
             className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 shadow-[var(--vo-card-shadow)]"
@@ -222,6 +255,22 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
               {c.phone ? ` · ${c.phone}` : ""}
             </p>
             <div className="mt-3 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                disabled={reordering || idx === 0}
+                onClick={() => void moveClient(c.id, -1)}
+                className="rounded-md border border-[var(--vo-border)] px-2 py-1 text-xs font-medium text-[var(--vo-fg)] disabled:opacity-40"
+              >
+                Gor
+              </button>
+              <button
+                type="button"
+                disabled={reordering || idx === orderedClients.length - 1}
+                onClick={() => void moveClient(c.id, 1)}
+                className="rounded-md border border-[var(--vo-border)] px-2 py-1 text-xs font-medium text-[var(--vo-fg)] disabled:opacity-40"
+              >
+                Dol
+              </button>
               <Link
                 href={clientProfilePath(c)}
                 prefetch
@@ -270,14 +319,14 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
             </tr>
           </thead>
           <tbody>
-            {clients.length === 0 ? (
+            {orderedClients.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-[var(--vo-muted)]">
                   Ni strank.
                 </td>
               </tr>
             ) : null}
-            {clients.map((c) => (
+            {orderedClients.map((c, idx) => (
               <tr
                 key={c.id}
                 className="border-b border-[var(--vo-border)] last:border-0"
@@ -313,6 +362,22 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
+                  <button
+                    type="button"
+                    disabled={reordering || idx === 0}
+                    onClick={() => void moveClient(c.id, -1)}
+                    className="mr-3 text-xs font-medium text-[var(--vo-fg)] hover:underline disabled:opacity-40"
+                  >
+                    Gor
+                  </button>
+                  <button
+                    type="button"
+                    disabled={reordering || idx === orderedClients.length - 1}
+                    onClick={() => void moveClient(c.id, 1)}
+                    className="text-xs font-medium text-[var(--vo-fg)] hover:underline disabled:opacity-40"
+                  >
+                    Dol
+                  </button>
                   <Link
                     href={clientProfilePath(c)}
                     prefetch
@@ -348,13 +413,13 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
           </tbody>
         </table>
       </div>
-      {ctxMenu && clients.some((c) => c.id === ctxMenu.clientId) ? (
+      {ctxMenu && orderedClients.some((c) => c.id === ctxMenu.clientId) ? (
         <PortalContextMenu
           open
           x={ctxMenu.x}
           y={ctxMenu.y}
           onClose={() => setCtxMenu(null)}
-          items={contextItems(clients.find((c) => c.id === ctxMenu.clientId)!)}
+          items={contextItems(orderedClients.find((c) => c.id === ctxMenu.clientId)!)}
         />
       ) : null}
     </div>

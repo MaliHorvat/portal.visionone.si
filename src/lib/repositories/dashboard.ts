@@ -198,7 +198,7 @@ export async function getPortalDashboard(
   const [rows, probes, remindersRaw, audits] = await Promise.all([
     prisma.client.findMany({
       where: clientWhere,
-      orderBy: { name: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: {
         id: true,
         name: true,
