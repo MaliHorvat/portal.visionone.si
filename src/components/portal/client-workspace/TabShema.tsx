@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EthernetPort, HardDrive, Video } from "lucide-react";
+import { EthernetPort, HardDrive } from "lucide-react";
 import { usePortalToast } from "@/context/PortalToastContext";
 import { parseTopologyState } from "@/lib/topology-parse";
 import {
@@ -74,12 +74,25 @@ function DeviceGlyph({
   status: "online" | "offline";
   rotationDeg?: number;
 }) {
-  const color = status === "online" ? "var(--vo-ok)" : "var(--vo-danger)";
   const className = "h-8 w-8 drop-shadow-md";
-  const style = { color, transform: `rotate(${rotationDeg ?? 0}deg)` };
-  if (kind === "camera") return <Video className={className} style={style} aria-hidden />;
-  if (kind === "switch") return <EthernetPort className={className} style={style} aria-hidden />;
-  return <HardDrive className={className} style={style} aria-hidden />;
+  const iconStyle = {
+    color: status === "online" ? "var(--vo-ok)" : "var(--vo-danger)",
+    transform: `rotate(${rotationDeg ?? 0}deg)`,
+  };
+  if (kind === "camera") {
+    return (
+      <span
+        className={`inline-block h-8 w-8 shrink-0 rounded-full border-2 border-black/30 shadow-md ${
+          status === "online" ? "bg-[var(--vo-ok)]" : "bg-[var(--vo-danger)]"
+        }`}
+        style={{ transform: `rotate(${rotationDeg ?? 0}deg)` }}
+        title={status === "online" ? "Dosegljiva" : "Nedosegljiva"}
+        aria-hidden
+      />
+    );
+  }
+  if (kind === "switch") return <EthernetPort className={className} style={iconStyle} aria-hidden />;
+  return <HardDrive className={className} style={iconStyle} aria-hidden />;
 }
 
 export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
@@ -741,7 +754,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   </label>
                 </div>
                 <p className="mt-2 text-[var(--vo-muted)]">
-                  Obrnite ikono (‑15° / +15°) za smer „streha“ polja vidnosti. DORI je orientacijski model (ne EN 62676 certifikacija).
+                  Obrnite krog (‑15° / +15°) za smer „streha“ polja vidnosti. DORI je orientacijski model (ne EN 62676 certifikacija).
                 </p>
               </div>
             );
