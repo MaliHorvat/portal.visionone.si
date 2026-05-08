@@ -22,8 +22,8 @@ import type {
 } from "@/lib/types";
 import type { WorkspaceCtx } from "./types";
 
-/** Odmik „objektiva“ od središča markerja (usklajeno s ~11px krogcem). */
-const CAMERA_DOT_LENS_FORWARD_PX = 6;
+/** Za krog marker naj FOV začne iz njegove sredine. */
+const CAMERA_DOT_LENS_FORWARD_PX = 0;
 
 type DragPayload = { kind: TopologyDeviceKind; id: string; label: string };
 type PaletteItem = DragPayload & { status: "online" | "offline" };
