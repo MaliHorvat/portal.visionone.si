@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PortalContextMenu } from "@/components/portal/PortalContextMenu";
 import type { WorkspaceCtx } from "./types";
 
 function Dot({ status }: { status: string }) {
@@ -126,6 +127,7 @@ function RecorderBlock({
 }) {
   const [f, setF] = useState({ name: "", ip: "", model: "", comment: "" });
   const [edit, setEdit] = useState<string | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; id: string } | null>(null);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -163,7 +165,14 @@ function RecorderBlock({
             {ctx.client.nvrs.map((r) => {
                 const status = live.recorders[r.id]?.status || r.status;
                 return (
-              <tr key={r.id} className={`border-b border-[var(--vo-border)] ${status !== "online" ? "bg-red-950/15" : ""}`}>
+              <tr
+                key={r.id}
+                className={`border-b border-[var(--vo-border)] ${status !== "online" ? "bg-red-950/15" : ""}`}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setCtxMenu({ x: e.clientX, y: e.clientY, id: r.id });
+                }}
+              >
                 <td className="px-2 py-2"><Dot status={status} /></td>
                 <td className="px-2 py-2 text-[var(--vo-fg)]">
                 {edit === r.id ? (
@@ -232,6 +241,27 @@ function RecorderBlock({
           </tbody>
         </table>
       </div>
+      {ctxMenu ? (
+        <PortalContextMenu
+          open
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          items={[
+            { id: "edit", label: "Uredi", onClick: () => setEdit(ctxMenu.id) },
+            {
+              id: "delete",
+              label: "Izbriši",
+              danger: true,
+              disabled: !dbConfigured,
+              onClick: () => {
+                if (!confirm("Izbris?")) return;
+                void del(`/recorders/${ctxMenu.id}`).then(() => reload());
+              },
+            },
+          ]}
+        />
+      ) : null}
     </section>
   );
 }
@@ -263,6 +293,7 @@ function SwitchBlock({
 }) {
   const [f, setF] = useState({ name: "", ip: "", model: "", comment: "", ports: 0 });
   const [edit, setEdit] = useState<string | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; id: string } | null>(null);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -302,7 +333,14 @@ function SwitchBlock({
             {ctx.client.switches.map((s) => {
                 const status = live.switches[s.id]?.status || s.status;
                 return (
-              <tr key={s.id} className={`border-b border-[var(--vo-border)] ${status !== "online" ? "bg-red-950/15" : ""}`}>
+              <tr
+                key={s.id}
+                className={`border-b border-[var(--vo-border)] ${status !== "online" ? "bg-red-950/15" : ""}`}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setCtxMenu({ x: e.clientX, y: e.clientY, id: s.id });
+                }}
+              >
                 <td className="px-2 py-2"><Dot status={status} /></td>
                 <td className="px-2 py-2">
                 {edit === s.id ? <input defaultValue={s.name} id={`sn-${s.id}`} className="rounded border border-[var(--vo-border)] bg-transparent px-1" /> : s.name}
@@ -351,6 +389,27 @@ function SwitchBlock({
           </tbody>
         </table>
       </div>
+      {ctxMenu ? (
+        <PortalContextMenu
+          open
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          items={[
+            { id: "edit", label: "Uredi", onClick: () => setEdit(ctxMenu.id) },
+            {
+              id: "delete",
+              label: "Izbriši",
+              danger: true,
+              disabled: !dbConfigured,
+              onClick: () => {
+                if (!confirm("Izbris?")) return;
+                void del(`/switches/${ctxMenu.id}`).then(() => reload());
+              },
+            },
+          ]}
+        />
+      ) : null}
     </section>
   );
 }
@@ -376,6 +435,7 @@ function DiskBlock({
 }) {
   const [f, setF] = useState({ label: "", model: "", serial: "", sizeTb: 0, installedAt: "", comment: "" });
   const [edit, setEdit] = useState<string | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; id: string } | null>(null);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -428,7 +488,14 @@ function DiskBlock({
               const age = getDiskHealthByAge(d.installedAt);
               const level = d.health === "fail" ? "critical" : age.level;
               return (
-              <tr key={d.id} className={`border-b border-[var(--vo-border)] ${level !== "ok" ? "bg-red-950/15" : ""}`}>
+              <tr
+                key={d.id}
+                className={`border-b border-[var(--vo-border)] ${level !== "ok" ? "bg-red-950/15" : ""}`}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setCtxMenu({ x: e.clientX, y: e.clientY, id: d.id });
+                }}
+              >
                 <td className="px-2 py-2"><Dot status={level === "ok" ? "online" : "offline"} /></td>
                 <td className="px-2 py-2 text-[var(--vo-fg)]">
                 {edit === d.id ? <input defaultValue={d.label} id={`dl-${d.id}`} className="rounded border px-1" /> : d.label}
@@ -469,6 +536,27 @@ function DiskBlock({
           </tbody>
         </table>
       </div>
+      {ctxMenu ? (
+        <PortalContextMenu
+          open
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          items={[
+            { id: "edit", label: "Uredi", onClick: () => setEdit(ctxMenu.id) },
+            {
+              id: "delete",
+              label: "Izbriši",
+              danger: true,
+              disabled: !dbConfigured,
+              onClick: () => {
+                if (!confirm("Izbris?")) return;
+                void del(`/disks/${ctxMenu.id}`).then(() => reload());
+              },
+            },
+          ]}
+        />
+      ) : null}
     </section>
   );
 }

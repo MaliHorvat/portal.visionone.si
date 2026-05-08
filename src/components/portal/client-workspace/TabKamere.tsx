@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PortalContextMenu, type ContextMenuItem } from "@/components/portal/PortalContextMenu";
 import { usePortalToast } from "@/context/PortalToastContext";
 import type { WorkspaceCtx } from "./types";
 
@@ -31,6 +32,7 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
     model: "",
     comment: "",
   });
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; camId: string } | null>(null);
 
   useEffect(() => {
     if (!dbConfigured) return;
@@ -118,6 +120,30 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
     setEditId(null);
     await reload();
     showToast("Kamera shranjena.");
+  }
+
+  function openCameraMenu(e: React.MouseEvent, camId: string) {
+    e.preventDefault();
+    setCtxMenu({ x: e.clientX, y: e.clientY, camId });
+  }
+
+  function cameraItems(camId: string): ContextMenuItem[] {
+    return [
+      { id: "edit", label: "Uredi", onClick: () => setEditId(camId) },
+      {
+        id: "check",
+        label: "Preveri dosegljivost vseh",
+        disabled: busy || !dbConfigured,
+        onClick: () => void checkAll(),
+      },
+      {
+        id: "delete",
+        label: "Izbriši",
+        danger: true,
+        disabled: busy || !dbConfigured,
+        onClick: () => void deleteCam(camId),
+      },
+    ];
   }
 
   return (
@@ -225,6 +251,7 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
                 <tr
                   key={cam.id}
                   className={`border-b border-[var(--vo-border)] ${offline ? "bg-red-950/20" : ""}`}
+                  onContextMenu={(e) => openCameraMenu(e, cam.id)}
                 >
                   <td className="px-2 py-2">
                     <StatusDot status={effectiveStatus} />
@@ -348,6 +375,15 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
           </tbody>
         </table>
       </div>
+      {ctxMenu ? (
+        <PortalContextMenu
+          open
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          items={cameraItems(ctxMenu.camId)}
+        />
+      ) : null}
     </div>
   );
 }

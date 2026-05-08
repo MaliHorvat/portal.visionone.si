@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PortalContextMenu, type ContextMenuItem } from "@/components/portal/PortalContextMenu";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { clientProfilePath } from "@/lib/client-url";
 import { mockClientPortalSlug } from "@/lib/mock-data";
@@ -24,6 +25,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; clientId: string } | null>(null);
 
   useEffect(() => {
     if (role !== "admin") {
@@ -77,6 +79,38 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
 
   function prefetchProfile(client: ClientSummary) {
     router.prefetch(clientProfilePath(client));
+  }
+
+  function openClientMenu(e: React.MouseEvent, clientId: string) {
+    e.preventDefault();
+    setCtxMenu({ x: e.clientX, y: e.clientY, clientId });
+  }
+
+  function contextItems(client: ClientSummary): ContextMenuItem[] {
+    return [
+      {
+        id: "open",
+        label: "Odpri profil",
+        onClick: () => router.push(clientProfilePath(client)),
+      },
+      {
+        id: "edit",
+        label: "Uredi",
+        onClick: () => {
+          setError(null);
+          setNotice(null);
+          setEditClientId(client.id);
+          setShowForm(true);
+        },
+      },
+      {
+        id: "delete",
+        label: "Izbriši",
+        danger: true,
+        disabled: !dbConfigured,
+        onClick: () => void handleDelete(client.id),
+      },
+    ];
   }
 
   return (
@@ -166,6 +200,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
           <div
             key={`m-${c.id}`}
             className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 shadow-[var(--vo-card-shadow)]"
+            onContextMenu={(e) => openClientMenu(e, c.id)}
           >
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -243,7 +278,11 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
               </tr>
             ) : null}
             {clients.map((c) => (
-              <tr key={c.id} className="border-b border-[var(--vo-border)] last:border-0">
+              <tr
+                key={c.id}
+                className="border-b border-[var(--vo-border)] last:border-0"
+                onContextMenu={(e) => openClientMenu(e, c.id)}
+              >
                 <td className="px-4 py-3 font-medium text-[var(--vo-fg)]">{c.name}</td>
                 <td className="px-4 py-3 text-[var(--vo-muted)]">{c.address}</td>
                 <td className="px-4 py-3 text-[var(--vo-muted)]">
@@ -309,6 +348,15 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
           </tbody>
         </table>
       </div>
+      {ctxMenu && clients.some((c) => c.id === ctxMenu.clientId) ? (
+        <PortalContextMenu
+          open
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          items={contextItems(clients.find((c) => c.id === ctxMenu.clientId)!)}
+        />
+      ) : null}
     </div>
   );
 }

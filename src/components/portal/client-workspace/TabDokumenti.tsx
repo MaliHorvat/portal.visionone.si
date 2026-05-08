@@ -11,6 +11,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { PortalContextMenu } from "@/components/portal/PortalContextMenu";
 import { usePortalToast } from "@/context/PortalToastContext";
 import type { WorkspaceCtx } from "./types";
 
@@ -62,6 +63,7 @@ export function TabDokumenti({ ctx }: { ctx: WorkspaceCtx }) {
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteTitle, setNoteTitle] = useState("zapis");
   const [noteText, setNoteText] = useState("");
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; doc: DocRow } | null>(null);
 
   const load = useCallback(async () => {
     if (!dbConfigured) return;
@@ -379,7 +381,14 @@ export function TabDokumenti({ ctx }: { ctx: WorkspaceCtx }) {
               </thead>
               <tbody>
                 {documents.map((d) => (
-                  <tr key={d.id} className="border-b border-[var(--vo-border)] hover:bg-[var(--vo-surface-2)]/60">
+                  <tr
+                    key={d.id}
+                    className="border-b border-[var(--vo-border)] hover:bg-[var(--vo-surface-2)]/60"
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setCtxMenu({ x: e.clientX, y: e.clientY, doc: d });
+                    }}
+                  >
                     <td className="px-3 py-2 font-mono text-[var(--vo-muted)]">{d.folder || "—"}</td>
                     <td className="px-3 py-2">
                       <a
@@ -414,6 +423,29 @@ export function TabDokumenti({ ctx }: { ctx: WorkspaceCtx }) {
           </div>
         </div>
       </div>
+      {ctxMenu ? (
+        <PortalContextMenu
+          open
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          items={[
+            {
+              id: "open",
+              label: "Odpri / prenesi",
+              onClick: () => {
+                window.open(`/api/clients/${clientId}/documents/${ctxMenu.doc.id}`, "_blank", "noopener,noreferrer");
+              },
+            },
+            {
+              id: "delete",
+              label: "Izbriši",
+              danger: true,
+              onClick: () => void removeDoc(ctxMenu.doc.id),
+            },
+          ]}
+        />
+      ) : null}
 
       {noteOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
