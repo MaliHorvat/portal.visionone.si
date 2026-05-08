@@ -22,6 +22,9 @@ import type {
 } from "@/lib/types";
 import type { WorkspaceCtx } from "./types";
 
+/** Odmik „objektiva“ od središča markerja (usklajeno s ~11px krogcem). */
+const CAMERA_DOT_LENS_FORWARD_PX = 6;
+
 type DragPayload = { kind: TopologyDeviceKind; id: string; label: string };
 type PaletteItem = DragPayload & { status: "online" | "offline" };
 
@@ -82,7 +85,7 @@ function DeviceGlyph({
   if (kind === "camera") {
     return (
       <span
-        className={`inline-block h-8 w-8 shrink-0 rounded-full border-2 border-black/30 shadow-md ${
+        className={`inline-block size-[11px] shrink-0 rounded-full border border-black/35 shadow-sm ${
           status === "online" ? "bg-[var(--vo-ok)]" : "bg-[var(--vo-danger)]"
         }`}
         style={{ transform: `rotate(${rotationDeg ?? 0}deg)` }}
@@ -799,12 +802,19 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
               const plan = n.cameraPlan;
               const fovDeg = plan?.fovDeg ?? 70;
               const reach = plan?.reachPx ?? 150;
-              const d = cameraFovPath(cx, cy, n.rotationDeg ?? 0, fovDeg, reach);
+              const d = cameraFovPath(
+                cx,
+                cy,
+                n.rotationDeg ?? 0,
+                fovDeg,
+                reach,
+                CAMERA_DOT_LENS_FORWARD_PX,
+              );
               const st = getDeviceStatus("camera", n.deviceRef.id);
               const fill =
                 st === "online" ? "rgba(59, 130, 246, 0.28)" : "rgba(248, 113, 113, 0.22)";
               const stroke = st === "online" ? "rgba(59, 130, 246, 0.65)" : "rgba(248, 113, 113, 0.55)";
-              const { vx, vy, br } = cameraLensVertex(cx, cy, n.rotationDeg ?? 0);
+              const { vx, vy, br } = cameraLensVertex(cx, cy, n.rotationDeg ?? 0, CAMERA_DOT_LENS_FORWARD_PX);
               const fov = Number.isFinite(fovDeg) && fovDeg > 0 ? Math.min(fovDeg, 359) : 70;
               const half = (fov * Math.PI) / 360;
               const a1 = br - half;
@@ -849,7 +859,14 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   ) : null}
                   {ir != null && Number.isFinite(ir) && ir > 25 ? (
                     <path
-                      d={cameraFovPath(cx, cy, n.rotationDeg ?? 0, fovDeg, ir)}
+                      d={cameraFovPath(
+                        cx,
+                        cy,
+                        n.rotationDeg ?? 0,
+                        fovDeg,
+                        ir,
+                        CAMERA_DOT_LENS_FORWARD_PX,
+                      )}
                       fill="none"
                       stroke={stroke}
                       strokeWidth={1.25}
@@ -963,7 +980,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                 {isCamera || isRecorder || isSwitch ? (
                   <div className="relative flex flex-col items-center">
                     {isCamera && n.cameraPlan?.badge != null && Number.isFinite(n.cameraPlan.badge) ? (
-                      <span className="absolute -right-1 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white shadow-md">
+                      <span className="absolute -right-0.5 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-0.5 text-[8px] font-bold text-white shadow-sm">
                         {n.cameraPlan.badge}
                       </span>
                     ) : null}
