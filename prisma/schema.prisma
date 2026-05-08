@@ -38,11 +38,27 @@ model Client {
   agentJobs AgentJob[]
   deviceProbes DeviceProbe[]
   deviceChecks DeviceCheck[]
+  documents ClientDocument[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([packageId])
   @@index([ownerUsername])
+}
+
+model ClientDocument {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /** Relativna "pot mape", npr. "Pogodbe" ali "Slike/hodnik" */
+  folder       String   @default("")
+  originalName String
+  mimeType     String   @default("application/octet-stream")
+  sizeBytes    Int      @default(0)
+  data         Bytes    @db.LongBlob
+  createdAt    DateTime @default(now())
+
+  @@index([clientId, folder])
 }
 
 model ClientCamera {

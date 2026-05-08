@@ -11,6 +11,7 @@ import { TabPopisi } from "./client-workspace/TabPopisi";
 import { TabRack } from "./client-workspace/TabRack";
 import { TabShema } from "./client-workspace/TabShema";
 import { TabVzdrzevanje } from "./client-workspace/TabVzdrzevanje";
+import { TabDokumenti } from "./client-workspace/TabDokumenti";
 import type { WorkspaceCtx, WorkspaceTab } from "./client-workspace/types";
 import { parseWorkspaceTab } from "./client-workspace/types";
 import {
@@ -19,6 +20,7 @@ import {
   Camera,
   ClipboardList,
   Clock,
+  FolderOpen,
   FileText,
   MapPin,
   Mail,
@@ -38,6 +40,7 @@ const TABS: { id: WorkspaceTab; label: string; icon: ElementType }[] = [
   { id: "popisi", label: "Popisi", icon: ClipboardList },
   { id: "cas", label: "Čas", icon: Clock },
   { id: "vzdrzevanje", label: "Vzdrževanje", icon: Wrench },
+  { id: "dokumenti", label: "Dokumenti", icon: FolderOpen },
 ];
 
 type Props = {
@@ -196,6 +199,7 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
         {panel("popisi", <TabPopisi ctx={ctx} />)}
         {panel("cas", <TabCas ctx={ctx} />)}
         {panel("vzdrzevanje", <TabVzdrzevanje ctx={ctx} />)}
+        {panel("dokumenti", <TabDokumenti ctx={ctx} />)}
       </div>
     </div>
   );

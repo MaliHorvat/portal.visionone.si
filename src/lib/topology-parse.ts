@@ -1,4 +1,5 @@
 import type {
+  CameraPlanOverlay,
   ClientTopologyState,
   TopologyCanvasEdge,
   TopologyCanvasNode,
@@ -17,9 +18,25 @@ function parseDeviceRef(
   return { kind: k as TopologyDeviceKind, id };
 }
 
+function parseCameraPlan(raw: unknown): CameraPlanOverlay | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const p = raw as Record<string, unknown>;
+  const badge = typeof p.badge === "number" && Number.isFinite(p.badge) ? Math.round(p.badge) : undefined;
+  const mountHeightM =
+    typeof p.mountHeightM === "number" && Number.isFinite(p.mountHeightM) ? p.mountHeightM : undefined;
+  const tiltDeg = typeof p.tiltDeg === "number" && Number.isFinite(p.tiltDeg) ? p.tiltDeg : undefined;
+  const fovDeg = typeof p.fovDeg === "number" && Number.isFinite(p.fovDeg) ? p.fovDeg : undefined;
+  const reachPx = typeof p.reachPx === "number" && Number.isFinite(p.reachPx) ? p.reachPx : undefined;
+  if (badge === undefined && mountHeightM === undefined && tiltDeg === undefined && fovDeg === undefined && reachPx === undefined)
+    return undefined;
+  return { badge, mountHeightM, tiltDeg, fovDeg, reachPx };
+}
+
 export function parseTopologyState(raw: unknown): ClientTopologyState {
   if (!raw || typeof raw !== "object") return { nodes: [], edges: [], floorPlanPaths: [] };
   const o = raw as Record<string, unknown>;
+  const planBackgroundUrl =
+    typeof o.planBackgroundUrl === "string" && o.planBackgroundUrl.trim() ? o.planBackgroundUrl.trim() : undefined;
   const nodesRaw = Array.isArray(o.nodes) ? o.nodes : [];
   const edgesRaw = Array.isArray(o.edges) ? o.edges : [];
   const pathsRaw = Array.isArray(o.floorPlanPaths) ? o.floorPlanPaths : [];
@@ -32,6 +49,7 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
       y: typeof n.y === "number" ? n.y : 80 + Math.floor(i / 5) * 100,
       rotationDeg: typeof n.rotationDeg === "number" ? n.rotationDeg : 0,
       deviceRef: parseDeviceRef(n.deviceRef),
+      cameraPlan: parseCameraPlan(n.cameraPlan),
     }));
   const edges: TopologyCanvasEdge[] = edgesRaw
     .filter((e): e is Record<string, unknown> => !!e && typeof e === "object")
@@ -58,5 +76,6 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
     nodes,
     edges,
     floorPlanPaths,
+    planBackgroundUrl,
   };
 }

@@ -129,6 +129,18 @@ export interface OfferLine {
 /** Shema / načrt — shranjeno v Client.topologyData */
 export type TopologyDeviceKind = "camera" | "recorder" | "switch" | "disk";
 
+/** Načrt vstavitve kamere (kot na risbah pokritosti). */
+export interface CameraPlanOverlay {
+  /** Številka na označevalcu (npr. 1, 2, 3). */
+  badge?: number;
+  mountHeightM?: number;
+  tiltDeg?: number;
+  /** Horizontalni kot vidnega polja (stopinje). */
+  fovDeg?: number;
+  /** Dolžina „stožca“ na platnu v slikovnih pikah. */
+  reachPx?: number;
+}
+
 export interface TopologyCanvasNode {
   id: string;
   label: string;
@@ -136,6 +148,7 @@ export interface TopologyCanvasNode {
   y: number;
   rotationDeg?: number;
   deviceRef?: { kind: TopologyDeviceKind; id: string };
+  cameraPlan?: CameraPlanOverlay;
 }
 
 export interface TopologyCanvasEdge {
@@ -148,6 +161,8 @@ export interface ClientTopologyState {
   edges: TopologyCanvasEdge[];
   /** Ročno narisane linije tlorisa v shemi. */
   floorPlanPaths?: Array<{ points: Array<{ x: number; y: number }> }>;
+  /** Opcijsko satelitsko / ortofoto ozadje (URL). */
+  planBackgroundUrl?: string;
 }
 
 export interface InventoryItem {

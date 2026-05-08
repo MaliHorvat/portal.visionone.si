@@ -4,7 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { EthernetPort, HardDrive, Video } from "lucide-react";
 import { usePortalToast } from "@/context/PortalToastContext";
 import { parseTopologyState } from "@/lib/topology-parse";
-import type { ClientTopologyState, TopologyCanvasNode, TopologyDeviceKind } from "@/lib/types";
+import type {
+  CameraPlanOverlay,
+  ClientTopologyState,
+  TopologyCanvasNode,
+  TopologyDeviceKind,
+} from "@/lib/types";
 import type { WorkspaceCtx } from "./types";
 
 type DragPayload = { kind: TopologyDeviceKind; id: string; label: string };
@@ -22,6 +27,22 @@ function Dot({ status }: { status: "online" | "offline" }) {
 
 function newId() {
   return typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `n-${Date.now()}`;
+}
+
+/** Kot pokritosti v slogu načrtovalskih risb (stožec okoli pozicije kamere). */
+function cameraFovPath(cx: number, cy: number, rotationDeg: number, fovDeg: number, reach: number) {
+  const fov = Number.isFinite(fovDeg) && fovDeg > 0 ? Math.min(fovDeg, 359) : 70;
+  const half = (fov * Math.PI) / 360;
+  const br = ((rotationDeg ?? 0) - 90) * (Math.PI / 180);
+  const a1 = br - half;
+  const a2 = br + half;
+  const r = Number.isFinite(reach) && reach > 20 ? reach : 150;
+  const x1 = cx + r * Math.cos(a1);
+  const y1 = cy + r * Math.sin(a1);
+  const x2 = cx + r * Math.cos(a2);
+  const y2 = cy + r * Math.sin(a2);
+  const largeArc = fov > 180 ? 1 : 0;
+  return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
 }
 
 function DeviceGlyph({
@@ -198,6 +219,16 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
       ...t,
       nodes: t.nodes.map((n) =>
         n.id === id ? { ...n, rotationDeg: (((n.rotationDeg ?? 0) + delta) % 360 + 360) % 360 } : n,
+      ),
+    }));
+  };
+
+  const patchCameraPlan = (patch: Partial<CameraPlanOverlay>) => {
+    if (!selectedNodeId) return;
+    setTopo((t) => ({
+      ...t,
+      nodes: t.nodes.map((n) =>
+        n.id === selectedNodeId ? { ...n, cameraPlan: { ...n.cameraPlan, ...patch } } : n,
       ),
     }));
   };
@@ -406,6 +437,112 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           </button>
         </div>
 
+        {editMode ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-3 py-2 text-xs">
+            <span className="font-medium text-[var(--vo-muted)]">Ozadje (URL slike / ortofoto):</span>
+            <input
+              type="url"
+              placeholder="https://…"
+              value={topo.planBackgroundUrl ?? ""}
+              onChange={(e) =>
+                setTopo((t) => ({ ...t, planBackgroundUrl: e.target.value.trim() || undefined }))
+              }
+              className="min-w-[200px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1 text-[var(--vo-fg)]"
+            />
+            <button
+              type="button"
+              className="rounded border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)] hover:text-[var(--vo-danger)]"
+              onClick={() => setTopo((t) => ({ ...t, planBackgroundUrl: undefined }))}
+            >
+              Odstrani ozadje
+            </button>
+          </div>
+        ) : null}
+
+        {editMode && selectedNodeId ? (
+          (() => {
+            const sel = topo.nodes.find((n) => n.id === selectedNodeId);
+            const cp = sel?.cameraPlan;
+            if (!sel || sel.deviceRef?.kind !== "camera") return null;
+            return (
+              <div className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-3 py-2 text-xs">
+                <p className="mb-2 font-semibold text-[var(--vo-fg)]">Kamera na načrtu (pokritost)</p>
+                <div className="flex flex-wrap gap-2">
+                  <label className="flex flex-col text-[var(--vo-muted)]">
+                    Št. oznake
+                    <input
+                      type="number"
+                      value={cp?.badge ?? ""}
+                      placeholder="—"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        patchCameraPlan(v === "" ? { badge: undefined } : { badge: Number(v) || 0 });
+                      }}
+                      className="mt-0.5 w-20 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
+                    />
+                  </label>
+                  <label className="flex flex-col text-[var(--vo-muted)]">
+                    Višina (m)
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={cp?.mountHeightM ?? ""}
+                      placeholder="3"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        patchCameraPlan(v === "" ? { mountHeightM: undefined } : { mountHeightM: Number(v) });
+                      }}
+                      className="mt-0.5 w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
+                    />
+                  </label>
+                  <label className="flex flex-col text-[var(--vo-muted)]">
+                    Naklon (°)
+                    <input
+                      type="number"
+                      value={cp?.tiltDeg ?? ""}
+                      placeholder="15"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        patchCameraPlan(v === "" ? { tiltDeg: undefined } : { tiltDeg: Number(v) });
+                      }}
+                      className="mt-0.5 w-20 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
+                    />
+                  </label>
+                  <label className="flex flex-col text-[var(--vo-muted)]">
+                    FOV (°)
+                    <input
+                      type="number"
+                      value={cp?.fovDeg ?? ""}
+                      placeholder="70"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        patchCameraPlan(v === "" ? { fovDeg: undefined } : { fovDeg: Number(v) });
+                      }}
+                      className="mt-0.5 w-20 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
+                    />
+                  </label>
+                  <label className="flex flex-col text-[var(--vo-muted)]">
+                    Doseg (px)
+                    <input
+                      type="number"
+                      value={cp?.reachPx ?? ""}
+                      placeholder="150"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        patchCameraPlan(v === "" ? { reachPx: undefined } : { reachPx: Number(v) });
+                      }}
+                      className="mt-0.5 w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
+                    />
+                  </label>
+                </div>
+                <p className="mt-2 text-[var(--vo-muted)]">
+                  Obrnite ikono (‑15° / +15°) za smer „streha“ polja vidnosti.
+                </p>
+              </div>
+            );
+          })()
+        ) : null}
+
         <div
           ref={canvasRef}
           className="relative min-h-[420px] overflow-hidden rounded-xl border border-[var(--vo-border)] bg-[var(--vo-bg)]"
@@ -416,7 +553,26 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           onPointerUp={endDraw}
           onPointerLeave={endDraw}
         >
+          {topo.planBackgroundUrl ? (
+            <div
+              className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.92]"
+              style={{ backgroundImage: `url(${topo.planBackgroundUrl})` }}
+              aria-hidden
+            />
+          ) : null}
           <svg className="absolute inset-0 h-full w-full">
+            {topo.nodes.map((n) => {
+              if (n.deviceRef?.kind !== "camera") return null;
+              const cx = n.x + 32;
+              const cy = n.y + 18;
+              const plan = n.cameraPlan;
+              const d = cameraFovPath(cx, cy, n.rotationDeg ?? 0, plan?.fovDeg ?? 70, plan?.reachPx ?? 150);
+              const st = getDeviceStatus("camera", n.deviceRef.id);
+              const fill =
+                st === "online" ? "rgba(59, 130, 246, 0.28)" : "rgba(248, 113, 113, 0.22)";
+              const stroke = st === "online" ? "rgba(59, 130, 246, 0.65)" : "rgba(248, 113, 113, 0.55)";
+              return <path key={`fov-${n.id}`} d={d} fill={fill} stroke={stroke} strokeWidth={1.5} />;
+            })}
             {(topo.floorPlanPaths ?? []).map((path, i) => (
               <polyline
                 key={`fp-${i}`}
@@ -473,7 +629,6 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             const isRecorder = kind === "recorder";
             const isSwitch = kind === "switch";
             const st = kind && n.deviceRef ? getDeviceStatus(kind, n.deviceRef.id) : "offline";
-            const color = st === "online" ? "var(--vo-ok)" : "var(--vo-danger)";
             return (
               <div
                 key={n.id}
@@ -509,7 +664,12 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                 }}
               >
                 {isCamera || isRecorder || isSwitch ? (
-                  <div className="flex flex-col items-center">
+                  <div className="relative flex flex-col items-center">
+                    {isCamera && n.cameraPlan?.badge != null && Number.isFinite(n.cameraPlan.badge) ? (
+                      <span className="absolute -right-1 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white shadow-md">
+                        {n.cameraPlan.badge}
+                      </span>
+                    ) : null}
                     <DeviceGlyph kind={kind} status={st} rotationDeg={n.rotationDeg} />
                     <div className="mt-1 w-full truncate text-center text-[10px] font-medium text-[var(--vo-fg)]">{n.label}</div>
                     <div className="w-full truncate text-center font-mono text-[10px] text-[var(--vo-muted)]">
@@ -521,6 +681,13 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                             ? client.switches.find((s) => s.id === n.deviceRef?.id)?.ip ?? ""
                             : ""}
                     </div>
+                    {isCamera && (n.cameraPlan?.mountHeightM != null || n.cameraPlan?.tiltDeg != null) ? (
+                      <div className="mt-0.5 rounded bg-black/55 px-1.5 py-0.5 text-[9px] font-medium text-white shadow">
+                        {n.cameraPlan.mountHeightM != null ? `${n.cameraPlan.mountHeightM}m` : "?m"}
+                        {" · "}
+                        {n.cameraPlan.tiltDeg != null ? `${n.cameraPlan.tiltDeg}°` : "?°"}
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <>

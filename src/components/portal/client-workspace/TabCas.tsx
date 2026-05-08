@@ -20,6 +20,23 @@ function fmtH(hours: number) {
   return `${hours.toFixed(2)} h`;
 }
 
+/** Obseg npr. 10:00-12:00 ali 10.00–12.30 */
+function parseTimeRangeToHours(raw: string): number | null {
+  const s = raw.trim().replace(/\s+/g, "").replace(/–/g, "-");
+  const m = /^(\d{1,2})[:.](\d{2})-(\d{1,2})[:.](\d{2})$/.exec(s);
+  if (!m) return null;
+  const h1 = Number(m[1]);
+  const mi1 = Number(m[2]);
+  const h2 = Number(m[3]);
+  const mi2 = Number(m[4]);
+  if ([h1, mi1, h2, mi2].some((x) => Number.isNaN(x))) return null;
+  if (mi1 >= 60 || mi2 >= 60 || h1 > 23 || h2 > 23) return null;
+  const t1 = h1 + mi1 / 60;
+  const t2 = h2 + mi2 / 60;
+  if (t2 <= t1) return null;
+  return Math.round((t2 - t1) * 100) / 100;
+}
+
 export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
   const { clientId, dbConfigured } = ctx;
@@ -29,6 +46,7 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
   const [note, setNote] = useState("");
   const [rate, setRate] = useState(20);
   const [hoursManual, setHoursManual] = useState(0);
+  const [timeRange, setTimeRange] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [, setTick] = useState(0);
 
@@ -69,6 +87,20 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
 
   async function addManual() {
     if (!tech.trim() || !dbConfigured) return;
+    let hours = hoursManual;
+    const tr = timeRange.trim();
+    if (tr) {
+      const parsed = parseTimeRangeToHours(tr);
+      if (parsed === null) {
+        showToast("Neveljaven obseg. Zapis: npr. 10:00-12:00 ali 10.00-12.30.", "err");
+        return;
+      }
+      hours = parsed;
+    }
+    if (!Number.isFinite(hours) || hours <= 0) {
+      showToast("Vnesi pozitivne ure ali veljaven obseg.", "err");
+      return;
+    }
     setBusy(true);
     const r = await fetch(`/api/clients/${clientId}/timelogs`, {
       method: "POST",
@@ -76,7 +108,7 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
       body: JSON.stringify({
         technician: tech.trim(),
         hourlyRate: rate,
-        hours: hoursManual,
+        hours,
         workDate: date,
         note,
       }),
@@ -87,6 +119,7 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
       return;
     }
     setHoursManual(0);
+    setTimeRange("");
     setNote("");
     await load();
     showToast("Ure dodane.");
@@ -213,14 +246,26 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
             </button>
           )}
         </div>
-        <div className="flex items-center gap-2 border-l border-[var(--vo-border)] pl-3">
-          <input
-            type="number"
-            step="0.25"
-            value={hoursManual}
-            onChange={(e) => setHoursManual(Number(e.target.value) || 0)}
-            className="w-20 rounded border border-[var(--vo-border)] px-2 py-1.5 text-sm text-[var(--vo-fg)]"
-          />
+        <div className="flex flex-wrap items-end gap-2 border-l border-[var(--vo-border)] pl-3">
+          <label className="flex flex-col text-xs text-[var(--vo-muted)]">
+            Obseg ur
+            <input
+              placeholder="10:00-12:00"
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="mt-1 w-36 rounded border border-[var(--vo-border)] px-2 py-1.5 font-mono text-sm text-[var(--vo-fg)]"
+            />
+          </label>
+          <label className="flex flex-col text-xs text-[var(--vo-muted)]">
+            Ali ure (decimalno)
+            <input
+              type="number"
+              step="0.25"
+              value={hoursManual}
+              onChange={(e) => setHoursManual(Number(e.target.value) || 0)}
+              className="mt-1 w-20 rounded border border-[var(--vo-border)] px-2 py-1.5 text-sm text-[var(--vo-fg)]"
+            />
+          </label>
           <button
             type="button"
             disabled={busy || !dbConfigured}

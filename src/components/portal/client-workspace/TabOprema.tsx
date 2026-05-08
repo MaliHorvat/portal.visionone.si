@@ -286,7 +286,7 @@ function SwitchBlock({
         <button type="submit" disabled={busy || !dbConfigured} className="rounded-lg bg-[var(--vo-fg)] px-3 py-1.5 font-semibold text-[var(--vo-bg)] disabled:opacity-40">+</button>
       </form>
       <div className="overflow-x-auto rounded-lg border border-[var(--vo-border)]">
-        <table className="min-w-[820px] w-full text-left text-xs">
+        <table className="min-w-[920px] w-full text-left text-xs">
           <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
             <tr>
               <th className="px-2 py-2">STATUS</th>
@@ -294,6 +294,7 @@ function SwitchBlock({
               <th className="px-2 py-2">IP</th>
               <th className="px-2 py-2">MODEL</th>
               <th className="px-2 py-2">KOMENTAR</th>
+              <th className="px-2 py-2 text-center">PORTI</th>
               <th className="px-2 py-2 text-right">AKCIJE</th>
             </tr>
           </thead>
@@ -315,6 +316,19 @@ function SwitchBlock({
               <td className="px-2 py-2">
                 {edit === s.id ? <input defaultValue={s.comment ?? ""} id={`sc-${s.id}`} className="rounded border border-[var(--vo-border)] bg-transparent px-1" /> : s.comment || "—"}
               </td>
+              <td className="px-2 py-2 text-center font-mono text-[var(--vo-muted)]">
+                {edit === s.id ? (
+                  <input
+                    type="number"
+                    min={0}
+                    defaultValue={s.ports ?? 0}
+                    id={`sp-${s.id}`}
+                    className="w-16 rounded border border-[var(--vo-border)] bg-transparent px-1 text-center"
+                  />
+                ) : (
+                  s.ports ?? "—"
+                )}
+              </td>
               <td className="px-2 py-2 text-right">
                 {edit === s.id ? (
                   <button type="button" className="text-[var(--vo-ok)] hover:underline" onClick={() => {
@@ -323,6 +337,7 @@ function SwitchBlock({
                       ip: (document.getElementById(`sip-${s.id}`) as HTMLInputElement).value,
                       model: (document.getElementById(`sm-${s.id}`) as HTMLInputElement).value,
                       comment: (document.getElementById(`sc-${s.id}`) as HTMLInputElement).value,
+                      ports: Number((document.getElementById(`sp-${s.id}`) as HTMLInputElement).value) || 0,
                     }).then(() => { setEdit(null); void reload(); });
                   }}>Shrani</button>
                 ) : (
@@ -359,16 +374,16 @@ function DiskBlock({
   reload: () => Promise<void>;
   dbConfigured: boolean;
 }) {
-  const [f, setF] = useState({ label: "", ip: "", model: "", serial: "", sizeTb: 0, installedAt: "", comment: "" });
+  const [f, setF] = useState({ label: "", model: "", serial: "", sizeTb: 0, installedAt: "", comment: "" });
   const [edit, setEdit] = useState<string | null>(null);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
     if (!f.label.trim() || !dbConfigured) return;
     setBusy(true);
-    await post("/disks", { ...f });
+    await post("/disks", { ...f, ip: "" });
     setBusy(false);
-    setF({ label: "", ip: "", model: "", serial: "", sizeTb: 0, installedAt: "", comment: "" });
+    setF({ label: "", model: "", serial: "", sizeTb: 0, installedAt: "", comment: "" });
     await reload();
   }
 
@@ -388,7 +403,6 @@ function DiskBlock({
       <h3 className="text-sm font-semibold text-[var(--vo-fg)]">Diski</h3>
       <form onSubmit={add} className="flex flex-wrap gap-2 text-xs">
         <input placeholder="Ime" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <input placeholder="IP" value={f.ip} onChange={(e) => setF({ ...f, ip: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-mono" />
         <input placeholder="Model" value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
         <input placeholder="Serijska" value={f.serial} onChange={(e) => setF({ ...f, serial: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
         <input type="number" placeholder="TB" value={f.sizeTb || ""} onChange={(e) => setF({ ...f, sizeTb: Number(e.target.value) || 0 })} className="w-16 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
@@ -397,12 +411,11 @@ function DiskBlock({
         <button type="submit" disabled={busy || !dbConfigured} className="rounded-lg bg-[var(--vo-fg)] px-3 py-1.5 font-semibold text-[var(--vo-bg)] disabled:opacity-40">+</button>
       </form>
       <div className="overflow-x-auto rounded-lg border border-[var(--vo-border)]">
-        <table className="min-w-[980px] w-full text-left text-xs">
+        <table className="min-w-[860px] w-full text-left text-xs">
           <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
             <tr>
               <th className="px-2 py-2">STATUS</th>
               <th className="px-2 py-2">DISK</th>
-              <th className="px-2 py-2">IP</th>
               <th className="px-2 py-2">MODEL</th>
               <th className="px-2 py-2">TB</th>
               <th className="px-2 py-2">MONTAŽA</th>
@@ -419,9 +432,6 @@ function DiskBlock({
                 <td className="px-2 py-2"><Dot status={level === "ok" ? "online" : "offline"} /></td>
                 <td className="px-2 py-2 text-[var(--vo-fg)]">
                 {edit === d.id ? <input defaultValue={d.label} id={`dl-${d.id}`} className="rounded border px-1" /> : d.label}
-              </td>
-              <td className="px-2 py-2 font-mono text-[var(--vo-muted)]">
-                {edit === d.id ? <input defaultValue={d.ip ?? ""} id={`dip-${d.id}`} className="rounded border px-1" /> : d.ip || "—"}
               </td>
               <td className="px-2 py-2">
                 {edit === d.id ? <input defaultValue={d.model ?? ""} id={`dm-${d.id}`} className="rounded border px-1" /> : d.model || "—"}
@@ -444,7 +454,7 @@ function DiskBlock({
                   <button type="button" className="text-[var(--vo-ok)] hover:underline" onClick={() => {
                     void patch(`/disks/${d.id}`, {
                       label: (document.getElementById(`dl-${d.id}`) as HTMLInputElement).value,
-                      ip: (document.getElementById(`dip-${d.id}`) as HTMLInputElement).value,
+                      ip: "",
                       model: (document.getElementById(`dm-${d.id}`) as HTMLInputElement).value,
                     }).then(() => { setEdit(null); void reload(); });
                   }}>Shrani</button>
