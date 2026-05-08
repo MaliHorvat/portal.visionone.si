@@ -24,6 +24,9 @@ import type { WorkspaceCtx } from "./types";
 
 /** Za krog marker naj FOV začne iz njegove sredine. */
 const CAMERA_DOT_LENS_FORWARD_PX = 0;
+const CAMERA_DOT_SIZE_PX = 11;
+const CAMERA_DOT_CENTER_X_OFFSET = 32; // center znotraj "w-16" vozlišča
+const CAMERA_DOT_CENTER_Y_OFFSET = CAMERA_DOT_SIZE_PX / 2;
 
 type DragPayload = { kind: TopologyDeviceKind; id: string; label: string };
 type PaletteItem = DragPayload & { status: "online" | "offline" };
@@ -797,8 +800,8 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           <svg className="absolute inset-0 h-full w-full">
             {topo.nodes.map((n) => {
               if (n.deviceRef?.kind !== "camera") return null;
-              const cx = n.x + 32;
-              const cy = n.y + 20;
+              const cx = n.x + CAMERA_DOT_CENTER_X_OFFSET;
+              const cy = n.y + CAMERA_DOT_CENTER_Y_OFFSET;
               const plan = n.cameraPlan;
               const fovDeg = plan?.fovDeg ?? 70;
               const reach = plan?.reachPx ?? 150;
