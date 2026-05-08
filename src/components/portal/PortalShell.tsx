@@ -189,9 +189,19 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--vo-border)] bg-[var(--vo-surface)] md:flex">
         <div className="border-b border-[var(--vo-border)] px-4 py-4">
           <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-[var(--vo-fg)]">
-            <img src="/visionone-logo.png" alt="VisionOne" className="h-8 w-8 rounded object-contain" />
-            <span>
-              Vision<span className="text-[var(--vo-accent)]">One</span>
+            <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded">
+              <img
+                src="/visionone-logo.png"
+                alt="VisionOne znak"
+                className="absolute left-1/2 top-0 h-[185%] max-w-none -translate-x-1/2"
+              />
+            </span>
+            <span className="relative h-6 w-[124px] overflow-hidden">
+              <img
+                src="/visionone-logo.png"
+                alt="VisionOne napis"
+                className="absolute bottom-0 left-1/2 h-[240%] max-w-none -translate-x-1/2"
+              />
             </span>
           </Link>
         </div>
@@ -237,7 +247,13 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-2">
           <div className="flex min-w-0 items-center gap-3">
-            <img src="/visionone-logo.png" alt="VisionOne" className="h-5 w-5 shrink-0 rounded object-contain md:hidden" />
+            <span className="relative h-5 w-5 shrink-0 overflow-hidden rounded md:hidden">
+              <img
+                src="/visionone-logo.png"
+                alt="VisionOne"
+                className="absolute left-1/2 top-0 h-[185%] max-w-none -translate-x-1/2"
+              />
+            </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[var(--vo-fg)]">VisionOne portal</p>
               <p className="truncate text-xs text-[var(--vo-muted)]">
