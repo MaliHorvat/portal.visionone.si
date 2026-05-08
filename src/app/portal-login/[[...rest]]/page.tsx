@@ -26,7 +26,7 @@ export default async function PortalLoginPage({ searchParams }: PortalLoginPageP
       </section>
 
       <section className="relative hidden min-h-screen flex-1 lg:flex">
-        <Image src="/login-hero-cameras.png" alt="" fill priority className="object-cover object-center" sizes="52vw" />
+        <Image src="/login-hero-source.jpg" alt="" fill priority className="object-cover object-center" sizes="52vw" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#0d7a7a]/65 via-[#0d7a7a]/40 to-[#0d7a7a]/20" />
         <div className="relative z-[1] mt-auto max-w-xl px-10 pb-16 xl:px-16 xl:pb-20">
           <h2 className="text-5xl font-bold leading-[1.02] tracking-tight text-white">Napredno načrtovanje varnosti.</h2>

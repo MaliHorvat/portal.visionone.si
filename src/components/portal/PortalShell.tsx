@@ -6,6 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
   Boxes,
+  ChevronDown,
+  ChevronUp,
   LayoutDashboard,
   Package,
   RadioTower,
@@ -59,6 +61,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const [results, setResults] = useState<Array<{ id: string; label: string; href: string; meta?: string }>>([]);
   const [showResults, setShowResults] = useState(false);
   const [pendingAccessRequests, setPendingAccessRequests] = useState(0);
+  const [sectionOrders, setSectionOrders] = useState<Record<string, string[]>>({});
 
   const current = useMemo(() => {
     const qs = searchParams.toString();
@@ -78,9 +81,64 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    const prefetchable = visible.flatMap((section) => section.items).slice(0, 6);
+    try {
+      const raw = localStorage.getItem("vo_nav_section_orders");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, string[]>;
+      if (parsed && typeof parsed === "object") setSectionOrders(parsed);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const orderedVisible = useMemo(
+    () =>
+      visible.map((section) => {
+        const order = sectionOrders[section.title] ?? [];
+        const keyed = section.items.map((item) => ({
+          item,
+          key: `${item.href}__${item.label}`,
+        }));
+        const sorted = keyed.sort((a, b) => {
+          const ia = order.indexOf(a.key);
+          const ib = order.indexOf(b.key);
+          if (ia === -1 && ib === -1) return 0;
+          if (ia === -1) return 1;
+          if (ib === -1) return -1;
+          return ia - ib;
+        });
+        return { ...section, items: sorted.map((x) => x.item) };
+      }),
+    [visible, sectionOrders],
+  );
+
+  function persistSectionOrder(next: Record<string, string[]>) {
+    setSectionOrders(next);
+    try {
+      localStorage.setItem("vo_nav_section_orders", JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function moveNavItem(sectionTitle: string, href: string, label: string, dir: -1 | 1) {
+    const section = orderedVisible.find((s) => s.title === sectionTitle);
+    if (!section) return;
+    const keys = section.items.map((x) => `${x.href}__${x.label}`);
+    const currentKey = `${href}__${label}`;
+    const idx = keys.indexOf(currentKey);
+    const target = idx + dir;
+    if (idx < 0 || target < 0 || target >= keys.length) return;
+    const nextKeys = [...keys];
+    const [it] = nextKeys.splice(idx, 1);
+    nextKeys.splice(target, 0, it);
+    persistSectionOrder({ ...sectionOrders, [sectionTitle]: nextKeys });
+  }
+
+  useEffect(() => {
+    const prefetchable = orderedVisible.flatMap((section) => section.items).slice(0, 6);
     for (const item of prefetchable) router.prefetch(item.href);
-  }, [router, visible]);
+  }, [router, orderedVisible]);
 
   useEffect(() => {
     const q = query.trim();
@@ -126,31 +184,52 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
         <nav className="flex flex-1 flex-col gap-3 overflow-auto px-2 py-3">
-          {visible.map((section) => (
+          {orderedVisible.map((section) => (
             <div key={section.title}>
               <div className="px-3 pb-1 text-[10px] font-semibold tracking-[0.11em] text-[var(--vo-muted)]/90">
                 {section.title}
               </div>
               <div className="flex flex-col gap-0.5">
-                {section.items.map(({ href, label, icon: Icon }) => {
+                {section.items.map(({ href, label, icon: Icon }, idx) => {
                   const active = href.includes("?")
                     ? current.startsWith(href)
                     : href === "/portal"
                       ? pathname === "/portal"
                       : pathname.startsWith(href);
                   return (
-                    <Link
-                      key={href + label}
-                      href={href}
-                      className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px] font-medium ${
-                        active
-                          ? "border border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-fg)]"
-                          : "text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)]"
-                      }`}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                      {label}
-                    </Link>
+                    <div key={href + label} className="group flex items-center gap-1">
+                      <Link
+                        href={href}
+                        className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-3 py-1.5 text-[13px] font-medium ${
+                          active
+                            ? "border border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-fg)]"
+                            : "text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)]"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                        {label}
+                      </Link>
+                      <div className="hidden items-center gap-0.5 group-hover:flex">
+                        <button
+                          type="button"
+                          title="Premakni gor"
+                          disabled={idx === 0}
+                          onClick={() => moveNavItem(section.title, href, label, -1)}
+                          className="rounded border border-[var(--vo-border)] p-0.5 text-[var(--vo-muted)] disabled:opacity-40"
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Premakni dol"
+                          disabled={idx === section.items.length - 1}
+                          onClick={() => moveNavItem(section.title, href, label, 1)}
+                          className="rounded border border-[var(--vo-border)] p-0.5 text-[var(--vo-muted)] disabled:opacity-40"
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -246,7 +325,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
         <div className="border-b border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 md:hidden">
           <nav className="flex gap-1 overflow-x-auto">
-            {visible.flatMap((s) => s.items).map(({ href, label }) => {
+            {orderedVisible.flatMap((s) => s.items).map(({ href, label }) => {
               const active = href.includes("?")
                 ? current.startsWith(href)
                 : href === "/portal"

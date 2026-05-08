@@ -109,17 +109,6 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
     }
   }
 
-  async function moveClient(id: string, direction: -1 | 1) {
-    const idx = orderedClients.findIndex((c) => c.id === id);
-    if (idx < 0) return;
-    const target = idx + direction;
-    if (target < 0 || target >= orderedClients.length) return;
-    const next = [...orderedClients];
-    const [item] = next.splice(idx, 1);
-    next.splice(target, 0, item);
-    await persistOrder(next);
-  }
-
   async function moveClientBefore(sourceId: string, targetId: string) {
     if (sourceId === targetId) return;
     const sourceIdx = orderedClients.findIndex((c) => c.id === sourceId);
@@ -242,7 +231,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
             Ni strank.
           </div>
         ) : null}
-        {orderedClients.map((c, idx) => (
+        {orderedClients.map((c) => (
           <div
             key={`m-${c.id}`}
             className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 shadow-[var(--vo-card-shadow)]"
@@ -268,22 +257,6 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
               {c.phone ? ` · ${c.phone}` : ""}
             </p>
             <div className="mt-3 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                disabled={reordering || idx === 0}
-                onClick={() => void moveClient(c.id, -1)}
-                className="rounded-md border border-[var(--vo-border)] px-2 py-1 text-xs font-medium text-[var(--vo-fg)] disabled:opacity-40"
-              >
-                Gor
-              </button>
-              <button
-                type="button"
-                disabled={reordering || idx === orderedClients.length - 1}
-                onClick={() => void moveClient(c.id, 1)}
-                className="rounded-md border border-[var(--vo-border)] px-2 py-1 text-xs font-medium text-[var(--vo-fg)] disabled:opacity-40"
-              >
-                Dol
-              </button>
               <Link
                 href={clientProfilePath(c)}
                 prefetch
