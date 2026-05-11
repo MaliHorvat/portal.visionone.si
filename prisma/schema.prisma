@@ -41,6 +41,7 @@ model Client {
   deviceProbes DeviceProbe[]
   deviceChecks DeviceCheck[]
   documents ClientDocument[]
+  fieldVisits FieldVisit[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -238,6 +239,25 @@ model ServiceRequest {
 
   @@index([ownerUsername, status, priority])
   @@index([clientId])
+}
+
+model FieldVisit {
+  id             String   @id @default(cuid())
+  ownerUsername  String   @default("admin")
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  checkedInBy    String   @default("portal")
+  checkInAt      DateTime @default(now())
+  checkOutAt     DateTime?
+  checklist      Json?
+  photoProofs    Json?
+  signatureDataUrl String @db.LongText @default("")
+  reportText     String   @db.Text @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([ownerUsername, checkInAt])
+  @@index([clientId, checkInAt])
 }
 
 model TelemetryAgent {
