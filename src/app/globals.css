@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "@tldraw/tldraw/tldraw.css";
 
 :root {
   --vo-bg: #f4f7fb;

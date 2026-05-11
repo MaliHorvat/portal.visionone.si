@@ -13,7 +13,6 @@ import {
   sumCableLengthM,
   svgArcOpen,
 } from "@/lib/schema-design-tools";
-import { TabShemaTldraw } from "./TabShemaTldraw";
 import type {
   CameraPlanOverlay,
   ClientTopologyState,
@@ -120,11 +119,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const [selectedPathIdx, setSelectedPathIdx] = useState<number | null>(null);
   const [drawStrokeKind, setDrawStrokeKind] = useState<"wall" | "cable">("wall");
   const [cableTypeDraft, setCableTypeDraft] = useState("Cat6");
-  const [schemaMode, setSchemaMode] = useState<"classic" | "tldraw">(
-    topo.schemaEditorMode === "tldraw" ? "tldraw" : "classic",
-  );
   const canvasRef = useRef<HTMLDivElement>(null);
-  const captureTldrawRef = useRef<(() => unknown | undefined) | null>(null);
 
   const cableTotalM = useMemo(
     () => sumCableLengthM(topo.floorPlanPaths, topo.planCalibration?.metersPerPx),
@@ -139,9 +134,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   }, [selectedPathIdx, topo.floorPlanPaths, topo.planCalibration?.metersPerPx]);
 
   useEffect(() => {
-    const parsed = parseTopologyState(client.topologyData);
-    setTopo(parsed);
-    setSchemaMode(parsed.schemaEditorMode === "tldraw" ? "tldraw" : "classic");
+    setTopo(parseTopologyState(client.topologyData));
   }, [client.topologyData]);
 
   useEffect(() => {
@@ -366,17 +359,10 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
 
   const save = useCallback(async () => {
     if (!dbConfigured) return;
-    const tldrawSnapshot =
-      schemaMode === "tldraw" ? captureTldrawRef.current?.() ?? topo.tldrawSnapshot : topo.tldrawSnapshot;
-    const payload = {
-      ...topo,
-      schemaEditorMode: schemaMode,
-      tldrawSnapshot,
-    };
     const r = await fetch(`/api/clients/${clientId}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ topologyData: payload }),
+      body: JSON.stringify({ topologyData: topo }),
     });
     if (!r.ok) {
       showToast("Shranjevanje načrta ni uspelo.", "err");
@@ -386,7 +372,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     if (j.client) applyClient(j.client);
     else await reload();
     showToast("Načrt shranjen.");
-  }, [applyClient, clientId, dbConfigured, reload, schemaMode, showToast, topo]);
+  }, [applyClient, clientId, dbConfigured, reload, showToast, topo]);
 
   useEffect(() => {
     if (!dragging || !canvasRef.current) return;
@@ -414,44 +400,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   }, [dragging, topo.snapGridPx]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setSchemaMode("classic")}
-            className={`rounded-md border px-2 py-1 text-xs ${
-              schemaMode === "classic"
-                ? "border-[var(--vo-accent)] bg-[var(--vo-accent-muted)] text-[var(--vo-accent)]"
-                : "border-[var(--vo-border)] text-[var(--vo-muted)]"
-            }`}
-          >
-            Klasična shema
-          </button>
-          <button
-            type="button"
-            onClick={() => setSchemaMode("tldraw")}
-            className={`rounded-md border px-2 py-1 text-xs ${
-              schemaMode === "tldraw"
-                ? "border-[var(--vo-accent)] bg-[var(--vo-accent-muted)] text-[var(--vo-accent)]"
-                : "border-[var(--vo-border)] text-[var(--vo-muted)]"
-            }`}
-          >
-            tldraw
-          </button>
-      </div>
-      {schemaMode === "tldraw" ? (
-        <TabShemaTldraw
-          clientId={clientId}
-          topo={topo}
-          setTopo={setTopo}
-          cameras={client.cameras}
-          onRegisterCapture={(fn) => {
-            captureTldrawRef.current = fn;
-          }}
-        />
-      ) : null}
-      {schemaMode !== "classic" ? null : (
-      <div className="flex flex-col gap-4 lg:flex-row">
+    <div className="flex flex-col gap-4 lg:flex-row">
       <div className="w-full shrink-0 space-y-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs lg:w-56">
         <p className="font-semibold text-[var(--vo-fg)]">Naprave (drag &amp; drop)</p>
         <p className="text-[var(--vo-muted)]">
@@ -1088,8 +1037,6 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           </ul>
         </div>
       </div>
-      </div>
-      )}
     </div>
   );
 }

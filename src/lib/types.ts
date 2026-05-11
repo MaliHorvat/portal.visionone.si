@@ -178,10 +178,6 @@ export interface PlanCalibration {
 export interface ClientTopologyState {
   nodes: TopologyCanvasNode[];
   edges: TopologyCanvasEdge[];
-  /** Izbran urejevalnik sheme v UI. */
-  schemaEditorMode?: "classic" | "tldraw";
-  /** Snapshot tldraw dokumenta (JSON), če je v uporabi tldraw način. */
-  tldrawSnapshot?: unknown;
   /** Ročno narisane črte (tloris, stene, kabli …). */
   floorPlanPaths?: FloorPlanPathEntry[];
   /** Ozadje kot HTTPS URL. */
