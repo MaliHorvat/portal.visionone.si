@@ -60,6 +60,7 @@ export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
     if (!isValidTldrawSnapshot(topo.tldrawSnapshot)) return undefined;
     return sanitizeSnapshot(topo.tldrawSnapshot);
   }, [topo.tldrawSnapshot]);
+  const initialSnapshotRef = useRef<TLStoreSnapshot | undefined>(snapshot);
 
   useEffect(() => {
     if (topo.tldrawSnapshot === undefined) return;
@@ -67,6 +68,12 @@ export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
     // Starejši / pokvarjen zapis ne sme sesuti editorja.
     setTopo((prev) => ({ ...prev, tldrawSnapshot: undefined }));
   }, [setTopo, topo.tldrawSnapshot]);
+
+  useEffect(() => {
+    // Pri menjavi stranke inicializiramo enkratni začetni snapshot.
+    initialSnapshotRef.current = snapshot;
+    seededIdsRef.current = new Set();
+  }, [clientId, snapshot]);
 
   useEffect(() => {
     const id = window.setInterval(() => setTick((x) => x + 1), 1200);
@@ -201,7 +208,7 @@ export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
         ) : null}
         <div className="absolute inset-0">
           <Tldraw
-            snapshot={snapshot}
+            snapshot={initialSnapshotRef.current}
             persistenceKey={`visionone-${clientId}`}
             onMount={(editor) => {
               editorRef.current = editor;
