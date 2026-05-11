@@ -124,6 +124,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     topo.schemaEditorMode === "tldraw" ? "tldraw" : "classic",
   );
   const canvasRef = useRef<HTMLDivElement>(null);
+  const captureTldrawRef = useRef<(() => unknown | undefined) | null>(null);
 
   const cableTotalM = useMemo(
     () => sumCableLengthM(topo.floorPlanPaths, topo.planCalibration?.metersPerPx),
@@ -365,7 +366,13 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
 
   const save = useCallback(async () => {
     if (!dbConfigured) return;
-    const payload = { ...topo, schemaEditorMode: schemaMode };
+    const tldrawSnapshot =
+      schemaMode === "tldraw" ? captureTldrawRef.current?.() ?? topo.tldrawSnapshot : topo.tldrawSnapshot;
+    const payload = {
+      ...topo,
+      schemaEditorMode: schemaMode,
+      tldrawSnapshot,
+    };
     const r = await fetch(`/api/clients/${clientId}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
@@ -433,7 +440,15 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           </button>
       </div>
       {schemaMode === "tldraw" ? (
-        <TabShemaTldraw clientId={clientId} topo={topo} setTopo={setTopo} cameras={client.cameras} />
+        <TabShemaTldraw
+          clientId={clientId}
+          topo={topo}
+          setTopo={setTopo}
+          cameras={client.cameras}
+          onRegisterCapture={(fn) => {
+            captureTldrawRef.current = fn;
+          }}
+        />
       ) : null}
       {schemaMode !== "classic" ? null : (
       <div className="flex flex-col gap-4 lg:flex-row">

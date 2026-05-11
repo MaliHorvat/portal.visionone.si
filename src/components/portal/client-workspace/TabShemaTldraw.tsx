@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Tldraw } from "@tldraw/tldraw";
 import type { Editor } from "@tldraw/tldraw";
 import type { TLStoreSnapshot } from "@tldraw/tldraw";
@@ -12,6 +12,7 @@ type Props = {
   topo: ClientTopologyState;
   setTopo: React.Dispatch<React.SetStateAction<ClientTopologyState>>;
   cameras: CameraDevice[];
+  onRegisterCapture?: (fn: (() => unknown | undefined) | null) => void;
 };
 
 function cameraLabel(c: CameraDevice) {
@@ -51,9 +52,8 @@ function sanitizeSnapshot(input: TLStoreSnapshot): TLStoreSnapshot {
   return { ...input, store } as TLStoreSnapshot;
 }
 
-export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
+export function TabShemaTldraw({ clientId, topo, setTopo, cameras, onRegisterCapture }: Props) {
   const editorRef = useRef<Editor | null>(null);
-  const [tick, setTick] = useState(0);
   const seededIdsRef = useRef<Set<string>>(new Set());
   const snapshotRef = useRef<unknown>(topo.tldrawSnapshot);
 
@@ -84,16 +84,14 @@ export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
   }, [clientId]);
 
   useEffect(() => {
-    const id = window.setInterval(() => setTick((x) => x + 1), 1200);
-    return () => window.clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const editor = editorRef.current;
-    if (!editor) return;
-    const next = editor.getSnapshot();
-    setTopo((prev) => ({ ...prev, schemaEditorMode: "tldraw", tldrawSnapshot: next }));
-  }, [tick, setTopo]);
+    if (!onRegisterCapture) return;
+    onRegisterCapture(() => {
+      const editor = editorRef.current;
+      if (!editor) return undefined;
+      return editor.getSnapshot();
+    });
+    return () => onRegisterCapture(null);
+  }, [onRegisterCapture]);
 
   const addCamera = (camera: CameraDevice) => {
     const editor = editorRef.current;
