@@ -407,9 +407,8 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   }, [dragging, topo.snapGridPx]);
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row">
-      <div className="w-full">
-        <div className="mb-2 flex items-center gap-2">
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setSchemaMode("classic")}
@@ -432,20 +431,12 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           >
             tldraw
           </button>
-        </div>
       </div>
       {schemaMode === "tldraw" ? (
-        <div className="w-full">
-          <TabShemaTldraw
-            clientId={clientId}
-            topo={topo}
-            setTopo={setTopo}
-            cameras={client.cameras}
-          />
-        </div>
+        <TabShemaTldraw clientId={clientId} topo={topo} setTopo={setTopo} cameras={client.cameras} />
       ) : null}
       {schemaMode !== "classic" ? null : (
-      <>
+      <div className="flex flex-col gap-4 lg:flex-row">
       <div className="w-full shrink-0 space-y-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs lg:w-56">
         <p className="font-semibold text-[var(--vo-fg)]">Naprave (drag &amp; drop)</p>
         <p className="text-[var(--vo-muted)]">
@@ -1082,7 +1073,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           </ul>
         </div>
       </div>
-      </>
+      </div>
       )}
     </div>
   );

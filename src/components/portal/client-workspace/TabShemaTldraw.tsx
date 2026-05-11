@@ -71,9 +71,12 @@ export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
 
   useEffect(() => {
     // Pri menjavi stranke inicializiramo enkratni začetni snapshot.
-    initialSnapshotRef.current = snapshot;
+    const nextInitial = isValidTldrawSnapshot(topo.tldrawSnapshot)
+      ? sanitizeSnapshot(topo.tldrawSnapshot)
+      : undefined;
+    initialSnapshotRef.current = nextInitial;
     seededIdsRef.current = new Set();
-  }, [clientId, snapshot]);
+  }, [clientId, topo.tldrawSnapshot]);
 
   useEffect(() => {
     const id = window.setInterval(() => setTick((x) => x + 1), 1200);
