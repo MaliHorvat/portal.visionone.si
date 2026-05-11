@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Tldraw } from "@tldraw/tldraw";
 import type { Editor } from "@tldraw/tldraw";
 import type { TLStoreSnapshot } from "@tldraw/tldraw";
+import { toRichText } from "@tldraw/tldraw";
 import type { CameraDevice, ClientTopologyState } from "@/lib/types";
 
 type Props = {
@@ -27,13 +28,37 @@ function isValidTldrawSnapshot(input: unknown): input is TLStoreSnapshot {
   return !!x.store && typeof x.store === "object" && !!x.schema && typeof x.schema === "object";
 }
 
+function sanitizeSnapshot(input: TLStoreSnapshot): TLStoreSnapshot {
+  const rawStore = (input as { store: Record<string, unknown> }).store;
+  const store: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(rawStore)) {
+    if (!v || typeof v !== "object") {
+      store[k] = v;
+      continue;
+    }
+    const rec = v as Record<string, unknown>;
+    if (rec.typeName === "shape" && rec.type === "text" && rec.props && typeof rec.props === "object") {
+      const props = { ...(rec.props as Record<string, unknown>) };
+      if (typeof props.text === "string" && props.richText === undefined) {
+        props.richText = toRichText(props.text);
+      }
+      delete props.text;
+      store[k] = { ...rec, props };
+      continue;
+    }
+    store[k] = rec;
+  }
+  return { ...input, store } as TLStoreSnapshot;
+}
+
 export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
   const editorRef = useRef<Editor | null>(null);
   const [tick, setTick] = useState(0);
   const seededIdsRef = useRef<Set<string>>(new Set());
 
   const snapshot = useMemo<TLStoreSnapshot | undefined>(() => {
-    return isValidTldrawSnapshot(topo.tldrawSnapshot) ? topo.tldrawSnapshot : undefined;
+    if (!isValidTldrawSnapshot(topo.tldrawSnapshot)) return undefined;
+    return sanitizeSnapshot(topo.tldrawSnapshot);
   }, [topo.tldrawSnapshot]);
 
   useEffect(() => {
@@ -67,7 +92,7 @@ export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
         type: "text",
         x,
         y,
-        props: { text },
+        props: { richText: toRichText(text) },
       } as never,
     ]);
     seededIdsRef.current.add(camera.id);
