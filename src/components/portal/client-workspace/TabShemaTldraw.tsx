@@ -55,12 +55,17 @@ export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
   const editorRef = useRef<Editor | null>(null);
   const [tick, setTick] = useState(0);
   const seededIdsRef = useRef<Set<string>>(new Set());
+  const snapshotRef = useRef<unknown>(topo.tldrawSnapshot);
 
   const snapshot = useMemo<TLStoreSnapshot | undefined>(() => {
     if (!isValidTldrawSnapshot(topo.tldrawSnapshot)) return undefined;
     return sanitizeSnapshot(topo.tldrawSnapshot);
   }, [topo.tldrawSnapshot]);
   const initialSnapshotRef = useRef<TLStoreSnapshot | undefined>(snapshot);
+
+  useEffect(() => {
+    snapshotRef.current = topo.tldrawSnapshot;
+  }, [topo.tldrawSnapshot]);
 
   useEffect(() => {
     if (topo.tldrawSnapshot === undefined) return;
@@ -71,12 +76,12 @@ export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
 
   useEffect(() => {
     // Pri menjavi stranke inicializiramo enkratni začetni snapshot.
-    const nextInitial = isValidTldrawSnapshot(topo.tldrawSnapshot)
-      ? sanitizeSnapshot(topo.tldrawSnapshot)
+    const raw = snapshotRef.current;
+    initialSnapshotRef.current = isValidTldrawSnapshot(raw)
+      ? sanitizeSnapshot(raw)
       : undefined;
-    initialSnapshotRef.current = nextInitial;
     seededIdsRef.current = new Set();
-  }, [clientId, topo.tldrawSnapshot]);
+  }, [clientId]);
 
   useEffect(() => {
     const id = window.setInterval(() => setTick((x) => x + 1), 1200);
@@ -211,8 +216,8 @@ export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
         ) : null}
         <div className="absolute inset-0">
           <Tldraw
+            key={`tldraw-${clientId}`}
             snapshot={initialSnapshotRef.current}
-            persistenceKey={`visionone-${clientId}`}
             onMount={(editor) => {
               editorRef.current = editor;
             }}
