@@ -75,11 +75,12 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       navSections.map((s) => ({
         ...s,
         items: s.items.filter((item) => {
+          if (role === "admin" && item.permission === "service-requests") return true;
           if (!navPermissions.includes(item.permission)) return false;
           return true;
         }),
       })),
-    [navPermissions],
+    [navPermissions, role],
   );
 
   useEffect(() => {
