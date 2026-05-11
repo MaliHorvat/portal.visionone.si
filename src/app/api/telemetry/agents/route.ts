@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
-import { jsonError, requirePortalSession } from "@/lib/api-guard";
+import { getPortalSessionPayload, jsonError, requirePortalSession } from "@/lib/api-guard";
 import { appendAuditLog } from "@/lib/repositories/audit-log";
+import { assertClientOwnedBySession } from "@/lib/repositories/clients";
 
 export async function GET() {
   const guard = await requirePortalSession();
@@ -10,7 +11,10 @@ export async function GET() {
     return jsonError("DB ni nastavljena.", 500);
   }
   try {
+    const session = await getPortalSessionPayload();
+    const owner = session?.username?.trim();
     const agents = await prisma.telemetryAgent.findMany({
+      where: owner ? { client: { ownerUsername: owner } } : { client: { ownerUsername: "__portal_no_owner__" } },
       orderBy: { externalId: "asc" },
       include: { client: { select: { id: true, name: true } } },
     });
@@ -37,7 +41,10 @@ export async function POST(request: Request) {
     if (!externalId) return jsonError("Polje 'externalId' je obvezno.");
     if (!clientId) return jsonError("Polje 'clientId' je obvezno.");
 
-    const client = await prisma.client.findUnique({ where: { id: clientId } });
+    const session = await getPortalSessionPayload();
+    if (!session?.username?.trim()) return jsonError("Seja ni veljavna.", 401);
+    if (!(await assertClientOwnedBySession(clientId, session))) return jsonError("Stranka ne obstaja.", 404);
+    const client = await prisma.client.findUnique({ where: { id: clientId }, select: { name: true } });
     if (!client) return jsonError("Stranka ne obstaja.", 404);
 
     const agent = await prisma.telemetryAgent.upsert({
@@ -56,7 +63,7 @@ export async function POST(request: Request) {
       include: { client: { select: { id: true, name: true } } },
     });
 
-    await appendAuditLog("admin", "telemetry_agent_upsert", `${externalId} → ${clientId}`);
+    await appendAuditLog(session.username, "telemetry_agent_upsert", `${externalId} → ${clientId}`);
 
     return NextResponse.json({ agent });
   } catch (e) {

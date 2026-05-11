@@ -193,8 +193,9 @@ export async function getPortalDashboard(
     };
   }
 
-  const clientWhere =
-    session && session.role !== "admin" ? { ownerUsername: session.username } : undefined;
+  const clientWhere = session?.username?.trim()
+    ? { ownerUsername: session.username }
+    : { ownerUsername: "__portal_no_owner__" };
   const [rows, probes, remindersRaw, audits] = await Promise.all([
     prisma.client.findMany({
       where: clientWhere,
@@ -211,13 +212,15 @@ export async function getPortalDashboard(
     }),
     prisma.deviceProbe.findMany({
       where: {
-        ...(session && session.role !== "admin" ? { client: { ownerUsername: session.username } } : {}),
+        ...(session?.username?.trim()
+          ? { client: { ownerUsername: session.username } }
+          : { client: { ownerUsername: "__portal_no_owner__" } }),
         OR: [{ kind: "camera" }, { kind: "nvr" }, { kind: "switch" }],
       },
       select: { clientId: true, deviceKey: true, status: true },
     }),
     listRemindersForSession(session ?? undefined),
-    listAuditLogs(8),
+    listAuditLogs(8, session?.username?.trim() ?? undefined),
   ]);
   const liveByClient = new Map<string, Record<string, string>>();
   for (const p of probes) {

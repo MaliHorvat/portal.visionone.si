@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
 import { prisma } from "@/lib/db";
+import { requireOwnedClient } from "@/lib/guard-client-access";
 import { deleteCamera, updateCamera } from "@/lib/repositories/client-hardware";
 
 type Ctx = { params: Promise<{ id: string; cameraId: string }> };
@@ -11,6 +12,8 @@ export async function PATCH(request: Request, ctx: Ctx) {
   if (!prisma) return jsonError("Baza ni nastavljena.", 503);
   try {
     const { id: clientId, cameraId } = await ctx.params;
+    const own = await requireOwnedClient(clientId);
+    if (!own.ok) return own.response;
     const cam = await prisma.clientCamera.findFirst({
       where: { id: cameraId, clientId },
     });
@@ -46,6 +49,8 @@ export async function DELETE(_request: Request, ctx: Ctx) {
   if (!prisma) return jsonError("Baza ni nastavljena.", 503);
   try {
     const { id: clientId, cameraId } = await ctx.params;
+    const own = await requireOwnedClient(clientId);
+    if (!own.ok) return own.response;
     const cam = await prisma.clientCamera.findFirst({
       where: { id: cameraId, clientId },
     });

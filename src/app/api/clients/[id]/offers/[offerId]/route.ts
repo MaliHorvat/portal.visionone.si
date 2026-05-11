@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
 import { prisma } from "@/lib/db";
+import { requireOwnedClient } from "@/lib/guard-client-access";
 import { appendAuditLog } from "@/lib/repositories/audit-log";
 import { deleteOffer, getOffer, updateOfferFull, type OfferLineInput } from "@/lib/repositories/client-offers";
 
@@ -12,6 +13,8 @@ export async function GET(_request: Request, ctx: Ctx) {
   if (!prisma) return jsonError("Baza ni nastavljena.", 503);
   try {
     const { id: clientId, offerId } = await ctx.params;
+    const own = await requireOwnedClient(clientId);
+    if (!own.ok) return own.response;
     const offer = await getOffer(offerId);
     if (!offer || offer.clientId !== clientId) return jsonError("Ponudba ne obstaja.", 404);
     return NextResponse.json({ offer });
@@ -27,6 +30,8 @@ export async function PUT(request: Request, ctx: Ctx) {
   if (!prisma) return jsonError("Baza ni nastavljena.", 503);
   try {
     const { id: clientId, offerId } = await ctx.params;
+    const own = await requireOwnedClient(clientId);
+    if (!own.ok) return own.response;
     const existing = await getOffer(offerId);
     if (!existing || existing.clientId !== clientId) return jsonError("Ponudba ne obstaja.", 404);
 
@@ -54,7 +59,7 @@ export async function PUT(request: Request, ctx: Ctx) {
       vatPct: body?.vatPct !== undefined ? Number(body.vatPct) : undefined,
       lines,
     });
-    await appendAuditLog("portal", "client_offer_save", offerId);
+    await appendAuditLog(own.session.username, "client_offer_save", offerId);
     return NextResponse.json({ offer });
   } catch (e) {
     console.error(e);
@@ -68,10 +73,12 @@ export async function DELETE(_request: Request, ctx: Ctx) {
   if (!prisma) return jsonError("Baza ni nastavljena.", 503);
   try {
     const { id: clientId, offerId } = await ctx.params;
+    const own = await requireOwnedClient(clientId);
+    if (!own.ok) return own.response;
     const existing = await getOffer(offerId);
     if (!existing || existing.clientId !== clientId) return jsonError("Ponudba ne obstaja.", 404);
     await deleteOffer(offerId);
-    await appendAuditLog("portal", "client_offer_delete", offerId);
+    await appendAuditLog(own.session.username, "client_offer_delete", offerId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error(e);

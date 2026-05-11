@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
 import { prisma } from "@/lib/db";
+import { requireOwnedClient } from "@/lib/guard-client-access";
 import { createTimeLog, listTimeLogs } from "@/lib/repositories/client-timelogs";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -11,8 +12,8 @@ export async function GET(_request: Request, ctx: Ctx) {
   if (!prisma) return jsonError("Baza ni nastavljena.", 503);
   try {
     const { id: clientId } = await ctx.params;
-    const exists = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true } });
-    if (!exists) return jsonError("Stranka ne obstaja.", 404);
+    const own = await requireOwnedClient(clientId);
+    if (!own.ok) return own.response;
     const logs = await listTimeLogs(clientId);
     return NextResponse.json({ logs });
   } catch (e) {
@@ -27,8 +28,8 @@ export async function POST(request: Request, ctx: Ctx) {
   if (!prisma) return jsonError("Baza ni nastavljena.", 503);
   try {
     const { id: clientId } = await ctx.params;
-    const exists = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true } });
-    if (!exists) return jsonError("Stranka ne obstaja.", 404);
+    const own = await requireOwnedClient(clientId);
+    if (!own.ok) return own.response;
     const body = await request.json();
     const action = String(body?.action ?? "").trim();
     const technician = String(body?.technician ?? "").trim();

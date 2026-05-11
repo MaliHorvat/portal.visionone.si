@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { appendAuditLog } from "@/lib/repositories/audit-log";
 import { getPortalSessionPayload, jsonError, requirePortalRole } from "@/lib/api-guard";
+import { assertClientOwnedBySession } from "@/lib/repositories/clients";
 
 function makeClaimCode() {
   const raw = crypto.randomBytes(5).toString("hex").toUpperCase();
@@ -14,7 +15,10 @@ export async function GET() {
   if (guard) return guard;
   if (!isDbConfigured() || !prisma) return jsonError("DB ni nastavljena.", 500);
 
+  const session = await getPortalSessionPayload();
+  const owner = session?.username?.trim();
   const claims = await prisma.agentClaimCode.findMany({
+    where: owner ? { client: { ownerUsername: owner } } : { client: { ownerUsername: "__portal_no_owner__" } },
     orderBy: { createdAt: "desc" },
     take: 80,
     include: {
@@ -47,7 +51,10 @@ export async function POST(request: Request) {
   if (!clientId) return jsonError("Polje 'clientId' je obvezno.");
   if (!externalId) return jsonError("Polje 'externalId' je obvezno.");
 
-  const client = await prisma.client.findUnique({ where: { id: clientId } });
+  const session = await getPortalSessionPayload();
+  if (!session?.username?.trim()) return jsonError("Seja ni veljavna.", 401);
+  if (!(await assertClientOwnedBySession(clientId, session))) return jsonError("Stranka ne obstaja.", 404);
+  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { name: true } });
   if (!client) return jsonError("Stranka ne obstaja.", 404);
 
   const claim = await prisma.agentClaimCode.create({

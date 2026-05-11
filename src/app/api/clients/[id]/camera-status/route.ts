@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
+import { requireOwnedClient } from "@/lib/guard-client-access";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -10,6 +11,8 @@ export async function GET(_request: Request, ctx: Ctx) {
   if (!isDbConfigured() || !prisma) return jsonError("DB ni nastavljena.", 500);
   try {
     const { id } = await ctx.params;
+    const own = await requireOwnedClient(id);
+    if (!own.ok) return own.response;
     const probes = await prisma.deviceProbe.findMany({
       where: { clientId: id, kind: "camera" },
       select: {

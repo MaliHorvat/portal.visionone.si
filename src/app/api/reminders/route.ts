@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
 import { getPortalSession } from "@/lib/get-portal-session";
+import { assertClientOwnedBySession } from "@/lib/repositories/clients";
 import { createReminder, listRemindersForSession } from "@/lib/repositories/reminders";
 import type { ReminderKind } from "@/lib/types";
 
@@ -25,6 +26,8 @@ export async function POST(request: Request) {
   const guard = await requirePortalSession();
   if (guard) return guard;
   try {
+    const session = await getPortalSession();
+    if (!session?.username?.trim()) return jsonError("Seja ni veljavna.", 401);
     const body = await request.json();
     const clientId = String(body?.clientId ?? "");
     const title = String(body?.title ?? "").trim();
@@ -32,6 +35,9 @@ export async function POST(request: Request) {
     if (!clientId) return jsonError("Polje 'clientId' je obvezno.");
     if (!title) return jsonError("Polje 'title' je obvezno.");
     if (!dueDate) return jsonError("Polje 'dueDate' je obvezno.");
+    if (!(await assertClientOwnedBySession(clientId, session))) {
+      return jsonError("Stranka ne obstaja.", 404);
+    }
     const kind: ReminderKind = VALID_KINDS.includes(body?.kind) ? body.kind : "drugo";
     const created = await createReminder({
       clientId,

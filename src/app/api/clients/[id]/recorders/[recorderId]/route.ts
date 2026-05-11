@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
 import { prisma } from "@/lib/db";
+import { requireOwnedClient } from "@/lib/guard-client-access";
 import { deleteRecorder, updateRecorder } from "@/lib/repositories/client-hardware";
 
 type Ctx = { params: Promise<{ id: string; recorderId: string }> };
@@ -11,6 +12,8 @@ export async function PATCH(request: Request, ctx: Ctx) {
   if (!prisma) return jsonError("Baza ni nastavljena.", 503);
   try {
     const { id: clientId, recorderId } = await ctx.params;
+    const own = await requireOwnedClient(clientId);
+    if (!own.ok) return own.response;
     const row = await prisma.clientRecorder.findFirst({ where: { id: recorderId, clientId } });
     if (!row) return jsonError("Ni najdeno.", 404);
     const body = await request.json();
@@ -35,6 +38,8 @@ export async function DELETE(_request: Request, ctx: Ctx) {
   if (!prisma) return jsonError("Baza ni nastavljena.", 503);
   try {
     const { id: clientId, recorderId } = await ctx.params;
+    const own = await requireOwnedClient(clientId);
+    if (!own.ok) return own.response;
     const row = await prisma.clientRecorder.findFirst({ where: { id: recorderId, clientId } });
     if (!row) return jsonError("Ni najdeno.", 404);
     await deleteRecorder(recorderId);

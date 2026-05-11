@@ -204,9 +204,31 @@ export async function listClients(): Promise<ClientSummary[]> {
   return rows.map(mapClientSummary);
 }
 
+/** Brez veljavnega uporabniškega imena ne vračamo nobenih strank (namesto skupnega pogleda). */
+const NO_OWNER_SCOPE = { ownerUsername: "__portal_no_owner__" } as const;
+
 function scopeWhere(session?: Pick<PortalSessionPayload, "role" | "username">) {
-  if (!session || session.role === "admin") return {};
-  return { ownerUsername: session.username };
+  const u = session?.username?.trim();
+  if (!u) return NO_OWNER_SCOPE;
+  return { ownerUsername: u };
+}
+
+/** Preveri lastništvo stranke (id ali slug) za trenutnega portala uporabnika. */
+export async function assertClientOwnedBySession(
+  slugOrId: string,
+  session: Pick<PortalSessionPayload, "username">,
+): Promise<boolean> {
+  const owner = session.username?.trim();
+  if (!owner) return false;
+  if (!isDbConfigured() || !prisma) return false;
+  const row = await prisma.client.findFirst({
+    where: {
+      ownerUsername: owner,
+      OR: [{ id: slugOrId }, { slug: slugOrId }],
+    },
+    select: { id: true },
+  });
+  return !!row;
 }
 
 export async function listClientsForSession(
@@ -346,7 +368,7 @@ export async function createClientForSession(
       health: data.health ?? "ok",
       sortOrder: (max._max.sortOrder ?? 0) + 1,
       packageId: data.packageId ?? null,
-      ownerUsername: session?.role === "admin" ? (session.username || "admin") : (session?.username || "admin"),
+      ownerUsername: session?.username?.trim() || "admin",
     },
     include: {
       package: true,

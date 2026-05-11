@@ -15,11 +15,24 @@ export async function GET(request: Request) {
   const guard = await requirePortalSession();
   if (guard) return guard;
   const session = await getPortalSession();
-  const scope = session?.role === "admin" ? {} : { ownerUsername: session?.username ?? "" };
+  const scope = session?.username?.trim()
+    ? { ownerUsername: session.username }
+    : { ownerUsername: "__portal_no_owner__" };
   const url = new URL(request.url);
   const q = (url.searchParams.get("q") ?? "").trim();
   if (q.length < 2) return NextResponse.json({ items: [] as SearchItem[] });
   if (!isDbConfigured() || !prisma) return jsonError("Baza ni nastavljena.", 503);
+
+  const owner = session?.username?.trim();
+  const userSearchWhere =
+    session?.role === "admin"
+      ? { OR: [{ username: { contains: q } }, { email: { contains: q } }] }
+      : owner
+        ? {
+            username: owner,
+            OR: [{ username: { contains: q } }, { email: { contains: q } }],
+          }
+        : { id: "__none__" };
 
   const [clients, users, reminders] = await Promise.all([
     prisma.client.findMany({
@@ -37,7 +50,7 @@ export async function GET(request: Request) {
       orderBy: { name: "asc" },
     }),
     prisma.appUserAccount.findMany({
-      where: { OR: [{ username: { contains: q } }, { email: { contains: q } }] },
+      where: userSearchWhere,
       take: 6,
       select: { id: true, username: true, email: true, role: true },
       orderBy: { username: "asc" },
@@ -45,7 +58,7 @@ export async function GET(request: Request) {
     prisma.maintenanceReminder.findMany({
       where: {
         OR: [{ title: { contains: q } }, { client: { name: { contains: q } } }],
-        ...(session?.role === "admin" ? {} : { client: { ownerUsername: session?.username ?? "" } }),
+        client: { ownerUsername: owner ?? "__portal_no_owner__" },
       },
       take: 8,
       include: { client: { select: { id: true, slug: true, name: true } } },

@@ -34,15 +34,11 @@ export async function listRemindersForSession(
   clientId?: string,
 ): Promise<MaintenanceReminder[]> {
   if (!isDbConfigured() || !prisma) return listReminders(clientId);
-  const where =
-    session && session.role !== "admin"
-      ? {
-          ...(clientId ? { clientId } : {}),
-          client: { ownerUsername: session.username },
-        }
-      : clientId
-        ? { clientId }
-        : undefined;
+  const owner = session?.username?.trim();
+  const where = {
+    ...(clientId ? { clientId } : {}),
+    client: { ownerUsername: owner ?? "__portal_no_owner__" },
+  };
   const rows = await prisma.maintenanceReminder.findMany({
     where,
     include: { client: { select: { name: true } } },
@@ -126,4 +122,18 @@ export async function deleteReminder(id: string): Promise<void> {
     throw new Error("DB ni nastavljena.");
   }
   await prisma.maintenanceReminder.delete({ where: { id } });
+}
+
+export async function reminderBelongsToSession(
+  reminderId: string,
+  session: Pick<PortalSessionPayload, "username">,
+): Promise<boolean> {
+  if (!isDbConfigured() || !prisma) return false;
+  const owner = session.username?.trim();
+  if (!owner) return false;
+  const row = await prisma.maintenanceReminder.findFirst({
+    where: { id: reminderId, client: { ownerUsername: owner } },
+    select: { id: true },
+  });
+  return !!row;
 }
