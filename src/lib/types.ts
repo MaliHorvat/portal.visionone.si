@@ -210,6 +210,25 @@ export interface MaintenanceReminder {
   completed: boolean;
 }
 
+export type ServiceRequestStatus = "new" | "in_progress" | "waiting_customer" | "done";
+export type ServiceRequestPriority = "low" | "medium" | "high" | "urgent";
+
+export interface ServiceRequest {
+  id: string;
+  ownerUsername: string;
+  clientId: string | null;
+  clientName: string;
+  title: string;
+  description: string;
+  status: ServiceRequestStatus;
+  priority: ServiceRequestPriority;
+  dueDate: string;
+  createdBy: string;
+  assignee: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TimeLogEntry {
   id: string;
   projectId: string;

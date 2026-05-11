@@ -4,6 +4,7 @@ export const NAV_PERMISSION_KEYS = [
   "clients",
   "offers",
   "time-tracking",
+  "service-requests",
   "maintenance",
   "my-site",
   "rack-designer",
@@ -28,6 +29,7 @@ export const NAV_PERMISSION_LABELS: Record<NavPermissionKey, string> = {
   clients: "Objekti & stranke",
   offers: "Ponudbe",
   "time-tracking": "Sledenje času",
+  "service-requests": "Zahtevki",
   maintenance: "Vzdrževanje",
   "my-site": "Moj objekt",
   "rack-designer": "Rack dizajner",
@@ -50,6 +52,7 @@ export function getDefaultNavPermissions(role: "admin" | "operator" | "viewer"):
     return [
       "dashboard",
       "my-account",
+      "service-requests",
       "maintenance",
       "my-site",
       "tools",
@@ -58,7 +61,7 @@ export function getDefaultNavPermissions(role: "admin" | "operator" | "viewer"):
       "knowledge-base",
     ];
   }
-  return ["dashboard", "my-account", "maintenance", "my-site"];
+  return ["dashboard", "my-account", "service-requests", "maintenance", "my-site"];
 }
 
 export function normalizeNavPermissions(input: unknown, role: "admin" | "operator" | "viewer"): NavPermissionKey[] {

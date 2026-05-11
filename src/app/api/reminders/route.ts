@@ -4,6 +4,7 @@ import { jsonError, requirePortalSession } from "@/lib/api-guard";
 import { getPortalSession } from "@/lib/get-portal-session";
 import { assertClientOwnedBySession } from "@/lib/repositories/clients";
 import { createReminder, listRemindersForSession } from "@/lib/repositories/reminders";
+import { sendTelegramNotification } from "@/lib/telegram-notify";
 import type { ReminderKind } from "@/lib/types";
 
 const VALID_KINDS: ReminderKind[] = ["ciscenje_kamer", "diski", "servis", "drugo"];
@@ -46,6 +47,9 @@ export async function POST(request: Request) {
       kind,
       completed: Boolean(body?.completed),
     });
+    void sendTelegramNotification(
+      `🗓️ Nov opomnik\nNaslov: ${created.title}\nStranka: ${created.clientName || "-"}\nRok: ${created.dueDate}\nTip: ${created.kind}`,
+    );
     return NextResponse.json({ reminder: created }, { status: 201 });
   } catch (e) {
     console.error(e);

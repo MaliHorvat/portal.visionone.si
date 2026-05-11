@@ -1,0 +1,224 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { ClientSummary, ServiceRequest, ServiceRequestPriority, ServiceRequestStatus } from "@/lib/types";
+
+type Props = {
+  requests: ServiceRequest[];
+  clients: ClientSummary[];
+  dbConfigured: boolean;
+};
+
+const STATUS_LABEL: Record<ServiceRequestStatus, string> = {
+  new: "Novo",
+  in_progress: "V teku",
+  waiting_customer: "Čaka stranko",
+  done: "Zaključeno",
+};
+
+const PRIORITY_LABEL: Record<ServiceRequestPriority, string> = {
+  low: "Nizka",
+  medium: "Srednja",
+  high: "Visoka",
+  urgent: "Nujna",
+};
+
+export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
+  const router = useRouter();
+  const [showForm, setShowForm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const sorted = useMemo(
+    () =>
+      [...requests].sort((a, b) => {
+        const pa: Record<ServiceRequestPriority, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
+        if (pa[b.priority] !== pa[a.priority]) return pa[b.priority] - pa[a.priority];
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }),
+    [requests],
+  );
+
+  async function createRequest(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setMessage(null);
+    const form = new FormData(e.currentTarget);
+    const payload = {
+      clientId: String(form.get("clientId") ?? "") || null,
+      title: String(form.get("title") ?? ""),
+      description: String(form.get("description") ?? ""),
+      priority: String(form.get("priority") ?? "medium"),
+      dueDate: String(form.get("dueDate") ?? ""),
+      assignee: String(form.get("assignee") ?? ""),
+    };
+    const res = await fetch("/api/service-requests", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setMessage(j.error ?? "Shranjevanje ni uspelo.");
+      return;
+    }
+    setShowForm(false);
+    setMessage("Zahtevek je dodan.");
+    router.refresh();
+  }
+
+  async function patchRequest(id: string, patch: Record<string, unknown>) {
+    const res = await fetch(`/api/service-requests/${id}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setMessage(j.error ?? "Posodobitev ni uspela.");
+      return;
+    }
+    router.refresh();
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--vo-fg)]">Zahtevki</h1>
+          <p className="mt-1 text-sm text-[var(--vo-muted)]">
+            Interni operativni zahtevki za vsakodnevno delo.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowForm((s) => !s)}
+          className="rounded-lg bg-[var(--vo-accent)] px-3 py-2 text-sm font-semibold text-white"
+        >
+          {showForm ? "Prekliči" : "Nov zahtevek"}
+        </button>
+      </div>
+
+      {!dbConfigured ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Baza ni nastavljena. Zahtevki so onemogočeni.
+        </div>
+      ) : null}
+
+      {showForm ? (
+        <form
+          onSubmit={createRequest}
+          className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]"
+        >
+          <div className="grid gap-3 md:grid-cols-2">
+            <input
+              name="title"
+              required
+              placeholder="Naslov zahtevka"
+              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
+            />
+            <select name="clientId" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm">
+              <option value="">— brez stranke —</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <select
+              name="priority"
+              defaultValue="medium"
+              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+            >
+              <option value="low">Nizka</option>
+              <option value="medium">Srednja</option>
+              <option value="high">Visoka</option>
+              <option value="urgent">Nujna</option>
+            </select>
+            <input name="assignee" placeholder="Dodeljeno (ime)" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <input name="dueDate" type="date" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <textarea
+              name="description"
+              rows={3}
+              placeholder="Opis zahtevka"
+              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded-lg bg-[var(--vo-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {busy ? "Shranjujem..." : "Shrani zahtevek"}
+          </button>
+        </form>
+      ) : null}
+
+      {message ? (
+        <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-3 text-sm text-[var(--vo-fg)]">
+          {message}
+        </div>
+      ) : null}
+
+      <ul className="space-y-3">
+        {sorted.length === 0 ? (
+          <li className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-3 text-sm text-[var(--vo-muted)]">
+            Ni zahtevkov.
+          </li>
+        ) : null}
+        {sorted.map((r) => (
+          <li
+            key={r.id}
+            className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-3 shadow-[var(--vo-card-shadow)]"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-medium text-[var(--vo-fg)]">{r.title}</p>
+              <div className="flex items-center gap-2">
+                <select
+                  value={r.status}
+                  onChange={(e) => void patchRequest(r.id, { status: e.target.value })}
+                  className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1 text-xs"
+                >
+                  {Object.entries(STATUS_LABEL).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={r.priority}
+                  onChange={(e) => void patchRequest(r.id, { priority: e.target.value })}
+                  className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1 text-xs"
+                >
+                  {Object.entries(PRIORITY_LABEL).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="mt-1 text-xs text-[var(--vo-muted)]">
+              {r.clientName ? `${r.clientName} · ` : ""}Ustvaril: {r.createdBy}
+              {r.assignee ? ` · Dodeljeno: ${r.assignee}` : ""}
+              {r.dueDate ? ` · Rok: ${r.dueDate}` : ""}
+            </p>
+            {r.description ? <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--vo-fg)]/90">{r.description}</p> : null}
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => void fetch(`/api/service-requests/${r.id}`, { method: "DELETE" }).then(() => router.refresh())}
+                className="text-xs font-medium text-red-600 hover:underline"
+              >
+                Izbriši
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+

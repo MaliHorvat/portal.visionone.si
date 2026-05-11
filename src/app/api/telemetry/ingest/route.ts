@@ -3,6 +3,7 @@ import { prisma, isDbConfigured } from "@/lib/db";
 import { jsonError } from "@/lib/api-guard";
 import { requireEspIngestAuth } from "@/lib/esp-ingest-token";
 import type { ProbeKind, TelemetryIngestPayload } from "@/lib/types";
+import { sendTelegramNotification } from "@/lib/telegram-notify";
 
 const VALID_KINDS: ProbeKind[] = ["camera", "nvr", "switch", "router", "host", "other"];
 
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
 
     const registered = await prisma.telemetryAgent.findUnique({
       where: { externalId: agentId },
+      include: { client: { select: { name: true } } },
     });
     if (!registered) {
       return jsonError(
@@ -72,6 +74,10 @@ export async function POST(request: Request) {
       }
 
       const status = reachable ? "online" : "offline";
+      const previous = await prisma.deviceProbe.findUnique({
+        where: { agentId_deviceKey: { agentId: agent.id, deviceKey: key } },
+        select: { status: true },
+      });
 
       const device = await prisma.deviceProbe.upsert({
         where: { agentId_deviceKey: { agentId: agent.id, deviceKey: key } },
@@ -111,6 +117,11 @@ export async function POST(request: Request) {
           checkedAt,
         },
       });
+      if (status === "offline" && previous?.status !== "offline") {
+        void sendTelegramNotification(
+          `🚨 Naprava offline\nStranka: ${registered.client?.name || "-"}\nNaprava: ${name}\nIP: ${ip}\nAgent: ${agentId}`,
+        );
+      }
 
       accepted += 1;
     }

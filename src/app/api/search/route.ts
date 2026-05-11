@@ -5,7 +5,7 @@ import { getPortalSession } from "@/lib/get-portal-session";
 
 type SearchItem = {
   id: string;
-  type: "client" | "user" | "reminder";
+  type: "client" | "user" | "reminder" | "request";
   label: string;
   href: string;
   meta?: string;
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
           }
         : { id: "__none__" };
 
-  const [clients, users, reminders] = await Promise.all([
+  const [clients, users, reminders, requests] = await Promise.all([
     prisma.client.findMany({
       where: {
         ...scope,
@@ -64,6 +64,15 @@ export async function GET(request: Request) {
       include: { client: { select: { id: true, slug: true, name: true } } },
       orderBy: { dueDate: "asc" },
     }),
+    prisma.serviceRequest.findMany({
+      where: {
+        ownerUsername: owner ?? "__portal_no_owner__",
+        OR: [{ title: { contains: q } }, { description: { contains: q } }],
+      },
+      take: 8,
+      include: { client: { select: { name: true } } },
+      orderBy: { updatedAt: "desc" },
+    }),
   ]);
 
   const items: SearchItem[] = [
@@ -87,6 +96,13 @@ export async function GET(request: Request) {
       label: r.title,
       href: "/portal/opomniki",
       meta: `${r.client.name} · ${r.dueDate}`,
+    })),
+    ...requests.map((r) => ({
+      id: `request-${r.id}`,
+      type: "request" as const,
+      label: r.title,
+      href: "/portal/zahtevki",
+      meta: `${r.client?.name ?? "Brez stranke"} · ${r.priority}`,
     })),
   ].slice(0, 16);
 

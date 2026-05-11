@@ -131,6 +131,14 @@ export function PortalDashboardView({ initial }: Props) {
                 <span className="text-[var(--vo-warn)]">{totals.disksWarnFail} opozorilo</span>
               </p>
             </div>
+            <div className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] p-4">
+              <p className="text-xs text-[var(--vo-muted)]">Zahtevki</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--vo-fg)]">
+                Odprti {totals.requestsOpen}
+                <span className="text-[var(--vo-muted)]"> / </span>
+                <span className="text-[var(--vo-danger)]">Nujni {totals.requestsUrgent}</span>
+              </p>
+            </div>
           </div>
         </section>
 
@@ -162,6 +170,35 @@ export function PortalDashboardView({ initial }: Props) {
         </section>
       </div>
 
+      <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Operativni inbox — zahtevki</h2>
+          <Link href="/portal/zahtevki" className="text-xs font-medium text-[var(--vo-accent)] hover:underline">
+            Odpri vse
+          </Link>
+        </div>
+        {initial.requests.length === 0 ? (
+          <p className="mt-3 text-sm text-[var(--vo-muted)]">Ni odprtih zahtevkov.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {initial.requests.map((r) => (
+              <li key={r.id} className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium text-[var(--vo-fg)]">{r.title}</span>
+                  <span className="text-xs text-[var(--vo-muted)]">
+                    {r.priority} · {r.status}
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--vo-muted)]">
+                  {r.clientName || "Brez stranke"}
+                  {r.dueDate ? ` · rok ${r.dueDate}` : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-4 py-3 text-xs">
         <div className="flex flex-wrap gap-4 text-[var(--vo-muted)]">
           <span className="flex items-center gap-1">
@@ -187,6 +224,7 @@ export function PortalDashboardView({ initial }: Props) {
             icon={Video}
             adminOnly={role === "admin"}
           />
+          <QuickCard href="/portal/zahtevki" title="Zahtevki" desc="Operativni inbox in statusi." icon={Activity} />
           <QuickCard href="/portal/ponudbe" title="Ponudbe" desc="Postavke in izračuni." icon={Boxes} adminOnly />
           <QuickCard href="/portal/orodja" title="Omrežna orodja" desc="Diagnostika in orodja." icon={Router} />
           <QuickCard href="/portal/nastavitve" title="Nastavitve sistema" desc="Uporabniki in okolje." icon={Settings} adminOnly />

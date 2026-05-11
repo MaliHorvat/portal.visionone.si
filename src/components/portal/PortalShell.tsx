@@ -15,6 +15,7 @@ import {
   Shield,
   UserCircle,
   Users,
+  Wrench,
   Video,
 } from "lucide-react";
 import { usePortalRole } from "@/context/PortalRoleContext";
@@ -35,6 +36,7 @@ const navSections: NavSection[] = [
     title: "VODENJE PROJEKTOV",
     items: [
       { href: "/portal/stranke", label: "Objekti & stranke", icon: Users, permission: "clients", adminOnly: true },
+      { href: "/portal/zahtevki", label: "Zahtevki", icon: Wrench, permission: "service-requests" },
     ],
   },
   {

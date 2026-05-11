@@ -37,6 +37,14 @@ export type PortalDashboardPayload = {
     completed: boolean;
   }>;
   activities: DashboardActivity[];
+  requests: Array<{
+    id: string;
+    title: string;
+    clientName: string;
+    status: string;
+    priority: string;
+    dueDate: string;
+  }>;
   totals: {
     clients: number;
     camerasOnline: number;
@@ -47,6 +55,8 @@ export type PortalDashboardPayload = {
     switchesOffline: number;
     disksOk: number;
     disksWarnFail: number;
+    requestsOpen: number;
+    requestsUrgent: number;
   };
   appVersion: string;
 };
@@ -156,6 +166,8 @@ export async function getPortalDashboard(
         switchesOffline: acc.switchesOffline + (x.switchesTotal - x.switchesOnline),
         disksOk: acc.disksOk + x.disksOk,
         disksWarnFail: acc.disksWarnFail + (x.disksTotal - x.disksOk),
+        requestsOpen: acc.requestsOpen,
+        requestsUrgent: acc.requestsUrgent,
       }),
       {
         clients: 0,
@@ -167,6 +179,8 @@ export async function getPortalDashboard(
         switchesOffline: 0,
         disksOk: 0,
         disksWarnFail: 0,
+        requestsOpen: 0,
+        requestsUrgent: 0,
       },
     );
     return {
@@ -189,14 +203,16 @@ export async function getPortalDashboard(
         level: e.level,
       })),
       totals,
+      requests: [],
       appVersion,
     };
   }
 
-  const clientWhere = session?.username?.trim()
-    ? { ownerUsername: session.username }
+  const owner = session?.username?.trim();
+  const clientWhere = owner
+    ? { ownerUsername: owner }
     : { ownerUsername: "__portal_no_owner__" };
-  const [rows, probes, remindersRaw, audits] = await Promise.all([
+  const [rows, probes, remindersRaw, audits, requestsRows] = await Promise.all([
     prisma.client.findMany({
       where: clientWhere,
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -212,15 +228,21 @@ export async function getPortalDashboard(
     }),
     prisma.deviceProbe.findMany({
       where: {
-        ...(session?.username?.trim()
-          ? { client: { ownerUsername: session.username } }
+        ...(owner
+          ? { client: { ownerUsername: owner } }
           : { client: { ownerUsername: "__portal_no_owner__" } }),
         OR: [{ kind: "camera" }, { kind: "nvr" }, { kind: "switch" }],
       },
       select: { clientId: true, deviceKey: true, status: true },
     }),
     listRemindersForSession(session ?? undefined),
-    listAuditLogs(8, session?.username?.trim() ?? undefined),
+    listAuditLogs(8, owner ?? undefined),
+    prisma.serviceRequest.findMany({
+      where: { ownerUsername: owner ?? "__portal_no_owner__" },
+      include: { client: { select: { name: true } } },
+      orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
+      take: 12,
+    }),
   ]);
   const liveByClient = new Map<string, Record<string, string>>();
   for (const p of probes) {
@@ -259,6 +281,8 @@ export async function getPortalDashboard(
       switchesOffline: acc.switchesOffline + (x.switchesTotal - x.switchesOnline),
       disksOk: acc.disksOk + x.disksOk,
       disksWarnFail: acc.disksWarnFail + (x.disksTotal - x.disksOk),
+      requestsOpen: acc.requestsOpen,
+      requestsUrgent: acc.requestsUrgent,
     }),
     {
       clients: 0,
@@ -270,8 +294,20 @@ export async function getPortalDashboard(
       switchesOffline: 0,
       disksOk: 0,
       disksWarnFail: 0,
+      requestsOpen: 0,
+      requestsUrgent: 0,
     },
   );
+  const requests = requestsRows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    clientName: r.client?.name ?? "",
+    status: r.status,
+    priority: r.priority,
+    dueDate: r.dueDate,
+  }));
+  const requestsOpen = requests.filter((r) => r.status !== "done").length;
+  const requestsUrgent = requests.filter((r) => r.priority === "urgent" && r.status !== "done").length;
 
   const reminders = remindersRaw
     .filter((r) => !r.completed)
@@ -300,8 +336,9 @@ export async function getPortalDashboard(
     dbConfigured: true,
     clients,
     reminders,
+    requests,
     activities,
-    totals,
+    totals: { ...totals, requestsOpen, requestsUrgent },
     appVersion,
   };
 }

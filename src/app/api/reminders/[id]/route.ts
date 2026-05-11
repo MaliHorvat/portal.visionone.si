@@ -3,6 +3,7 @@ import { jsonError, requirePortalSession } from "@/lib/api-guard";
 import { getPortalSession } from "@/lib/get-portal-session";
 import { assertClientOwnedBySession } from "@/lib/repositories/clients";
 import { deleteReminder, reminderBelongsToSession, updateReminder } from "@/lib/repositories/reminders";
+import { sendTelegramNotification } from "@/lib/telegram-notify";
 import type { ReminderKind } from "@/lib/types";
 
 const VALID_KINDS: ReminderKind[] = ["ciscenje_kamer", "diski", "servis", "drugo"];
@@ -32,6 +33,9 @@ export async function PUT(request: Request, ctx: Ctx) {
       kind,
       completed: body?.completed === undefined ? undefined : Boolean(body.completed),
     });
+    void sendTelegramNotification(
+      `🔁 Opomnik posodobljen\nNaslov: ${updated.title}\nStranka: ${updated.clientName || "-"}\nRok: ${updated.dueDate}\nStatus: ${updated.completed ? "opravljeno" : "odprto"}`,
+    );
     return NextResponse.json({ reminder: updated });
   } catch (e) {
     console.error(e);
@@ -48,6 +52,7 @@ export async function DELETE(_request: Request, ctx: Ctx) {
     const { id } = await ctx.params;
     if (!(await reminderBelongsToSession(id, session))) return jsonError("Opomnik ne obstaja.", 404);
     await deleteReminder(id);
+    void sendTelegramNotification(`🗑️ Opomnik izbrisan\nID: ${id}`);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error(e);

@@ -12,6 +12,7 @@ import { TabRack } from "./client-workspace/TabRack";
 import { TabShema } from "./client-workspace/TabShema";
 import { TabVzdrzevanje } from "./client-workspace/TabVzdrzevanje";
 import { TabDokumenti } from "./client-workspace/TabDokumenti";
+import { TabTimeline } from "./client-workspace/TabTimeline";
 import type { WorkspaceCtx, WorkspaceTab } from "./client-workspace/types";
 import { parseWorkspaceTab } from "./client-workspace/types";
 import {
@@ -28,6 +29,7 @@ import {
   Layers,
   LayoutGrid,
   Network,
+  Shield,
   Wrench,
 } from "lucide-react";
 
@@ -41,6 +43,7 @@ const TABS: { id: WorkspaceTab; label: string; icon: ElementType }[] = [
   { id: "cas", label: "Čas", icon: Clock },
   { id: "vzdrzevanje", label: "Vzdrževanje", icon: Wrench },
   { id: "dokumenti", label: "Dokumenti", icon: FolderOpen },
+  { id: "timeline", label: "Timeline", icon: Shield },
 ];
 
 type Props = {
@@ -200,6 +203,7 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
         {panel("cas", <TabCas ctx={ctx} />)}
         {panel("vzdrzevanje", <TabVzdrzevanje ctx={ctx} />)}
         {panel("dokumenti", <TabDokumenti ctx={ctx} />)}
+        {panel("timeline", <TabTimeline ctx={ctx} />)}
       </div>
     </div>
   );

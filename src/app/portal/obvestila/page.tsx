@@ -89,6 +89,9 @@ export default function ObvestilaPage() {
           <p className="mt-1 text-sm text-[var(--vo-muted)]">
             Shranjeno v bazi (kot <code className="text-xs">telegram_bots</code> v desktop programu). Žeton hrani varno — ne izpostavljaj javno.
           </p>
+          <p className="mt-1 text-xs text-[var(--vo-muted)]">
+            Sistem pošilja dogodke za zahtevke, opomnike in prehode naprav v stanje offline.
+          </p>
         </div>
 
         <form

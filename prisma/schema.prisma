@@ -31,6 +31,7 @@ model Client {
   switches  ClientSwitch[]
   disks     ClientDisk[]
   reminders MaintenanceReminder[]
+  serviceRequests ServiceRequest[]
   offers    ClientOffer[]
   siteSurveys ClientSiteSurvey[]
   timeLogs  ClientTimeLog[]
@@ -217,6 +218,25 @@ model MaintenanceReminder {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([clientId])
+}
+
+model ServiceRequest {
+  id            String               @id @default(cuid())
+  ownerUsername String               @default("admin")
+  clientId      String?
+  client        Client?              @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  title         String
+  description   String               @db.Text @default("")
+  status        ServiceRequestStatus @default(new)
+  priority      ServiceRequestPriority @default(medium)
+  dueDate       String               @default("")
+  createdBy     String               @default("portal")
+  assignee      String               @default("")
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([ownerUsername, status, priority])
   @@index([clientId])
 }
 
@@ -420,6 +440,20 @@ enum PortalAccessRequestStatus {
   new
   approved
   rejected
+}
+
+enum ServiceRequestStatus {
+  new
+  in_progress
+  waiting_customer
+  done
+}
+
+enum ServiceRequestPriority {
+  low
+  medium
+  high
+  urgent
 }
 
 model PortalAccessRequest {

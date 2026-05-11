@@ -9,7 +9,8 @@ export type WorkspaceTab =
   | "popisi"
   | "cas"
   | "vzdrzevanje"
-  | "dokumenti";
+  | "dokumenti"
+  | "timeline";
 
 const WORKSPACE_TAB_IDS = new Set<WorkspaceTab>([
   "kamere",
@@ -21,6 +22,7 @@ const WORKSPACE_TAB_IDS = new Set<WorkspaceTab>([
   "cas",
   "vzdrzevanje",
   "dokumenti",
+  "timeline",
 ]);
 
 export type WorkspaceCtx = {
