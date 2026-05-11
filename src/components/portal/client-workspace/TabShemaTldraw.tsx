@@ -16,6 +16,10 @@ function cameraLabel(c: CameraDevice) {
   return `KAMERA ${c.tag ? `${c.tag} ` : ""}${c.name}`.trim();
 }
 
+function cameraBadge(c: CameraDevice) {
+  return c.tag?.trim() ? `#${c.tag.trim()}` : "KAMERA";
+}
+
 export function TabShemaTldraw({ topo, setTopo, cameras }: Props) {
   const editorRef = useRef<Editor | null>(null);
   const [tick, setTick] = useState(0);
@@ -45,7 +49,7 @@ export function TabShemaTldraw({ topo, setTopo, cameras }: Props) {
     const idx = seededIdsRef.current.size;
     const x = 160 + (idx % 5) * 240;
     const y = 140 + Math.floor(idx / 5) * 110;
-    const text = `${cameraLabel(camera)}\n${camera.ip || ""}`;
+    const text = `📷 ${cameraBadge(camera)}\n${camera.name}\n${camera.ip || ""}`;
     editor.createShapes([
       {
         type: "text",
@@ -57,35 +61,115 @@ export function TabShemaTldraw({ topo, setTopo, cameras }: Props) {
     seededIdsRef.current.add(camera.id);
   };
 
+  const addAllCameras = () => {
+    cameras.forEach((c) => {
+      if (!seededIdsRef.current.has(c.id)) addCamera(c);
+    });
+  };
+
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs">
         <p className="font-semibold text-[var(--vo-fg)]">tldraw shema</p>
         <p className="mt-1 text-[var(--vo-muted)]">
-          Uporabi orodja levo zgoraj za risanje. Spodaj lahko dodaš kamere kot besedilne oznake.
+          Uporabi orodja levo zgoraj za risanje. Kamere lahko dodaš po eni ali vse naenkrat.
         </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={addAllCameras}
+            className="rounded border border-[var(--vo-accent)] bg-[var(--vo-accent-muted)] px-2 py-1 text-[var(--vo-accent)]"
+          >
+            + Dodaj vse kamere
+          </button>
+          <span className="text-[var(--vo-muted)]">({cameras.length} kamer)</span>
+        </div>
         <div className="mt-2 flex flex-wrap gap-2">
           {cameras.map((c) => (
             <button
               key={c.id}
               type="button"
               onClick={() => addCamera(c)}
-              className="rounded border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)] hover:text-[var(--vo-fg)]"
+              className="rounded border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)] hover:border-[var(--vo-accent)] hover:text-[var(--vo-fg)]"
             >
-              + {c.tag ? `${c.tag} ` : ""}
-              {c.name}
+              📷 {c.tag ? `${c.tag} ` : ""}
+              {c.name || cameraLabel(c)}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="h-[70vh] min-h-[520px] overflow-hidden rounded-xl border border-[var(--vo-border)] bg-white">
-        <Tldraw
-          snapshot={snapshot}
-          onMount={(editor) => {
-            editorRef.current = editor;
-          }}
-        />
+      <div className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs">
+        <p className="font-semibold text-[var(--vo-fg)]">Ozadje tlorisa</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            type="url"
+            placeholder="https://.../tloris.jpg"
+            value={topo.planBackgroundUrl ?? ""}
+            onChange={(e) =>
+              setTopo((t) => ({
+                ...t,
+                planBackgroundUrl: e.target.value.trim() || undefined,
+                planBackgroundDataUrl: e.target.value.trim() ? undefined : t.planBackgroundDataUrl,
+              }))
+            }
+            className="min-w-[260px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1 text-[var(--vo-fg)]"
+          />
+          <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-[var(--vo-border)] px-2 py-1 hover:bg-[var(--vo-surface-2)]">
+            Naloži sliko
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                if (file.size > 2_400_000) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const url = typeof reader.result === "string" ? reader.result : "";
+                  if (!url.startsWith("data:")) return;
+                  setTopo((t) => ({
+                    ...t,
+                    planBackgroundDataUrl: url,
+                    planBackgroundUrl: undefined,
+                  }));
+                };
+                reader.readAsDataURL(file);
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="rounded border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)] hover:text-[var(--vo-danger)]"
+            onClick={() =>
+              setTopo((t) => ({ ...t, planBackgroundUrl: undefined, planBackgroundDataUrl: undefined }))
+            }
+          >
+            Odstrani ozadje
+          </button>
+        </div>
+      </div>
+
+      <div className="relative h-[70vh] min-h-[520px] overflow-hidden rounded-xl border border-[var(--vo-border)] bg-white">
+        {(topo.planBackgroundDataUrl ?? topo.planBackgroundUrl) ? (
+          <div
+            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.2]"
+            style={{
+              backgroundImage: `url(${topo.planBackgroundDataUrl ?? topo.planBackgroundUrl})`,
+            }}
+            aria-hidden
+          />
+        ) : null}
+        <div className="absolute inset-0">
+          <Tldraw
+            snapshot={snapshot}
+            onMount={(editor) => {
+              editorRef.current = editor;
+            }}
+          />
+        </div>
       </div>
     </div>
   );
