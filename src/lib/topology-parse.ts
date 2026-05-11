@@ -47,6 +47,9 @@ function parseCameraPlan(raw: unknown): CameraPlanOverlay | undefined {
 export function parseTopologyState(raw: unknown): ClientTopologyState {
   if (!raw || typeof raw !== "object") return { nodes: [], edges: [], floorPlanPaths: [] };
   const o = raw as Record<string, unknown>;
+  const schemaEditorMode = o.schemaEditorMode === "tldraw" ? "tldraw" : "classic";
+  const tldrawSnapshot =
+    o.tldrawSnapshot && typeof o.tldrawSnapshot === "object" ? o.tldrawSnapshot : undefined;
   const planBackgroundUrl =
     typeof o.planBackgroundUrl === "string" && o.planBackgroundUrl.trim() ? o.planBackgroundUrl.trim() : undefined;
   const planBackgroundDataUrl =
@@ -103,6 +106,8 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
   return {
     nodes,
     edges,
+    schemaEditorMode,
+    tldrawSnapshot,
     floorPlanPaths,
     planBackgroundUrl,
     planBackgroundDataUrl,
