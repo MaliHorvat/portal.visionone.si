@@ -170,7 +170,7 @@ export function TabField({ ctx }: { ctx: WorkspaceCtx }) {
   return (
     <div className="space-y-4 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Field mode (mobilni)</h2>
+        <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Terenski način (mobilni)</h2>
         <div className="flex gap-2">
           <button
             type="button"

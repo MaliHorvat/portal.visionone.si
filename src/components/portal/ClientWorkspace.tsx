@@ -45,8 +45,9 @@ const TABS: { id: WorkspaceTab; label: string; icon: ElementType }[] = [
   { id: "cas", label: "Čas", icon: Clock },
   { id: "vzdrzevanje", label: "Vzdrževanje", icon: Wrench },
   { id: "dokumenti", label: "Dokumenti", icon: FolderOpen },
+  /** Pred Timeline — na ozkih zaslonih se Field skrival desno od vrstice z overflow-x. */
+  { id: "field", label: "Teren", icon: Smartphone },
   { id: "timeline", label: "Timeline", icon: Shield },
-  { id: "field", label: "Field", icon: Smartphone },
 ];
 
 type Props = {
@@ -129,7 +130,7 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
     <div className="space-y-6">
       <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold text-[var(--vo-fg)]">{client.name}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <span
@@ -172,10 +173,19 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
               ) : null}
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => selectTab("field")}
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[var(--vo-accent)] bg-[var(--vo-accent-muted)] px-3 py-2 text-xs font-semibold text-[var(--vo-accent)] hover:opacity-90 md:text-sm"
+            title="Check-in, checklista, fotografije, podpis, PDF"
+          >
+            <Smartphone className="h-4 w-4 shrink-0" aria-hidden />
+            Terenski način
+          </button>
         </div>
       </div>
 
-      <nav className="flex gap-1 overflow-x-auto rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] p-1 text-xs font-medium md:text-sm">
+      <nav className="flex flex-wrap gap-1 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] p-1 text-xs font-medium md:text-sm">
         {TABS.map(({ id, label, icon: Icon }) => {
           const active = tab === id;
           return (
@@ -206,8 +216,8 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
         {panel("cas", <TabCas ctx={ctx} />)}
         {panel("vzdrzevanje", <TabVzdrzevanje ctx={ctx} />)}
         {panel("dokumenti", <TabDokumenti ctx={ctx} />)}
-        {panel("timeline", <TabTimeline ctx={ctx} />)}
         {panel("field", <TabField ctx={ctx} />)}
+        {panel("timeline", <TabTimeline ctx={ctx} />)}
       </div>
     </div>
   );
