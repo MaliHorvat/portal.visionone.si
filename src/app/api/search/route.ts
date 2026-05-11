@@ -34,7 +34,7 @@ export async function GET(request: Request) {
           }
         : { id: "__none__" };
 
-  const [clients, users, reminders, requests] = await Promise.all([
+  const [clients, users, reminders] = await Promise.all([
     prisma.client.findMany({
       where: {
         ...scope,
@@ -64,7 +64,15 @@ export async function GET(request: Request) {
       include: { client: { select: { id: true, slug: true, name: true } } },
       orderBy: { dueDate: "asc" },
     }),
-    prisma.serviceRequest.findMany({
+  ]);
+  let requests: Array<{
+    id: string;
+    title: string;
+    priority: string;
+    client: { name: string } | null;
+  }> = [];
+  try {
+    requests = await prisma.serviceRequest.findMany({
       where: {
         ownerUsername: owner ?? "__portal_no_owner__",
         OR: [{ title: { contains: q } }, { description: { contains: q } }],
@@ -72,8 +80,11 @@ export async function GET(request: Request) {
       take: 8,
       include: { client: { select: { name: true } } },
       orderBy: { updatedAt: "desc" },
-    }),
-  ]);
+    });
+  } catch (error) {
+    // DB may not yet have service_request table after deploy.
+    console.warn("Search service requests unavailable:", error);
+  }
 
   const items: SearchItem[] = [
     ...clients.map((c) => ({

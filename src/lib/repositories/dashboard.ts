@@ -212,7 +212,7 @@ export async function getPortalDashboard(
   const clientWhere = owner
     ? { ownerUsername: owner }
     : { ownerUsername: "__portal_no_owner__" };
-  const [rows, probes, remindersRaw, audits, requestsRows] = await Promise.all([
+  const [rows, probes, remindersRaw, audits] = await Promise.all([
     prisma.client.findMany({
       where: clientWhere,
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -237,13 +237,26 @@ export async function getPortalDashboard(
     }),
     listRemindersForSession(session ?? undefined),
     listAuditLogs(8, owner ?? undefined),
-    prisma.serviceRequest.findMany({
+  ]);
+  let requestsRows: Array<{
+    id: string;
+    title: string;
+    status: string;
+    priority: string;
+    dueDate: string;
+    client: { name: string } | null;
+  }> = [];
+  try {
+    requestsRows = await prisma.serviceRequest.findMany({
       where: { ownerUsername: owner ?? "__portal_no_owner__" },
       include: { client: { select: { name: true } } },
       orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
       take: 12,
-    }),
-  ]);
+    });
+  } catch (error) {
+    // Backward-compatible fallback while production DB migration is pending.
+    console.warn("Dashboard service requests unavailable:", error);
+  }
   const liveByClient = new Map<string, Record<string, string>>();
   for (const p of probes) {
     if (!p.clientId) continue;
