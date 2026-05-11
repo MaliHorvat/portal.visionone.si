@@ -436,7 +436,12 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
       </div>
       {schemaMode === "tldraw" ? (
         <div className="w-full">
-          <TabShemaTldraw topo={topo} setTopo={setTopo} cameras={client.cameras} />
+          <TabShemaTldraw
+            clientId={clientId}
+            topo={topo}
+            setTopo={setTopo}
+            cameras={client.cameras}
+          />
         </div>
       ) : null}
       {schemaMode !== "classic" ? null : (

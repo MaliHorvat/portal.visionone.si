@@ -7,6 +7,7 @@ import type { TLStoreSnapshot } from "@tldraw/tldraw";
 import type { CameraDevice, ClientTopologyState } from "@/lib/types";
 
 type Props = {
+  clientId: string;
   topo: ClientTopologyState;
   setTopo: React.Dispatch<React.SetStateAction<ClientTopologyState>>;
   cameras: CameraDevice[];
@@ -20,16 +21,27 @@ function cameraBadge(c: CameraDevice) {
   return c.tag?.trim() ? `#${c.tag.trim()}` : "KAMERA";
 }
 
-export function TabShemaTldraw({ topo, setTopo, cameras }: Props) {
+function isValidTldrawSnapshot(input: unknown): input is TLStoreSnapshot {
+  if (!input || typeof input !== "object") return false;
+  const x = input as Record<string, unknown>;
+  return !!x.store && typeof x.store === "object" && !!x.schema && typeof x.schema === "object";
+}
+
+export function TabShemaTldraw({ clientId, topo, setTopo, cameras }: Props) {
   const editorRef = useRef<Editor | null>(null);
   const [tick, setTick] = useState(0);
   const seededIdsRef = useRef<Set<string>>(new Set());
 
   const snapshot = useMemo<TLStoreSnapshot | undefined>(() => {
-    return topo.tldrawSnapshot && typeof topo.tldrawSnapshot === "object"
-      ? (topo.tldrawSnapshot as TLStoreSnapshot)
-      : undefined;
+    return isValidTldrawSnapshot(topo.tldrawSnapshot) ? topo.tldrawSnapshot : undefined;
   }, [topo.tldrawSnapshot]);
+
+  useEffect(() => {
+    if (topo.tldrawSnapshot === undefined) return;
+    if (isValidTldrawSnapshot(topo.tldrawSnapshot)) return;
+    // Starejši / pokvarjen zapis ne sme sesuti editorja.
+    setTopo((prev) => ({ ...prev, tldrawSnapshot: undefined }));
+  }, [setTopo, topo.tldrawSnapshot]);
 
   useEffect(() => {
     const id = window.setInterval(() => setTick((x) => x + 1), 1200);
@@ -165,6 +177,7 @@ export function TabShemaTldraw({ topo, setTopo, cameras }: Props) {
         <div className="absolute inset-0">
           <Tldraw
             snapshot={snapshot}
+            persistenceKey={`visionone-${clientId}`}
             onMount={(editor) => {
               editorRef.current = editor;
             }}
