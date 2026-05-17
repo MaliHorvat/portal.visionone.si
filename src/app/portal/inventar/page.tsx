@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminGate } from "@/components/portal/AdminGate";
+import { DecimalInput } from "@/components/portal/DecimalInput";
 
 type Item = {
   id: string;
@@ -77,10 +78,10 @@ export default function InventarPage() {
           <input placeholder="Ime artikla" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
           <input placeholder="Model" value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
           <input placeholder="SKU" value={f.sku} onChange={(e) => setF({ ...f, sku: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <input type="number" placeholder="Količina" value={f.qty || ""} onChange={(e) => setF({ ...f, qty: Number(e.target.value) || 0 })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <input type="number" step="0.01" placeholder="Cena / enoto (€)" value={f.unitPrice || ""} onChange={(e) => setF({ ...f, unitPrice: Number(e.target.value) || 0 })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
+          <DecimalInput placeholder="Količina" value={f.qty} onChange={(qty) => setF({ ...f, qty })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
+          <DecimalInput placeholder="Cena / enoto (€)" value={f.unitPrice} onChange={(unitPrice) => setF({ ...f, unitPrice })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
           <input placeholder="Enota (kos/m/...)" value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <input type="number" placeholder="Minimum" value={f.minQty || ""} onChange={(e) => setF({ ...f, minQty: Number(e.target.value) || 0 })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
+          <DecimalInput placeholder="Minimum" value={f.minQty} onChange={(minQty) => setF({ ...f, minQty })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
           <input placeholder="Dobavitelj" value={f.supplier} onChange={(e) => setF({ ...f, supplier: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
           <input placeholder="Lokacija v skladišču" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
           <button type="submit" className="rounded bg-[var(--vo-accent)] px-3 py-2 font-semibold text-white md:col-span-3">{editId ? "Shrani spremembe" : "Dodaj artikel"}</button>

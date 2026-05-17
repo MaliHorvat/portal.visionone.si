@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EthernetPort, HardDrive } from "lucide-react";
 import { usePortalToast } from "@/context/PortalToastContext";
+import { DecimalInput } from "@/components/portal/DecimalInput";
 import { parseTopologyState } from "@/lib/topology-parse";
 import {
   buildDesignBomCsv,
@@ -518,20 +519,15 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             <div className="flex flex-wrap items-end gap-2">
               <label className="flex flex-col text-[var(--vo-muted)]">
                 Merilo (m / px)
-                <input
-                  type="number"
-                  step="any"
-                  placeholder="npr. 0.02"
-                  value={topo.planCalibration?.metersPerPx ?? ""}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    const n = Number(v);
+                <DecimalInput
+                  placeholder="npr. 0,02"
+                  value={topo.planCalibration?.metersPerPx ?? 0}
+                  onChange={(n) =>
                     setTopo((t) => ({
                       ...t,
-                      planCalibration:
-                        v.trim() === "" || !Number.isFinite(n) || n <= 0 ? undefined : { metersPerPx: n },
-                    }));
-                  }}
+                      planCalibration: n > 0 ? { metersPerPx: n } : undefined,
+                    }))
+                  }
                   className="mt-0.5 w-28 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
                 />
               </label>
@@ -683,54 +679,39 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   </label>
                   <label className="flex flex-col text-[var(--vo-muted)]">
                     Višina (m)
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={cp?.mountHeightM ?? ""}
+                    <DecimalInput
+                      value={cp?.mountHeightM ?? 0}
                       placeholder="3"
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        patchCameraPlan(v === "" ? { mountHeightM: undefined } : { mountHeightM: Number(v) });
-                      }}
+                      onChange={(mountHeightM) =>
+                        patchCameraPlan(mountHeightM > 0 ? { mountHeightM } : { mountHeightM: undefined })
+                      }
                       className="mt-0.5 w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
                     />
                   </label>
                   <label className="flex flex-col text-[var(--vo-muted)]">
                     Naklon (°)
-                    <input
-                      type="number"
-                      value={cp?.tiltDeg ?? ""}
+                    <DecimalInput
+                      value={cp?.tiltDeg ?? 0}
                       placeholder="15"
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        patchCameraPlan(v === "" ? { tiltDeg: undefined } : { tiltDeg: Number(v) });
-                      }}
+                      onChange={(tiltDeg) => patchCameraPlan(tiltDeg > 0 ? { tiltDeg } : { tiltDeg: undefined })}
                       className="mt-0.5 w-20 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
                     />
                   </label>
                   <label className="flex flex-col text-[var(--vo-muted)]">
                     FOV (°)
-                    <input
-                      type="number"
-                      value={cp?.fovDeg ?? ""}
+                    <DecimalInput
+                      value={cp?.fovDeg ?? 0}
                       placeholder="70"
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        patchCameraPlan(v === "" ? { fovDeg: undefined } : { fovDeg: Number(v) });
-                      }}
+                      onChange={(fovDeg) => patchCameraPlan(fovDeg > 0 ? { fovDeg } : { fovDeg: undefined })}
                       className="mt-0.5 w-20 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
                     />
                   </label>
                   <label className="flex flex-col text-[var(--vo-muted)]">
                     Doseg (px)
-                    <input
-                      type="number"
-                      value={cp?.reachPx ?? ""}
+                    <DecimalInput
+                      value={cp?.reachPx ?? 0}
                       placeholder="150"
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        patchCameraPlan(v === "" ? { reachPx: undefined } : { reachPx: Number(v) });
-                      }}
+                      onChange={(reachPx) => patchCameraPlan(reachPx > 0 ? { reachPx } : { reachPx: undefined })}
                       className="mt-0.5 w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
                     />
                   </label>
@@ -747,14 +728,10 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   </label>
                   <label className="flex flex-col text-[var(--vo-muted)]">
                     IR doseg (px)
-                    <input
-                      type="number"
-                      value={cp?.irReachPx ?? ""}
+                    <DecimalInput
+                      value={cp?.irReachPx ?? 0}
                       placeholder="opcijsko"
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        patchCameraPlan(v === "" ? { irReachPx: undefined } : { irReachPx: Number(v) });
-                      }}
+                      onChange={(irReachPx) => patchCameraPlan(irReachPx > 0 ? { irReachPx } : { irReachPx: undefined })}
                       className="mt-0.5 w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
                     />
                   </label>

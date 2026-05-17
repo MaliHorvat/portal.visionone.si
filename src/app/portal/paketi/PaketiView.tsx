@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePortalRole } from "@/context/PortalRoleContext";
+import { decimalFromFormData, decimalTextInputProps } from "@/lib/decimal-number-input";
 import type { SubscriptionPackageDto } from "@/lib/types";
 
 type Props = {
@@ -28,7 +29,7 @@ export function PaketiView({ packages, dbConfigured }: Props) {
     const form = new FormData(event.currentTarget);
     const payload = {
       name: String(form.get("name") ?? ""),
-      price: Number(form.get("price") ?? 0),
+      price: decimalFromFormData(form, "price", 0),
       description: String(form.get("description") ?? ""),
     };
     const res = await fetch("/api/packages", {
@@ -52,7 +53,7 @@ export function PaketiView({ packages, dbConfigured }: Props) {
     const form = new FormData(event.currentTarget);
     const payload = {
       name: String(form.get("name") ?? ""),
-      price: Number(form.get("price") ?? 0),
+      price: decimalFromFormData(form, "price", 0),
       description: String(form.get("description") ?? ""),
     };
     const res = await fetch(`/api/packages/${id}`, {
@@ -124,7 +125,7 @@ export function PaketiView({ packages, dbConfigured }: Props) {
         >
           <div className="grid gap-3 md:grid-cols-2">
             <input name="name" required defaultValue={createSeed.name} placeholder="Ime paketa" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <input name="price" type="number" step="0.01" min="0" defaultValue={createSeed.price} required placeholder="Cena (€)" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <input name="price" {...decimalTextInputProps} defaultValue={createSeed.price} required placeholder="Cena (€), npr. 29,90" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
             <textarea
               name="description"
               defaultValue={createSeed.description}
@@ -198,7 +199,7 @@ export function PaketiView({ packages, dbConfigured }: Props) {
               className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]"
             >
               <input name="name" defaultValue={p.name} required className="w-full rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-              <input name="price" type="number" step="0.01" min="0" defaultValue={p.price} required className="w-full rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+              <input name="price" {...decimalTextInputProps} defaultValue={p.price} required placeholder="npr. 29,90" className="w-full rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
               <textarea
                 name="description"
                 defaultValue={p.description}

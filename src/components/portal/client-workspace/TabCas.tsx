@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePortalToast } from "@/context/PortalToastContext";
+import { DecimalInput } from "@/components/portal/DecimalInput";
 import type { WorkspaceCtx } from "./types";
 
 type Log = {
@@ -220,10 +221,9 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
         </label>
         <label className="flex flex-col text-xs text-[var(--vo-muted)]">
           Urna postavka
-          <input
-            type="number"
+          <DecimalInput
             value={rate}
-            onChange={(e) => setRate(Number(e.target.value) || 0)}
+            onChange={setRate}
             className="mt-1 block w-24 rounded border border-[var(--vo-border)] px-2 py-1.5 text-[var(--vo-fg)]"
           />
         </label>
@@ -269,11 +269,9 @@ export function TabCas({ ctx }: { ctx: WorkspaceCtx }) {
           </label>
           <label className="flex flex-col text-xs text-[var(--vo-muted)]">
             Ali ure (decimalno)
-            <input
-              type="number"
-              step="0.25"
+            <DecimalInput
               value={hoursManual}
-              onChange={(e) => setHoursManual(Number(e.target.value) || 0)}
+              onChange={setHoursManual}
               className="mt-1 w-20 rounded border border-[var(--vo-border)] px-2 py-1.5 text-sm text-[var(--vo-fg)]"
             />
           </label>

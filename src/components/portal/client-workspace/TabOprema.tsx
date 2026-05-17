@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PortalContextMenu } from "@/components/portal/PortalContextMenu";
+import { DecimalInput } from "@/components/portal/DecimalInput";
 import type { WorkspaceCtx } from "./types";
 
 function Dot({ status }: { status: string }) {
@@ -465,7 +466,7 @@ function DiskBlock({
         <input placeholder="Ime" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
         <input placeholder="Model" value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
         <input placeholder="Serijska" value={f.serial} onChange={(e) => setF({ ...f, serial: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <input type="number" placeholder="TB" value={f.sizeTb || ""} onChange={(e) => setF({ ...f, sizeTb: Number(e.target.value) || 0 })} className="w-16 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
+        <DecimalInput placeholder="TB" value={f.sizeTb} onChange={(sizeTb) => setF({ ...f, sizeTb })} className="w-16 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
         <input placeholder="Montaža (datum)" value={f.installedAt} onChange={(e) => setF({ ...f, installedAt: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
         <input placeholder="Komentar" value={f.comment} onChange={(e) => setF({ ...f, comment: e.target.value })} className="min-w-[120px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
         <button type="submit" disabled={busy || !dbConfigured} className="rounded-lg bg-[var(--vo-fg)] px-3 py-1.5 font-semibold text-[var(--vo-bg)] disabled:opacity-40">+</button>

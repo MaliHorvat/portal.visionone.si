@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePortalToast } from "@/context/PortalToastContext";
+import { DecimalInput } from "@/components/portal/DecimalInput";
 import type { WorkspaceCtx } from "./types";
 
 type LineRow = {
@@ -438,16 +439,16 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
                     <input value={l.unit} onChange={(e) => updateRow(l.key, { unit: e.target.value })} className="w-14" />
                   </td>
                   <td className="px-2 py-1">
-                    <input type="number" value={l.qty} onChange={(e) => updateRow(l.key, { qty: Number(e.target.value) || 0 })} className="w-16" />
+                    <DecimalInput value={l.qty} onChange={(qty) => updateRow(l.key, { qty })} className="w-16 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]" />
                   </td>
                   <td className="px-2 py-1">
-                    <input type="number" step="0.01" value={l.unitPrice} onChange={(e) => updateRow(l.key, { unitPrice: Number(e.target.value) || 0 })} className="w-20" />
+                    <DecimalInput value={l.unitPrice} onChange={(unitPrice) => updateRow(l.key, { unitPrice })} className="w-20 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]" />
                   </td>
                   <td className="px-2 py-1">
-                    <input type="number" value={l.discountPct} onChange={(e) => updateRow(l.key, { discountPct: Number(e.target.value) || 0 })} className="w-14" />
+                    <DecimalInput value={l.discountPct} onChange={(discountPct) => updateRow(l.key, { discountPct })} className="w-14 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]" />
                   </td>
                   <td className="px-2 py-1">
-                    <input type="number" value={l.lineVatPct} onChange={(e) => updateRow(l.key, { lineVatPct: Number(e.target.value) || 0 })} className="w-14" />
+                    <DecimalInput value={l.lineVatPct} onChange={(lineVatPct) => updateRow(l.key, { lineVatPct })} className="w-14 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]" />
                   </td>
                   <td className="px-2 py-1 font-medium">{lineNet(l).toFixed(2)} €</td>
                   <td className="px-2 py-1">
@@ -559,10 +560,9 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
           <div className="flex flex-wrap justify-end gap-6 border-t border-[var(--vo-border)] pt-4 text-sm">
             <label className="flex flex-col text-xs">
               Skupni popust %
-              <input
-                type="number"
+              <DecimalInput
                 value={draft.totalDiscountPct}
-                onChange={(e) => setDraft({ ...draft, totalDiscountPct: Number(e.target.value) || 0 })}
+                onChange={(totalDiscountPct) => setDraft({ ...draft, totalDiscountPct })}
                 className="mt-1 w-24 rounded border border-[var(--vo-border)] px-2 py-1"
               />
             </label>
@@ -570,11 +570,10 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               <input type="checkbox" checked={draft.vatEnabled} onChange={(e) => setDraft({ ...draft, vatEnabled: e.target.checked })} />
               DDV {draft.vatPct}%
             </label>
-            <input
-              type="number"
+            <DecimalInput
               value={draft.vatPct}
-              onChange={(e) => setDraft({ ...draft, vatPct: Number(e.target.value) || 0 })}
-              className="w-16 rounded border px-2 py-1 text-xs"
+              onChange={(vatPct) => setDraft({ ...draft, vatPct })}
+              className="w-16 rounded border border-[var(--vo-border)] px-2 py-1 text-xs"
             />
             <div>
               <div className="text-[var(--vo-muted)]">Osnova</div>

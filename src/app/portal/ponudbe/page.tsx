@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AdminGate } from "@/components/portal/AdminGate";
+import { DecimalInput } from "@/components/portal/DecimalInput";
 import { mockOfferLines } from "@/lib/mock-data";
 import type { OfferLine } from "@/lib/types";
 
@@ -88,31 +89,23 @@ export default function PonudbePage() {
                   />
                 </td>
                 <td className="px-3 py-2">
-                  <input
-                    type="number"
-                    min={1}
+                  <DecimalInput
                     value={l.qty}
-                    onChange={(e) => updateLine(l.id, { qty: Number(e.target.value) || 0 })}
+                    onChange={(qty) => updateLine(l.id, { qty })}
                     className="w-16 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-1 py-0.5"
                   />
                 </td>
                 <td className="px-3 py-2">
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
+                  <DecimalInput
                     value={l.unitPrice}
-                    onChange={(e) => updateLine(l.id, { unitPrice: Number(e.target.value) || 0 })}
+                    onChange={(unitPrice) => updateLine(l.id, { unitPrice })}
                     className="w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-1 py-0.5"
                   />
                 </td>
                 <td className="px-3 py-2">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
+                  <DecimalInput
                     value={l.discountPct}
-                    onChange={(e) => updateLine(l.id, { discountPct: Number(e.target.value) || 0 })}
+                    onChange={(discountPct) => updateLine(l.id, { discountPct })}
                     className="w-16 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-1 py-0.5"
                   />
                 </td>

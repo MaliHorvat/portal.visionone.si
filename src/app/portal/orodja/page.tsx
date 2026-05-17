@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Calculator, Image as ImageIcon, Network, Scan, Shield, Wifi } from "lucide-react";
+import { DecimalInput } from "@/components/portal/DecimalInput";
 
 function mockScan(start: string, end: string) {
   const base = start.replace(/\.\d+$/, "");
@@ -291,11 +292,11 @@ export default function OrodjaPage() {
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">W / port</span>
-              <input type="number" value={poePerPortW} onChange={(e) => setPoePerPortW(Number(e.target.value) || 0)} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <DecimalInput value={poePerPortW} onChange={setPoePerPortW} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">PoE budget (W)</span>
-              <input type="number" value={poeBudgetW} onChange={(e) => setPoeBudgetW(Number(e.target.value) || 0)} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <DecimalInput value={poeBudgetW} onChange={setPoeBudgetW} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
             </label>
           </div>
           <div className="mt-4 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-4 py-3 text-sm">
@@ -326,7 +327,7 @@ export default function OrodjaPage() {
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">Bitrate (Mbps)</span>
-              <input type="number" value={storBitrate} onChange={(e) => setStorBitrate(Number(e.target.value) || 0)} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <DecimalInput value={storBitrate} onChange={setStorBitrate} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">Dni</span>
@@ -353,11 +354,11 @@ export default function OrodjaPage() {
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">CAPEX (€)</span>
-              <input type="number" value={lccCapex} onChange={(e) => setLccCapex(Number(e.target.value) || 0)} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <DecimalInput value={lccCapex} onChange={setLccCapex} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">OPEX / leto (€)</span>
-              <input type="number" value={lccOpex} onChange={(e) => setLccOpex(Number(e.target.value) || 0)} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <DecimalInput value={lccOpex} onChange={setLccOpex} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">Leta</span>

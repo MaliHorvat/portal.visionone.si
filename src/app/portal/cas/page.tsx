@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AdminGate } from "@/components/portal/AdminGate";
+import { decimalFromFormData, decimalTextInputProps } from "@/lib/decimal-number-input";
 import { mockTimeLogs, getMockClients } from "@/lib/mock-data";
 import type { TimeLogEntry } from "@/lib/types";
 
@@ -14,7 +15,7 @@ export default function CasPage() {
     const fd = new FormData(e.currentTarget);
     const projectId = String(fd.get("project") || clients[0]?.id);
     const project = clients.find((c) => c.id === projectId);
-    const hours = Number(fd.get("hours") || 0);
+    const hours = decimalFromFormData(fd, "hours", 0);
     const note = String(fd.get("note") || "");
     const date = String(fd.get("date") || new Date().toISOString().slice(0, 10));
     setLogs((prev) => [
@@ -71,11 +72,10 @@ export default function CasPage() {
         <label className="text-sm">
           <span className="text-[var(--vo-muted)]">Ure</span>
           <input
-            type="number"
             name="hours"
-            step="0.25"
-            min="0"
+            {...decimalTextInputProps}
             required
+            placeholder="npr. 2,5"
             className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2"
           />
         </label>
