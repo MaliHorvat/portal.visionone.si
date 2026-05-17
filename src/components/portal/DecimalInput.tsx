@@ -68,7 +68,7 @@ export function DecimalInput({
         if (!isValidDecimalDraft(next)) return;
         setDraft(next);
         const parsed = parseDecimalInput(next);
-        if (Number.isFinite(parsed)) onChange(parsed);
+        if (Number.isFinite(parsed) && parsed !== value) onChange(parsed);
       }}
       className={className}
     />

@@ -1,21 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePortalToast } from "@/context/PortalToastContext";
 import { DecimalInput } from "@/components/portal/DecimalInput";
+import { OfferLineTable, type OfferLineRow } from "./OfferLineTable";
 import type { WorkspaceCtx } from "./types";
 
-type LineRow = {
-  key: string;
-  section: "material" | "service";
-  code: string;
-  description: string;
-  unit: string;
-  qty: number;
-  unitPrice: number;
-  discountPct: number;
-  lineVatPct: number;
-};
+type LineRow = OfferLineRow;
 
 type OfferDto = {
   id: string;
@@ -28,6 +19,7 @@ type OfferDto = {
   createdAt?: string;
   updatedAt?: string;
   lines: Array<{
+    id?: string;
     section: string;
     sortOrder: number;
     code: string;
@@ -60,7 +52,7 @@ function emptyLine(section: LineRow["section"]): LineRow {
 
 function dtoToRows(o: OfferDto): LineRow[] {
   return (o.lines ?? []).map((l, i) => ({
-    key: `l-${i}-${l.code}`,
+    key: l.id ?? `tmp-load-${i}`,
     section: l.section === "service" ? "service" : "material",
     code: l.code,
     description: l.description,
@@ -81,15 +73,15 @@ function formatOfferPlainText(
   const hdr = [`PONUDBA`, `Stranka: ${clientName}`, `Datum: ${draft.offerDate}`, `Naslov: ${draft.clientAddress}`, ""].join("\n");
   const lines = rows.map(
     (l) =>
-      `${l.section === "material" ? "[MAT]" : "[DEL]"} ${l.code}\t${l.description}\t${l.qty} ${l.unit} × ${l.unitPrice} € (popust ${l.discountPct}%) => ${lineNet(l).toFixed(2)} €`,
+      `${l.section === "material" ? "[MAT]" : "[DEL]"} ${l.code}\t${l.description}\t${l.qty} ${l.unit} Ă— ${l.unitPrice} â‚¬ (popust ${l.discountPct}%) => ${lineNet(l).toFixed(2)} â‚¬`,
   );
   const tail = [
     "",
     `Skupni popust dokumenta: ${draft.totalDiscountPct}%`,
     `DDV: ${draft.vatEnabled ? `${draft.vatPct}%` : "izklopljen"}`,
-    `Osnova: ${totals.net.toFixed(2)} €`,
-    `DDV znesek: ${totals.vat.toFixed(2)} €`,
-    `SKUPAJ: ${totals.gross.toFixed(2)} €`,
+    `Osnova: ${totals.net.toFixed(2)} â‚¬`,
+    `DDV znesek: ${totals.vat.toFixed(2)} â‚¬`,
+    `SKUPAJ: ${totals.gross.toFixed(2)} â‚¬`,
     "",
     draft.notes ? `Opombe:\n${draft.notes}` : "",
   ]
@@ -244,9 +236,9 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
     try {
       const text = formatOfferPlainText(client.name, draft, rows, totals);
       await navigator.clipboard.writeText(text);
-      showToast("Ponudba kopirana v odložišče.");
+      showToast("Ponudba kopirana v odloĹľiĹˇÄŤe.");
     } catch {
-      showToast("Kopiranje v odložišče ni uspelo.", "err");
+      showToast("Kopiranje v odloĹľiĹˇÄŤe ni uspelo.", "err");
     }
   }
 
@@ -281,10 +273,10 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               <td>${escapeHtml(l.description)}</td>
               <td>${escapeHtml(l.unit)}</td>
               <td class="right">${l.qty}</td>
-              <td class="right">${l.unitPrice.toFixed(2)} €</td>
+              <td class="right">${l.unitPrice.toFixed(2)} â‚¬</td>
               <td class="right">${l.discountPct}%</td>
               <td class="right">${l.lineVatPct}%</td>
-              <td class="right">${lineNet(l).toFixed(2)} €</td>
+              <td class="right">${lineNet(l).toFixed(2)} â‚¬</td>
             </tr>`,
         )
         .join("");
@@ -293,7 +285,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         <table>
           <thead>
             <tr>
-              <th>ŠIFRA</th>
+              <th>Ĺ IFRA</th>
               <th>OPIS</th>
               <th>ENOTA</th>
               <th class="right">KOL.</th>
@@ -303,7 +295,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               <th class="right">SKUPAJ</th>
             </tr>
           </thead>
-          <tbody>${body || `<tr><td colspan="8" style="color:#666">—</td></tr>`}</tbody>
+          <tbody>${body || `<tr><td colspan="8" style="color:#666">â€”</td></tr>`}</tbody>
         </table>
       `;
     }
@@ -316,15 +308,15 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         <h1>Ponudba</h1>
         <div class="meta">
           <div><b>Stranka:</b> ${escapeHtml(client.name)}</div>
-          <div><b>Datum:</b> ${escapeHtml(draft.offerDate || "—")}</div>
-          <div><b>Naslov:</b> ${escapeHtml(draft.clientAddress || "—")}</div>
+          <div><b>Datum:</b> ${escapeHtml(draft.offerDate || "â€”")}</div>
+          <div><b>Naslov:</b> ${escapeHtml(draft.clientAddress || "â€”")}</div>
         </div>
         ${table("Material", mat)}
         ${table("Storitve / delo", svc)}
         <div class="sum">
-          <div>Osnova<br/><b>${totals.net.toFixed(2)} €</b></div>
-          <div>DDV<br/><b>${totals.vat.toFixed(2)} €</b></div>
-          <div>Skupaj<br/><b>${totals.gross.toFixed(2)} €</b></div>
+          <div>Osnova<br/><b>${totals.net.toFixed(2)} â‚¬</b></div>
+          <div>DDV<br/><b>${totals.vat.toFixed(2)} â‚¬</b></div>
+          <div>Skupaj<br/><b>${totals.gross.toFixed(2)} â‚¬</b></div>
         </div>
         ${draft.notes ? `<h2 style="font-size:13px;margin:18px 0 6px">Opombe</h2><pre>${escapeHtml(draft.notes)}</pre>` : ""}
         <script>window.focus();</script>
@@ -369,7 +361,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       ]);
       autoTable(doc, {
         startY: y,
-        head: [["Tip", "Šifra", "Opis", "Enota", "Kol.", "Cena €", "Popust %", "Neto €"]],
+        head: [["Tip", "Ĺ ifra", "Opis", "Enota", "Kol.", "Cena â‚¬", "Popust %", "Neto â‚¬"]],
         body,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [45, 45, 48] },
@@ -378,10 +370,10 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       const finalY = docExt.lastAutoTable?.finalY ?? y + 40;
       doc.text(`Skupni popust dokumenta: ${draft.totalDiscountPct}%`, 14, finalY + 8);
       doc.text(`DDV: ${draft.vatEnabled ? `${draft.vatPct}%` : "izklopljen"}`, 14, finalY + 14);
-      doc.text(`Osnova: ${totals.net.toFixed(2)} €`, 14, finalY + 20);
-      doc.text(`DDV: ${totals.vat.toFixed(2)} €`, 14, finalY + 26);
+      doc.text(`Osnova: ${totals.net.toFixed(2)} â‚¬`, 14, finalY + 20);
+      doc.text(`DDV: ${totals.vat.toFixed(2)} â‚¬`, 14, finalY + 26);
       doc.setFont("helvetica", "bold");
-      doc.text(`SKUPAJ: ${totals.gross.toFixed(2)} €`, 14, finalY + 34);
+      doc.text(`SKUPAJ: ${totals.gross.toFixed(2)} â‚¬`, 14, finalY + 34);
       if (draft.notes) {
         doc.setFont("helvetica", "normal");
         doc.text("Opombe:", 14, finalY + 44);
@@ -389,86 +381,24 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         doc.text(split, 14, finalY + 50);
       }
       doc.save(`ponudba-${sel.slice(0, 8)}.pdf`);
-      showToast("PDF ponudbe izvožen.");
+      showToast("PDF ponudbe izvoĹľen.");
     } catch {
       showToast("Izvoz PDF ni uspel.", "err");
     }
   }
 
-  function updateRow(key: string, patch: Partial<LineRow>) {
+  const updateRow = useCallback((key: string, patch: Partial<LineRow>) => {
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
-  }
+  }, []);
 
-  function LineTable({
-    title,
-    section,
-    list,
-  }: {
-    title: string;
-    section: LineRow["section"];
-    list: LineRow[];
-  }) {
-    return (
-      <div className="space-y-2">
-        <h4 className="text-xs font-semibold text-[var(--vo-fg)]">{title}</h4>
-        <div className="overflow-x-auto rounded-lg border border-[var(--vo-border)]">
-          <table className="min-w-[760px] w-full text-left text-[11px]">
-            <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
-              <tr>
-                <th className="px-2 py-1.5">ŠIFRA</th>
-                <th className="px-2 py-1.5">OPIS</th>
-                <th className="px-2 py-1.5">ENOTA</th>
-                <th className="px-2 py-1.5">KOL.</th>
-                <th className="px-2 py-1.5">CENA €</th>
-                <th className="px-2 py-1.5">POPUST %</th>
-                <th className="px-2 py-1.5">DDV %</th>
-                <th className="px-2 py-1.5">SKUPAJ</th>
-                <th className="px-2 py-1.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((l) => (
-                <tr key={l.key} className="border-b border-[var(--vo-border)]">
-                  <td className="px-2 py-1">
-                    <input value={l.code} onChange={(e) => updateRow(l.key, { code: e.target.value })} className="w-full rounded border border-transparent bg-transparent hover:border-[var(--vo-border)]" />
-                  </td>
-                  <td className="px-2 py-1">
-                    <input value={l.description} onChange={(e) => updateRow(l.key, { description: e.target.value })} className="w-full min-w-[140px] rounded border border-transparent bg-transparent hover:border-[var(--vo-border)]" />
-                  </td>
-                  <td className="px-2 py-1">
-                    <input value={l.unit} onChange={(e) => updateRow(l.key, { unit: e.target.value })} className="w-14" />
-                  </td>
-                  <td className="px-2 py-1">
-                    <DecimalInput value={l.qty} onChange={(qty) => updateRow(l.key, { qty })} className="w-16 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]" />
-                  </td>
-                  <td className="px-2 py-1">
-                    <DecimalInput value={l.unitPrice} onChange={(unitPrice) => updateRow(l.key, { unitPrice })} className="w-20 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]" />
-                  </td>
-                  <td className="px-2 py-1">
-                    <DecimalInput value={l.discountPct} onChange={(discountPct) => updateRow(l.key, { discountPct })} className="w-14 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]" />
-                  </td>
-                  <td className="px-2 py-1">
-                    <DecimalInput value={l.lineVatPct} onChange={(lineVatPct) => updateRow(l.key, { lineVatPct })} className="w-14 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]" />
-                  </td>
-                  <td className="px-2 py-1 font-medium">{lineNet(l).toFixed(2)} €</td>
-                  <td className="px-2 py-1">
-                    <button type="button" className="text-red-500 hover:underline" onClick={() => setRows((r) => r.filter((x) => x.key !== l.key))}>✕</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <button
-          type="button"
-          className="text-xs font-medium text-[var(--vo-accent)] hover:underline"
-          onClick={() => setRows((r) => [...r, emptyLine(section)])}
-        >
-          + Dodaj {section === "material" ? "material" : "delo"}
-        </button>
-      </div>
-    );
-  }
+  const removeRow = useCallback((key: string) => {
+    setRows((r) => r.filter((x) => x.key !== key));
+  }, []);
+
+  const addRow = useCallback((section: LineRow["section"]) => {
+    setRows((r) => [...r, emptyLine(section)]);
+  }, []);
+
 
   const materials = rows.filter((r) => r.section === "material");
   const services = rows.filter((r) => r.section === "service");
@@ -485,10 +415,10 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
           onChange={(e) => setSel(e.target.value || null)}
           className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-sm"
         >
-          <option value="">— izberi ponudbo —</option>
+          <option value="">â€” izberi ponudbo â€”</option>
           {offers.map((o) => (
             <option key={o.id} value={o.id}>
-              {o.id.slice(0, 8)}…
+              {o.id.slice(0, 8)}â€¦
             </option>
           ))}
         </select>
@@ -523,7 +453,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
           Shrani
         </button>
         <button type="button" disabled={!sel || !dbConfigured} onClick={() => void deleteOffer()} className="text-xs text-red-500 hover:underline disabled:opacity-40">
-          Izbriši
+          IzbriĹˇi
         </button>
       </div>
 
@@ -548,14 +478,14 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               <input
                 value={draft.clientAddress}
                 onChange={(e) => setDraft({ ...draft, clientAddress: e.target.value })}
-                placeholder="Ulica, Pošta, Kraj"
+                placeholder="Ulica, PoĹˇta, Kraj"
                 className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
               />
             </label>
           </div>
 
-          <LineTable title="Material" section="material" list={materials} />
-          <LineTable title="Storitve / delo" section="service" list={services} />
+          <OfferLineTable title="Material" section="material" list={materials} onUpdateRow={updateRow} onRemoveRow={removeRow} onAddRow={addRow} />
+          <OfferLineTable title="Storitve / delo" section="service" list={services} onUpdateRow={updateRow} onRemoveRow={removeRow} onAddRow={addRow} />
 
           <div className="flex flex-wrap justify-end gap-6 border-t border-[var(--vo-border)] pt-4 text-sm">
             <label className="flex flex-col text-xs">
@@ -577,15 +507,15 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
             />
             <div>
               <div className="text-[var(--vo-muted)]">Osnova</div>
-              <div className="font-bold">{totals.net.toFixed(2)} €</div>
+              <div className="font-bold">{totals.net.toFixed(2)} â‚¬</div>
             </div>
             <div>
               <div className="text-[var(--vo-muted)]">DDV</div>
-              <div className="font-bold">{totals.vat.toFixed(2)} €</div>
+              <div className="font-bold">{totals.vat.toFixed(2)} â‚¬</div>
             </div>
             <div>
               <div className="text-[var(--vo-muted)]">Skupaj</div>
-              <div className="text-lg font-bold text-[var(--vo-accent)]">{totals.gross.toFixed(2)} €</div>
+              <div className="text-lg font-bold text-[var(--vo-accent)]">{totals.gross.toFixed(2)} â‚¬</div>
             </div>
           </div>
 
@@ -596,12 +526,12 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
               rows={3}
               className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-2"
-              placeholder="Pogoji ponudbe…"
+              placeholder="Pogoji ponudbeâ€¦"
             />
           </label>
         </div>
       ) : (
-        <p className="text-sm text-[var(--vo-muted)]">Ustvarite ponudbo ali izberite obstoječo.</p>
+        <p className="text-sm text-[var(--vo-muted)]">Ustvarite ponudbo ali izberite obstojeÄŤo.</p>
       )}
     </div>
   );
