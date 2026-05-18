@@ -2,6 +2,8 @@
 
 import { DecimalInput } from "@/components/portal/DecimalInput";
 
+const EUR = "\u20AC";
+
 export type OfferLineRow = {
   key: string;
   section: "material" | "service";
@@ -40,7 +42,7 @@ export function OfferLineTable({ title, section, list, onUpdateRow, onRemoveRow,
               <th className="px-2 py-1.5">OPIS</th>
               <th className="px-2 py-1.5">ENOTA</th>
               <th className="px-2 py-1.5">KOL.</th>
-              <th className="px-2 py-1.5">CENA €</th>
+              <th className="px-2 py-1.5">CENA {EUR}</th>
               <th className="px-2 py-1.5">POPUST %</th>
               <th className="px-2 py-1.5">DDV %</th>
               <th className="px-2 py-1.5">SKUPAJ</th>
@@ -99,7 +101,7 @@ export function OfferLineTable({ title, section, list, onUpdateRow, onRemoveRow,
                     className="w-14 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]"
                   />
                 </td>
-                <td className="px-2 py-1 font-medium">{lineNet(l).toFixed(2)} €</td>
+                <td className="px-2 py-1 font-medium">{lineNet(l).toFixed(2)} {EUR}</td>
                 <td className="px-2 py-1">
                   <button type="button" className="text-red-500 hover:underline" onClick={() => onRemoveRow(l.key)}>
                     ✕

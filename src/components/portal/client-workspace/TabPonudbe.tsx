@@ -6,6 +6,9 @@ import { DecimalInput } from "@/components/portal/DecimalInput";
 import { OfferLineTable, type OfferLineRow } from "./OfferLineTable";
 import type { WorkspaceCtx } from "./types";
 
+/** ASCII-safe — datoteka ne sme pokvariti znaka € ob shranjevanju */
+const EUR = "\u20AC";
+
 type LineRow = OfferLineRow;
 
 type OfferDto = {
@@ -73,15 +76,15 @@ function formatOfferPlainText(
   const hdr = [`PONUDBA`, `Stranka: ${clientName}`, `Datum: ${draft.offerDate}`, `Naslov: ${draft.clientAddress}`, ""].join("\n");
   const lines = rows.map(
     (l) =>
-      `${l.section === "material" ? "[MAT]" : "[DEL]"} ${l.code}\t${l.description}\t${l.qty} ${l.unit} Ă— ${l.unitPrice} â‚¬ (popust ${l.discountPct}%) => ${lineNet(l).toFixed(2)} â‚¬`,
+      `${l.section === "material" ? "[MAT]" : "[DEL]"} ${l.code}\t${l.description}\t${l.qty} ${l.unit} \u00D7 ${l.unitPrice} ${EUR} (popust ${l.discountPct}%) => ${lineNet(l).toFixed(2)} ${EUR}`,
   );
   const tail = [
     "",
     `Skupni popust dokumenta: ${draft.totalDiscountPct}%`,
     `DDV: ${draft.vatEnabled ? `${draft.vatPct}%` : "izklopljen"}`,
-    `Osnova: ${totals.net.toFixed(2)} â‚¬`,
-    `DDV znesek: ${totals.vat.toFixed(2)} â‚¬`,
-    `SKUPAJ: ${totals.gross.toFixed(2)} â‚¬`,
+    `Osnova: ${totals.net.toFixed(2)} ${EUR}`,
+    `DDV znesek: ${totals.vat.toFixed(2)} ${EUR}`,
+    `SKUPAJ: ${totals.gross.toFixed(2)} ${EUR}`,
     "",
     draft.notes ? `Opombe:\n${draft.notes}` : "",
   ]
@@ -236,9 +239,9 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
     try {
       const text = formatOfferPlainText(client.name, draft, rows, totals);
       await navigator.clipboard.writeText(text);
-      showToast("Ponudba kopirana v odloĹľiĹˇÄŤe.");
+      showToast("Ponudba kopirana v odlo\u017Ei\u0161\u010De.");
     } catch {
-      showToast("Kopiranje v odloĹľiĹˇÄŤe ni uspelo.", "err");
+      showToast("Kopiranje v odlo\u017Ei\u0161\u010De ni uspelo.", "err");
     }
   }
 
@@ -273,10 +276,10 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               <td>${escapeHtml(l.description)}</td>
               <td>${escapeHtml(l.unit)}</td>
               <td class="right">${l.qty}</td>
-              <td class="right">${l.unitPrice.toFixed(2)} â‚¬</td>
+              <td class="right">${l.unitPrice.toFixed(2)} ${EUR}</td>
               <td class="right">${l.discountPct}%</td>
               <td class="right">${l.lineVatPct}%</td>
-              <td class="right">${lineNet(l).toFixed(2)} â‚¬</td>
+              <td class="right">${lineNet(l).toFixed(2)} ${EUR}</td>
             </tr>`,
         )
         .join("");
@@ -285,7 +288,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         <table>
           <thead>
             <tr>
-              <th>Ĺ IFRA</th>
+              <th>ŠIFRA</th>
               <th>OPIS</th>
               <th>ENOTA</th>
               <th class="right">KOL.</th>
@@ -295,7 +298,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               <th class="right">SKUPAJ</th>
             </tr>
           </thead>
-          <tbody>${body || `<tr><td colspan="8" style="color:#666">â€”</td></tr>`}</tbody>
+          <tbody>${body || `<tr><td colspan="8" style="color:#666">\u2014</td></tr>`}</tbody>
         </table>
       `;
     }
@@ -308,15 +311,15 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         <h1>Ponudba</h1>
         <div class="meta">
           <div><b>Stranka:</b> ${escapeHtml(client.name)}</div>
-          <div><b>Datum:</b> ${escapeHtml(draft.offerDate || "â€”")}</div>
-          <div><b>Naslov:</b> ${escapeHtml(draft.clientAddress || "â€”")}</div>
+          <div><b>Datum:</b> ${escapeHtml(draft.offerDate || "—")}</div>
+          <div><b>Naslov:</b> ${escapeHtml(draft.clientAddress || "—")}</div>
         </div>
         ${table("Material", mat)}
         ${table("Storitve / delo", svc)}
         <div class="sum">
-          <div>Osnova<br/><b>${totals.net.toFixed(2)} â‚¬</b></div>
-          <div>DDV<br/><b>${totals.vat.toFixed(2)} â‚¬</b></div>
-          <div>Skupaj<br/><b>${totals.gross.toFixed(2)} â‚¬</b></div>
+          <div>Osnova<br/><b>${totals.net.toFixed(2)} ${EUR}</b></div>
+          <div>DDV<br/><b>${totals.vat.toFixed(2)} ${EUR}</b></div>
+          <div>Skupaj<br/><b>${totals.gross.toFixed(2)} ${EUR}</b></div>
         </div>
         ${draft.notes ? `<h2 style="font-size:13px;margin:18px 0 6px">Opombe</h2><pre>${escapeHtml(draft.notes)}</pre>` : ""}
         <script>window.focus();</script>
@@ -361,7 +364,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       ]);
       autoTable(doc, {
         startY: y,
-        head: [["Tip", "Ĺ ifra", "Opis", "Enota", "Kol.", "Cena â‚¬", "Popust %", "Neto â‚¬"]],
+        head: [["Tip", "Šifra", "Opis", "Enota", "Kol.", `Cena ${EUR}`, "Popust %", `Neto ${EUR}`]],
         body,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [45, 45, 48] },
@@ -370,10 +373,10 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       const finalY = docExt.lastAutoTable?.finalY ?? y + 40;
       doc.text(`Skupni popust dokumenta: ${draft.totalDiscountPct}%`, 14, finalY + 8);
       doc.text(`DDV: ${draft.vatEnabled ? `${draft.vatPct}%` : "izklopljen"}`, 14, finalY + 14);
-      doc.text(`Osnova: ${totals.net.toFixed(2)} â‚¬`, 14, finalY + 20);
-      doc.text(`DDV: ${totals.vat.toFixed(2)} â‚¬`, 14, finalY + 26);
+      doc.text(`Osnova: ${totals.net.toFixed(2)} ${EUR}`, 14, finalY + 20);
+      doc.text(`DDV: ${totals.vat.toFixed(2)} ${EUR}`, 14, finalY + 26);
       doc.setFont("helvetica", "bold");
-      doc.text(`SKUPAJ: ${totals.gross.toFixed(2)} â‚¬`, 14, finalY + 34);
+      doc.text(`SKUPAJ: ${totals.gross.toFixed(2)} ${EUR}`, 14, finalY + 34);
       if (draft.notes) {
         doc.setFont("helvetica", "normal");
         doc.text("Opombe:", 14, finalY + 44);
@@ -381,7 +384,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         doc.text(split, 14, finalY + 50);
       }
       doc.save(`ponudba-${sel.slice(0, 8)}.pdf`);
-      showToast("PDF ponudbe izvoĹľen.");
+      showToast("PDF ponudbe izvožen.");
     } catch {
       showToast("Izvoz PDF ni uspel.", "err");
     }
@@ -415,10 +418,10 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
           onChange={(e) => setSel(e.target.value || null)}
           className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-sm"
         >
-          <option value="">â€” izberi ponudbo â€”</option>
+          <option value="">— izberi ponudbo —</option>
           {offers.map((o) => (
             <option key={o.id} value={o.id}>
-              {o.id.slice(0, 8)}â€¦
+              {o.id.slice(0, 8)}…
             </option>
           ))}
         </select>
@@ -453,7 +456,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
           Shrani
         </button>
         <button type="button" disabled={!sel || !dbConfigured} onClick={() => void deleteOffer()} className="text-xs text-red-500 hover:underline disabled:opacity-40">
-          IzbriĹˇi
+          Izbriši
         </button>
       </div>
 
@@ -478,7 +481,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               <input
                 value={draft.clientAddress}
                 onChange={(e) => setDraft({ ...draft, clientAddress: e.target.value })}
-                placeholder="Ulica, PoĹˇta, Kraj"
+                placeholder="Ulica, Pošta, Kraj"
                 className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
               />
             </label>
@@ -507,15 +510,15 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
             />
             <div>
               <div className="text-[var(--vo-muted)]">Osnova</div>
-              <div className="font-bold">{totals.net.toFixed(2)} â‚¬</div>
+              <div className="font-bold">{totals.net.toFixed(2)} {EUR}</div>
             </div>
             <div>
               <div className="text-[var(--vo-muted)]">DDV</div>
-              <div className="font-bold">{totals.vat.toFixed(2)} â‚¬</div>
+              <div className="font-bold">{totals.vat.toFixed(2)} {EUR}</div>
             </div>
             <div>
               <div className="text-[var(--vo-muted)]">Skupaj</div>
-              <div className="text-lg font-bold text-[var(--vo-accent)]">{totals.gross.toFixed(2)} â‚¬</div>
+              <div className="text-lg font-bold text-[var(--vo-accent)]">{totals.gross.toFixed(2)} {EUR}</div>
             </div>
           </div>
 
@@ -526,12 +529,12 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
               rows={3}
               className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-2"
-              placeholder="Pogoji ponudbeâ€¦"
+              placeholder="Pogoji ponudbe…"
             />
           </label>
         </div>
       ) : (
-        <p className="text-sm text-[var(--vo-muted)]">Ustvarite ponudbo ali izberite obstojeÄŤo.</p>
+        <p className="text-sm text-[var(--vo-muted)]">Ustvarite ponudbo ali izberite obstoječo.</p>
       )}
     </div>
   );
