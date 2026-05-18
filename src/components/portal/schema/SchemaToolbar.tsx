@@ -15,6 +15,8 @@ import {
   Undo2,
   Hash,
   ClipboardPaste,
+  Image,
+  Map,
 } from "lucide-react";
 
 type Props = {
@@ -46,6 +48,9 @@ type Props = {
   onFullscreen: () => void;
   onFitView: () => void;
   onAlign: (mode: "left" | "h-center") => void;
+  onExportPng: () => void;
+  viewMode: "floor" | "map";
+  onViewMode: (mode: "floor" | "map") => void;
 };
 
 export function SchemaToolbar(p: Props) {
@@ -84,6 +89,24 @@ export function SchemaToolbar(p: Props) {
       </button>
       <button type="button" className={btn} onClick={p.onImportJson}>
         Uvozi
+      </button>
+      <span className="mx-1 h-4 w-px bg-[var(--vo-border)]" />
+      <button
+        type="button"
+        className={`${btn} ${p.viewMode === "floor" ? "border-[var(--vo-accent)] text-[var(--vo-accent)]" : ""}`}
+        onClick={() => p.onViewMode("floor")}
+      >
+        Tloris
+      </button>
+      <button
+        type="button"
+        className={`${btn} ${p.viewMode === "map" ? "border-[var(--vo-accent)] text-[var(--vo-accent)]" : ""}`}
+        onClick={() => p.onViewMode("map")}
+      >
+        <Map className="h-3 w-3" /> Zemljevid
+      </button>
+      <button type="button" className={btn} onClick={p.onExportPng} disabled={p.viewMode !== "floor"} title="PNG platna">
+        <Image className="h-3 w-3" /> PNG
       </button>
       <span className="mx-1 h-4 w-px bg-[var(--vo-border)]" />
       <button type="button" className={btn} onClick={p.onAutoNumber} disabled={!p.editMode}>

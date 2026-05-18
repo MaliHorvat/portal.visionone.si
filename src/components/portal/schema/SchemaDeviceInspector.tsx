@@ -76,6 +76,12 @@ export function SchemaDeviceInspector({
   const [photoBefore, setPhotoBefore] = useState(node.planMeta?.photoBefore ?? "");
   const [photoAfter, setPhotoAfter] = useState(node.planMeta?.photoAfter ?? "");
   const [photoNvr, setPhotoNvr] = useState(node.planMeta?.photoNvr ?? "");
+  const [geoLat, setGeoLat] = useState(
+    node.planMeta?.geoLat != null ? String(node.planMeta.geoLat) : "",
+  );
+  const [geoLng, setGeoLng] = useState(
+    node.planMeta?.geoLng != null ? String(node.planMeta.geoLng) : "",
+  );
 
   useEffect(() => {
     setLabel(node.label);
@@ -92,6 +98,8 @@ export function SchemaDeviceInspector({
     setPhotoBefore(node.planMeta?.photoBefore ?? "");
     setPhotoAfter(node.planMeta?.photoAfter ?? "");
     setPhotoNvr(node.planMeta?.photoNvr ?? "");
+    setGeoLat(node.planMeta?.geoLat != null ? String(node.planMeta.geoLat) : "");
+    setGeoLng(node.planMeta?.geoLng != null ? String(node.planMeta.geoLng) : "");
   }, [node.id, node, client]);
 
   const loadPhoto = (field: "photoBefore" | "photoAfter" | "photoNvr", file: File) => {
@@ -206,9 +214,13 @@ export function SchemaDeviceInspector({
         photoBefore: photoBefore || undefined,
         photoAfter: photoAfter || undefined,
         photoNvr: photoNvr || undefined,
+        geoLat: geoLat.trim() ? Number(geoLat) : undefined,
+        geoLng: geoLng.trim() ? Number(geoLng) : undefined,
       },
     });
   }, [
+    geoLat,
+    geoLng,
     photoAfter,
     photoBefore,
     photoNvr,
@@ -377,6 +389,26 @@ export function SchemaDeviceInspector({
               MAC
               <input value={mac} onChange={(e) => setMac(e.target.value)} className={inputCls} />
             </label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-[var(--vo-muted)]">
+                GPS širina
+                <input
+                  value={geoLat}
+                  onChange={(e) => setGeoLat(e.target.value)}
+                  placeholder="46.05"
+                  className={inputCls}
+                />
+              </label>
+              <label className="block text-[var(--vo-muted)]">
+                GPS dolžina
+                <input
+                  value={geoLng}
+                  onChange={(e) => setGeoLng(e.target.value)}
+                  placeholder="14.50"
+                  className={inputCls}
+                />
+              </label>
+            </div>
             {node.deviceRef?.kind === "switch" || iconKey === "switch" ? (
               <label className="block text-[var(--vo-muted)]">
                 Število portov

@@ -176,7 +176,19 @@ export interface TopologyCanvasNode {
     photoBefore?: string;
     photoAfter?: string;
     photoNvr?: string;
+    /** Zemljepisna širina (WGS84) za prikaz na zemljevidu. */
+    geoLat?: number;
+    /** Zemljepisna dolžina (WGS84). */
+    geoLng?: number;
   };
+}
+
+/** Shranjeno stanje pogleda zemljevida v shemi. */
+export interface SchemaMapViewState {
+  centerLng: number;
+  centerLat: number;
+  zoom: number;
+  style?: "streets" | "satellite";
 }
 
 export interface TopologyCanvasEdge {
@@ -228,6 +240,8 @@ export interface ClientTopologyState {
   layerVisibility?: SchemaLayerVisibility;
   /** Zunanji zemljevid (URL slike ali opomba) */
   mapBackgroundUrl?: string;
+  /** Pogled MapLibre (središče, zoom). */
+  mapView?: SchemaMapViewState;
 }
 
 export interface InventoryItem {

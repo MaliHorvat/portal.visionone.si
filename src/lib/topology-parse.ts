@@ -4,6 +4,7 @@ import type {
   ClientTopologyState,
   FloorPlanPathEntry,
   FloorPlanStrokeKind,
+  SchemaMapViewState,
   TopologyCanvasEdge,
   TopologyCanvasNode,
   TopologyDeviceKind,
@@ -77,8 +78,22 @@ function parsePlanMeta(raw: unknown): TopologyCanvasNode["planMeta"] {
     photoBefore: str("photoBefore")?.startsWith("data:") ? str("photoBefore") : undefined,
     photoAfter: str("photoAfter")?.startsWith("data:") ? str("photoAfter") : undefined,
     photoNvr: str("photoNvr")?.startsWith("data:") ? str("photoNvr") : undefined,
+    geoLat: typeof p.geoLat === "number" && Number.isFinite(p.geoLat) ? p.geoLat : undefined,
+    geoLng: typeof p.geoLng === "number" && Number.isFinite(p.geoLng) ? p.geoLng : undefined,
   };
-  return Object.values(meta).some((v) => v !== undefined && v !== "") ? meta : undefined;
+  const hasGeo = meta.geoLat !== undefined && meta.geoLng !== undefined;
+  return Object.values(meta).some((v) => v !== undefined && v !== "") || hasGeo ? meta : undefined;
+}
+
+function parseMapView(raw: unknown): SchemaMapViewState | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const p = raw as Record<string, unknown>;
+  const centerLng = typeof p.centerLng === "number" ? p.centerLng : undefined;
+  const centerLat = typeof p.centerLat === "number" ? p.centerLat : undefined;
+  const zoom = typeof p.zoom === "number" ? p.zoom : undefined;
+  if (centerLng === undefined || centerLat === undefined || zoom === undefined) return undefined;
+  const style = p.style === "satellite" || p.style === "streets" ? p.style : undefined;
+  return { centerLng, centerLat, zoom, style };
 }
 
 function parseLayerVisibility(raw: unknown): ClientTopologyState["layerVisibility"] {
@@ -177,5 +192,6 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
     planNotes,
     layerVisibility: parseLayerVisibility(o.layerVisibility),
     mapBackgroundUrl,
+    mapView: parseMapView(o.mapView),
   };
 }

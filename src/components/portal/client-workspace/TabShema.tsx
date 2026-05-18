@@ -5,7 +5,10 @@ import { Minus, Plus } from "lucide-react";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { usePortalToast } from "@/context/PortalToastContext";
 import { SchemaLayersPanel } from "@/components/portal/schema/SchemaLayersPanel";
+import { SchemaMapView } from "@/components/portal/schema/SchemaMapView";
+import { SchemaModelPanel, applyModelToNode } from "@/components/portal/schema/SchemaModelPanel";
 import { SchemaToolbar } from "@/components/portal/schema/SchemaToolbar";
+import { exportSchemaCanvasPng } from "@/lib/schema-canvas-export";
 import { DecimalInput } from "@/components/portal/DecimalInput";
 import { SchemaDeviceInspector } from "@/components/portal/schema/SchemaDeviceInspector";
 import {
@@ -134,7 +137,10 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const [clipboard, setClipboard] = useState<TopologyCanvasNode | null>(null);
   const [showLayers, setShowLayers] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [viewMode, setViewMode] = useState<"floor" | "map">("floor");
+  const [exportingPng, setExportingPng] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const exportRootRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const dragBaselineRef = useRef<ClientTopologyState | null>(null);
   const layers = useMemo(() => mergeLayerVisibility(topo.layerVisibility), [topo.layerVisibility]);
@@ -541,12 +547,28 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
       ref={shellRef}
       className={`flex min-h-[640px] flex-col gap-2 xl:flex-row ${fullscreen ? "fixed inset-0 z-50 bg-[var(--vo-bg)] p-3" : ""}`}
     >
-      <SchemaIconPalette
-        inventoryGroups={inventoryGroups}
-        editMode={editMode && canEdit}
-        dbConfigured={dbConfigured}
-        getDeviceStatus={getDeviceStatus}
-      />
+      <aside className="flex w-full shrink-0 flex-col gap-0 lg:w-52 xl:w-56">
+        <SchemaIconPalette
+          inventoryGroups={inventoryGroups}
+          editMode={editMode && canEdit}
+          dbConfigured={dbConfigured}
+          getDeviceStatus={getDeviceStatus}
+        />
+        <div className="rounded-xl border border-t-0 border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 pb-2 lg:border-t">
+          <SchemaModelPanel
+            client={client}
+            selectedNodeId={selectedNodeId}
+            editMode={editMode && canEdit}
+            onApplyModel={(entry, nodeId) => {
+              mutateTopo((t) => ({
+                ...t,
+                nodes: t.nodes.map((n) => (n.id === nodeId ? { ...n, ...applyModelToNode(n, entry) } : n)),
+              }));
+              showToast(`Model ${entry.manufacturer} ${entry.model} uporabljen.`);
+            }}
+          />
+        </div>
+      </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         {connectFrom ? (
@@ -637,7 +659,21 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             const ids = selectedNodeId ? [selectedNodeId] : topo.nodes.map((n) => n.id);
             mutateTopo((t) => alignNodes(t, ids, mode));
           }}
+          viewMode={viewMode}
+          onViewMode={setViewMode}
+          onExportPng={() => {
+            const el = exportRootRef.current;
+            if (!el) return;
+            setExportingPng(true);
+            void exportSchemaCanvasPng(el, `nacrt-${client.slug ?? client.id}.png`)
+              .then(() => showToast("PNG izvožen."))
+              .catch(() => showToast("Izvoz PNG ni uspel.", "err"))
+              .finally(() => setExportingPng(false));
+          }}
         />
+        {exportingPng ? (
+          <p className="text-xs text-[var(--vo-muted)]">Pripravljam PNG …</p>
+        ) : null}
         {showLayers ? (
           <SchemaLayersPanel
             visibility={topo.layerVisibility}
@@ -837,7 +873,28 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           </div>
         ) : null}
 
-
+        {viewMode === "map" ? (
+          <SchemaMapView
+            client={client}
+            clientAddress={client.address ?? ""}
+            nodes={topo.nodes}
+            mapView={topo.mapView}
+            editMode={editMode && canEdit}
+            selectedNodeId={selectedNodeId}
+            onMapViewChange={(v) => mutateTopo((t) => ({ ...t, mapView: v }))}
+            onSelectNode={setSelectedNodeId}
+            onNodeGeo={(nodeId, lat, lng) => {
+              mutateTopo((t) => ({
+                ...t,
+                nodes: t.nodes.map((n) =>
+                  n.id === nodeId ? { ...n, planMeta: { ...n.planMeta, geoLat: lat, geoLng: lng } } : n,
+                ),
+              }));
+              showToast("GPS pozicija posodobljena.");
+            }}
+            getNodeStatus={getNodeStatus}
+          />
+        ) : (
         <div
           ref={canvasRef}
           className="relative min-h-[480px] flex-1 overflow-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-bg)]"
@@ -849,6 +906,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           onPointerLeave={endDraw}
         >
           <div
+            ref={exportRootRef}
             className="relative min-h-[520px] w-full origin-top-left"
             style={{ transform: `scale(${canvasZoom})`, transformOrigin: "0 0" }}
           >
@@ -1096,6 +1154,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           })}
           </div>
         </div>
+        )}
 
         <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs">
           <p className="font-medium text-[var(--vo-fg)]">Povezave</p>
