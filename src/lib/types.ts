@@ -173,12 +173,18 @@ export interface TopologyCanvasNode {
     ports?: number;
     rtspUser?: string;
     rtspPass?: string;
+    photoBefore?: string;
+    photoAfter?: string;
+    photoNvr?: string;
   };
 }
 
 export interface TopologyCanvasEdge {
   from: string;
   to: string;
+  /** Npr. LAN, Cat6 */
+  label?: string;
+  cableType?: string;
 }
 
 /** Segment risbe: stena/tloris ali pot kabla (kot pri CCTV design kablih). */
@@ -196,6 +202,15 @@ export interface PlanCalibration {
   metersPerPx?: number;
 }
 
+export interface SchemaLayerVisibility {
+  background?: boolean;
+  walls?: boolean;
+  cables?: boolean;
+  fov?: boolean;
+  devices?: boolean;
+  edges?: boolean;
+}
+
 export interface ClientTopologyState {
   nodes: TopologyCanvasNode[];
   edges: TopologyCanvasEdge[];
@@ -208,6 +223,11 @@ export interface ClientTopologyState {
   planCalibration?: PlanCalibration;
   /** 0 = izklop mreže snap; npr. 16 ali 24 */
   snapGridPx?: number;
+  /** Opombe projekta / lokacije na načrtu */
+  planNotes?: string;
+  layerVisibility?: SchemaLayerVisibility;
+  /** Zunanji zemljevid (URL slike ali opomba) */
+  mapBackgroundUrl?: string;
 }
 
 export interface InventoryItem {

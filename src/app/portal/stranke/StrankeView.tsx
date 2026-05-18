@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Star } from "lucide-react";
+import { getFavoriteClientIds, getRecentClients, toggleFavoriteClient } from "@/lib/portal-workspace-prefs";
 import { PortalContextMenu, type ContextMenuItem } from "@/components/portal/PortalContextMenu";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { clientProfilePath } from "@/lib/client-url";
@@ -28,6 +30,13 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; clientId: string } | null>(null);
   const [orderedClients, setOrderedClients] = useState(clients);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setFavoriteIds(getFavoriteClientIds());
+  }, []);
+
+  const recentClients = useMemo(() => getRecentClients(), []);
 
   useEffect(() => {
     setOrderedClients(clients);
@@ -188,6 +197,48 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
         </div>
       ) : null}
 
+      {(recentClients.length > 0 || favoriteIds.length > 0) && (
+        <section className="grid gap-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 text-sm md:grid-cols-2">
+          {recentClients.length > 0 ? (
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--vo-muted)]">Nedavno odprto</h2>
+              <ul className="mt-2 space-y-1">
+                {recentClients.slice(0, 6).map((r) => {
+                  const c = clients.find((x) => x.id === r.id);
+                  if (!c) return null;
+                  return (
+                    <li key={r.id}>
+                      <Link href={clientProfilePath(c)} className="text-[var(--vo-accent)] hover:underline">
+                        {r.name}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+          {favoriteIds.length > 0 ? (
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--vo-muted)]">Priljubljene</h2>
+              <ul className="mt-2 space-y-1">
+                {favoriteIds.map((fid) => {
+                  const c = clients.find((x) => x.id === fid);
+                  if (!c) return null;
+                  return (
+                    <li key={fid} className="flex items-center gap-2">
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden />
+                      <Link href={clientProfilePath(c)} className="hover:underline">
+                        {c.name}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      )}
+
       {showForm ? (
         <form
           onSubmit={handleSave}
@@ -327,7 +378,25 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                 }}
                 onDragEnd={() => setDragId(null)}
               >
-                <td className="px-4 py-3 font-medium text-[var(--vo-fg)]">{c.name}</td>
+                <td className="px-4 py-3 font-medium text-[var(--vo-fg)]">
+                  <span className="inline-flex items-center gap-2">
+                    <button
+                      type="button"
+                      title={favoriteIds.includes(c.id) ? "Odstrani iz priljubljenih" : "Dodaj med priljubljene"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFavoriteIds(toggleFavoriteClient(c.id));
+                      }}
+                      className="text-[var(--vo-muted)] hover:text-amber-400"
+                    >
+                      <Star
+                        className={`h-4 w-4 ${favoriteIds.includes(c.id) ? "fill-amber-400 text-amber-400" : ""}`}
+                        aria-hidden
+                      />
+                    </button>
+                    {c.name}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-[var(--vo-muted)]">{c.address}</td>
                 <td className="px-4 py-3 text-[var(--vo-muted)]">
                   {c.contact}

@@ -16,6 +16,7 @@ import { TabTimeline } from "./client-workspace/TabTimeline";
 import { TabField } from "./client-workspace/TabField";
 import type { WorkspaceCtx, WorkspaceTab } from "./client-workspace/types";
 import { parseWorkspaceTab } from "./client-workspace/types";
+import { pushRecentClient } from "@/lib/portal-workspace-prefs";
 import {
   Building2,
   Boxes,
@@ -99,6 +100,10 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
     const j = await r.json();
     setClient(j.client as ClientDetail);
   }, [client.id, dbConfigured]);
+
+  useEffect(() => {
+    pushRecentClient(client.id, client.name);
+  }, [client.id, client.name]);
 
   const ctx: WorkspaceCtx = useMemo(
     () => ({

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { X, Settings, Globe, Paintbrush, Link2 } from "lucide-react";
+import { X, Settings, Globe, Paintbrush, Link2, Image } from "lucide-react";
 import { DecimalInput } from "@/components/portal/DecimalInput";
 import { catalogEntry, ICON_CATALOG } from "./schema-icon-catalog";
 import { SchemaIcon } from "./SchemaIcon";
@@ -20,7 +20,7 @@ import {
 } from "@/lib/schema-node-utils";
 import type { CameraPlanOverlay, ClientDetail, TopologyCanvasEdge, TopologyCanvasNode } from "@/lib/types";
 
-type TabId = "settings" | "network" | "appearance" | "connections";
+type TabId = "settings" | "network" | "appearance" | "connections" | "photos";
 
 type Props = {
   client: ClientDetail;
@@ -73,6 +73,9 @@ export function SchemaDeviceInspector({
   const [ports, setPorts] = useState(String(node.planMeta?.ports ?? ""));
   const [rtspUser, setRtspUser] = useState(node.planMeta?.rtspUser ?? "");
   const [rtspPass, setRtspPass] = useState(node.planMeta?.rtspPass ?? "");
+  const [photoBefore, setPhotoBefore] = useState(node.planMeta?.photoBefore ?? "");
+  const [photoAfter, setPhotoAfter] = useState(node.planMeta?.photoAfter ?? "");
+  const [photoNvr, setPhotoNvr] = useState(node.planMeta?.photoNvr ?? "");
 
   useEffect(() => {
     setLabel(node.label);
@@ -86,7 +89,23 @@ export function SchemaDeviceInspector({
     setPorts(String(node.planMeta?.ports ?? ""));
     setRtspUser(node.planMeta?.rtspUser ?? "");
     setRtspPass(node.planMeta?.rtspPass ?? "");
+    setPhotoBefore(node.planMeta?.photoBefore ?? "");
+    setPhotoAfter(node.planMeta?.photoAfter ?? "");
+    setPhotoNvr(node.planMeta?.photoNvr ?? "");
   }, [node.id, node, client]);
+
+  const loadPhoto = (field: "photoBefore" | "photoAfter" | "photoNvr", file: File) => {
+    if (file.size > 1_800_000) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = typeof reader.result === "string" ? reader.result : "";
+      if (!url.startsWith("data:")) return;
+      if (field === "photoBefore") setPhotoBefore(url);
+      if (field === "photoAfter") setPhotoAfter(url);
+      if (field === "photoNvr") setPhotoNvr(url);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const patchAppearance = useCallback(
     (patch: Partial<SchemaNodeAppearance>) => {
@@ -184,9 +203,15 @@ export function SchemaDeviceInspector({
         ports: ports.trim() ? Number(ports) : undefined,
         rtspUser: rtspUser.trim() || undefined,
         rtspPass: rtspPass.trim() || undefined,
+        photoBefore: photoBefore || undefined,
+        photoAfter: photoAfter || undefined,
+        photoNvr: photoNvr || undefined,
       },
     });
   }, [
+    photoAfter,
+    photoBefore,
+    photoNvr,
     comment,
     displayName,
     floor,
@@ -225,6 +250,7 @@ export function SchemaDeviceInspector({
             ["network", "Omrežje", Globe],
             ["appearance", "Videz", Paintbrush],
             ["connections", "Povezave", Link2],
+            ["photos", "Fotke", Image],
           ] as const
         ).map(([id, lbl, Icon]) => (
           <button
@@ -503,6 +529,28 @@ export function SchemaDeviceInspector({
                 })}
               </ul>
             )}
+          </div>
+        ) : null}
+
+        {tab === "photos" ? (
+          <div className="space-y-3">
+            {(
+              [
+                ["photoBefore", "Pred montažo", photoBefore, setPhotoBefore],
+                ["photoAfter", "Po montaži", photoAfter, setPhotoAfter],
+                ["photoNvr", "NVR / stenska", photoNvr, setPhotoNvr],
+              ] as const
+            ).map(([field, label, src, setSrc]) => (
+              <div key={field} className="rounded-lg border border-[var(--vo-border)] p-2">
+                <p className="mb-1 font-medium text-[var(--vo-fg)]">{label}</p>
+                {src ? <img src={src} alt={label} className="mb-2 max-h-28 w-full rounded object-cover" /> : <p className="mb-2 text-[10px] text-[var(--vo-muted)]">Ni slike</p>}
+                <label className="inline-flex cursor-pointer rounded border border-[var(--vo-border)] px-2 py-1 hover:bg-[var(--vo-surface)]">
+                  Naloži
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) loadPhoto(field, f); }} />
+                </label>
+                {src ? <button type="button" className="ml-2 text-[10px] text-red-400" onClick={() => setSrc("")}>Odstrani</button> : null}
+              </div>
+            ))}
           </div>
         ) : null}
       </div>

@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
+import { usePortalRole } from "@/context/PortalRoleContext";
 import { usePortalToast } from "@/context/PortalToastContext";
+import { SchemaLayersPanel } from "@/components/portal/schema/SchemaLayersPanel";
+import { SchemaToolbar } from "@/components/portal/schema/SchemaToolbar";
 import { DecimalInput } from "@/components/portal/DecimalInput";
 import { SchemaDeviceInspector } from "@/components/portal/schema/SchemaDeviceInspector";
 import {
@@ -23,6 +26,19 @@ import {
 } from "@/lib/schema-node-utils";
 import { parseTopologyState } from "@/lib/topology-parse";
 import {
+  alignNodes,
+  autoNumberCameraBadges,
+  buildCableScheduleCsv,
+  duplicateNodeInTopo,
+  exportShemaPdf,
+  exportTopologyJson,
+  importTopologyFromJson,
+  cloneTopology,
+  mergeLayerVisibility,
+  openShemaPrintReport,
+  topologySnapshot,
+} from "@/lib/schema-design-extras";
+import {
   buildDesignBomCsv,
   cameraLensVertex,
   downloadTextFile,
@@ -31,6 +47,7 @@ import {
   sumCableLengthM,
   svgArcOpen,
 } from "@/lib/schema-design-tools";
+import { useSchemaHistory } from "@/lib/use-schema-history";
 import type {
   CameraPlanOverlay,
   ClientTopologyState,
@@ -79,8 +96,23 @@ function cameraFovPath(
 
 export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
+  const { role } = usePortalRole();
+  const canEdit = role === "admin" || role === "operator";
   const { client, clientId, dbConfigured, reload, applyClient } = ctx;
-  const [topo, setTopo] = useState<ClientTopologyState>(() => parseTopologyState(client.topologyData));
+  const {
+    topo,
+    mutateTopo,
+    mutateTopoSilent,
+    replaceTopo,
+    pushHistoryBaseline,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useSchemaHistory(parseTopologyState(client.topologyData));
+  const [savedSnap, setSavedSnap] = useState(() =>
+    topologySnapshot(parseTopologyState(client.topologyData)),
+  );
   const [liveStatus, setLiveStatus] = useState<{
     cameras: Record<string, { status: string }>;
     recorders: Record<string, { status: string }>;
@@ -97,7 +129,16 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const [cableTypeDraft, setCableTypeDraft] = useState("Cat6");
   const [canvasZoom, setCanvasZoom] = useState(1);
   const [globalIconSize, setGlobalIconSize] = useState(40);
+  const [measureMode, setMeasureMode] = useState(false);
+  const [measurePts, setMeasurePts] = useState<Array<{ x: number; y: number }>>([]);
+  const [clipboard, setClipboard] = useState<TopologyCanvasNode | null>(null);
+  const [showLayers, setShowLayers] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const dragBaselineRef = useRef<ClientTopologyState | null>(null);
+  const layers = useMemo(() => mergeLayerVisibility(topo.layerVisibility), [topo.layerVisibility]);
+  const isDirty = topologySnapshot(topo) !== savedSnap;
 
   const cableTotalM = useMemo(
     () => sumCableLengthM(topo.floorPlanPaths, topo.planCalibration?.metersPerPx),
@@ -112,8 +153,10 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   }, [selectedPathIdx, topo.floorPlanPaths, topo.planCalibration?.metersPerPx]);
 
   useEffect(() => {
-    setTopo(parseTopologyState(client.topologyData));
-  }, [client.topologyData]);
+    const p = parseTopologyState(client.topologyData);
+    replaceTopo(p, true);
+    setSavedSnap(topologySnapshot(p));
+  }, [client.topologyData, replaceTopo]);
 
   useEffect(() => {
     if (!dbConfigured) return;
@@ -187,12 +230,15 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     [selectedNodeId, topo.nodes],
   );
 
-  const patchNode = useCallback((id: string, patch: Partial<TopologyCanvasNode>) => {
-    setTopo((t) => ({
-      ...t,
-      nodes: t.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)),
-    }));
-  }, []);
+  const patchNode = useCallback(
+    (id: string, patch: Partial<TopologyCanvasNode>) => {
+      mutateTopo((t) => ({
+        ...t,
+        nodes: t.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)),
+      }));
+    },
+    [mutateTopo],
+  );
 
   const onCanvasDrop = (e: React.DragEvent) => {
     if (!editMode || !canvasRef.current) return;
@@ -227,7 +273,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
         appearance: { iconColor: entry.defaultColor, showFov: isCameraIcon(sym.iconKey) },
         cameraPlan: isCameraIcon(sym.iconKey) ? { fovDeg: 70, reachPx: 150 } : undefined,
       };
-      setTopo((t) => ({ ...t, nodes: [...t.nodes, node] }));
+      mutateTopo((t) => ({ ...t, nodes: [...t.nodes, node] }));
       setSelectedNodeId(node.id);
       return;
     }
@@ -247,7 +293,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
       appearance: { iconColor: catalogEntry(iconKey).defaultColor, showFov: inv.kind === "camera" },
       cameraPlan: inv.kind === "camera" ? { fovDeg: 70, reachPx: 150 } : undefined,
     };
-    setTopo((t) => ({ ...t, nodes: [...t.nodes, node] }));
+    mutateTopo((t) => ({ ...t, nodes: [...t.nodes, node] }));
     setSelectedNodeId(node.id);
   };
 
@@ -265,13 +311,13 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
       (e) => (e.from === connectFrom && e.to === id) || (e.from === id && e.to === connectFrom),
     );
     if (!exists) {
-      setTopo((t) => ({ ...t, edges: [...t.edges, { from: connectFrom, to: id }] }));
+      mutateTopo((t) => ({ ...t, edges: [...t.edges, { from: connectFrom, to: id }] }));
     }
     setConnectFrom(null);
   };
 
   const removeNode = (id: string) => {
-    setTopo((t) => ({
+    mutateTopo((t) => ({
       ...t,
       nodes: t.nodes.filter((n) => n.id !== id),
       edges: t.edges.filter((e) => e.from !== id && e.to !== id),
@@ -282,13 +328,13 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const clearAll = () => {
     if (!editMode) return;
     if (!confirm("Res želite počistiti celotno shemo (vozlišča + povezave + risbo)?")) return;
-    setTopo((t) => ({ ...t, nodes: [], edges: [], floorPlanPaths: [] }));
+    mutateTopo((t) => ({ ...t, nodes: [], edges: [], floorPlanPaths: [] }));
   };
   const removeEdge = (idx: number) =>
-    setTopo((t) => ({ ...t, edges: t.edges.filter((_, i) => i !== idx) }));
+    mutateTopo((t) => ({ ...t, edges: t.edges.filter((_, i) => i !== idx) }));
 
   const rotateNode = (id: string, delta: number) => {
-    setTopo((t) => ({
+    mutateTopo((t) => ({
       ...t,
       nodes: t.nodes.map((n) =>
         n.id === id ? { ...n, rotationDeg: (((n.rotationDeg ?? 0) + delta) % 360 + 360) % 360 } : n,
@@ -298,7 +344,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
 
   const patchCameraPlan = (patch: Partial<CameraPlanOverlay>) => {
     if (!selectedNodeId) return;
-    setTopo((t) => ({
+    mutateTopo((t) => ({
       ...t,
       nodes: t.nodes.map((n) =>
         n.id === selectedNodeId ? { ...n, cameraPlan: { ...n.cameraPlan, ...patch } } : n,
@@ -329,6 +375,12 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
 
   const startDraw = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!editMode || !canvasRef.current) return;
+    if (measureMode) {
+      const pt = canvasPoint(e);
+      if (!pt) return;
+      setMeasurePts((prev) => (prev.length >= 2 ? [pt] : [...prev, pt]));
+      return;
+    }
     const rect = canvasRef.current.getBoundingClientRect();
     const start = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     setLineStart(start);
@@ -357,7 +409,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
         kind: drawStrokeKind === "cable" ? "cable" : "wall",
       };
       if (drawStrokeKind === "cable" && cableTypeDraft.trim()) entry.cableType = cableTypeDraft.trim();
-      setTopo((t) => ({
+      mutateTopo((t) => ({
         ...t,
         floorPlanPaths: [...(t.floorPlanPaths ?? []), entry],
       }));
@@ -368,13 +420,13 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const clearDrawing = () => {
     if (!editMode) return;
     if (!confirm("Res želite počistiti narisan tloris?")) return;
-    setTopo((t) => ({ ...t, floorPlanPaths: [] }));
+    mutateTopo((t) => ({ ...t, floorPlanPaths: [] }));
     setSelectedPathIdx(null);
   };
 
   const removeSelectedPath = () => {
     if (!editMode || selectedPathIdx === null) return;
-    setTopo((t) => ({
+    mutateTopo((t) => ({
       ...t,
       floorPlanPaths: (t.floorPlanPaths ?? []).filter((_, i) => i !== selectedPathIdx),
     }));
@@ -395,6 +447,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     const j = (await r.json().catch(() => ({}))) as { client?: typeof client };
     if (j.client) applyClient(j.client);
     else await reload();
+    setSavedSnap(topologySnapshot(topo));
     showToast("Načrt shranjen.");
   }, [applyClient, clientId, dbConfigured, reload, showToast, topo]);
 
@@ -407,27 +460,90 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
       const parent = el.getBoundingClientRect();
       const x = snapCoord(Math.round(e.clientX - parent.left - dragging.dx), g);
       const y = snapCoord(Math.round(e.clientY - parent.top - dragging.dy), g);
-      setTopo((t) => ({
+      mutateTopoSilent((t) => ({
         ...t,
         nodes: t.nodes.map((n) =>
           n.id === dragging.id ? { ...n, x: Math.max(8, x), y: Math.max(8, y) } : n,
         ),
       }));
     };
-    const up = () => setDragging(null);
+    const up = () => {
+      if (dragBaselineRef.current) {
+        pushHistoryBaseline(dragBaselineRef.current);
+        dragBaselineRef.current = null;
+      }
+      setDragging(null);
+    };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     return () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
     };
-  }, [dragging, topo.snapGridPx]);
+  }, [dragging, topo.snapGridPx, mutateTopoSilent, pushHistoryBaseline, topo]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement)
+        return;
+      if (e.ctrlKey && e.key === "z") {
+        e.preventDefault();
+        undo();
+      }
+      if (e.ctrlKey && (e.key === "y" || (e.shiftKey && e.key === "z"))) {
+        e.preventDefault();
+        redo();
+      }
+      if (e.ctrlKey && e.key === "s") {
+        e.preventDefault();
+        if (dbConfigured) void save();
+      }
+      if (e.key === "Delete" && selectedNodeId && editMode) {
+        removeNode(selectedNodeId);
+      }
+      if (e.ctrlKey && e.key === "c" && selectedNodeId) {
+        const n = topo.nodes.find((x) => x.id === selectedNodeId);
+        if (n) setClipboard(JSON.parse(JSON.stringify(n)));
+      }
+      if (e.ctrlKey && e.key === "v" && clipboard && editMode) {
+        const id = newId();
+        mutateTopo((t) => ({
+          ...t,
+          nodes: [
+            ...t.nodes,
+            { ...clipboard, id, x: clipboard.x + 32, y: clipboard.y + 32, deviceRef: undefined },
+          ],
+        }));
+        setSelectedNodeId(id);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clipboard, dbConfigured, editMode, redo, removeNode, save, selectedNodeId, topo.nodes, undo, mutateTopo]);
+
+  const canvasPoint = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!canvasRef.current) return null;
+    const rect = canvasRef.current.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) / canvasZoom,
+      y: (e.clientY - rect.top) / canvasZoom,
+    };
+  };
+
+  const measureLenM = useMemo(() => {
+    if (measurePts.length < 2 || !topo.planCalibration?.metersPerPx) return null;
+    const px = Math.hypot(measurePts[1].x - measurePts[0].x, measurePts[1].y - measurePts[0].y);
+    return Math.round(px * topo.planCalibration.metersPerPx * 100) / 100;
+  }, [measurePts, topo.planCalibration?.metersPerPx]);
 
   return (
-    <div className="flex min-h-[640px] flex-col gap-2 xl:flex-row">
+    <div
+      ref={shellRef}
+      className={`flex min-h-[640px] flex-col gap-2 xl:flex-row ${fullscreen ? "fixed inset-0 z-50 bg-[var(--vo-bg)] p-3" : ""}`}
+    >
       <SchemaIconPalette
         inventoryGroups={inventoryGroups}
-        editMode={editMode}
+        editMode={editMode && canEdit}
         dbConfigured={dbConfigured}
         getDeviceStatus={getDeviceStatus}
       />
@@ -438,31 +554,104 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             Izberite drugo napravo za povezavo (drugi klik prekliče). Desni klik na ikono — odstrani.
           </p>
         ) : null}
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setEditMode((v) => !v)}
-            className={`rounded-lg border px-2 py-1 text-xs ${
-              editMode ? "border-[var(--vo-accent)] text-[var(--vo-accent)]" : "border-[var(--vo-border)] text-[var(--vo-muted)]"
-            }`}
-          >
-            {editMode ? "Način urejanja: VKLOPLJEN" : "Način urejanja: IZKLOPLJEN"}
-          </button>
-          <button
-            type="button"
-            disabled={!editMode}
-            onClick={clearDrawing}
-            className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)] disabled:opacity-40"
-          >
+        {measureMode ? (
+          <p className="rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs text-amber-200">
+            Merjenje: kliknite dve točki.{measureLenM != null ? ` ≈ ${measureLenM} m` : ""}
+          </p>
+        ) : null}
+        <SchemaToolbar
+          editMode={editMode && canEdit}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          isDirty={isDirty}
+          measureMode={measureMode}
+          showLayers={showLayers}
+          fullscreen={fullscreen}
+          selectedNodeId={selectedNodeId}
+          dbConfigured={dbConfigured}
+          onToggleEdit={() => canEdit && setEditMode((v) => !v)}
+          onUndo={undo}
+          onRedo={redo}
+          onSave={() => void save()}
+          onExportBom={() =>
+            downloadTextFile(`visionone-bom-${client.slug ?? client.id}.csv`, buildDesignBomCsv(client, topo.nodes))
+          }
+          onExportCables={() =>
+            downloadTextFile(`kabli-${client.slug ?? client.id}.csv`, buildCableScheduleCsv(topo, client))
+          }
+          onExportPdf={() => void exportShemaPdf(client, topo, cableTotalM)}
+          onPrint={() => openShemaPrintReport(client, topo, cableTotalM)}
+          onExportJson={() => exportTopologyJson(client.slug ?? client.id, topo)}
+          onImportJson={() => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = "application/json";
+            input.onchange = () => {
+              const file = input.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                const parsed = importTopologyFromJson(String(reader.result ?? ""));
+                if (!parsed) {
+                  showToast("Neveljavna JSON shema.", "err");
+                  return;
+                }
+                mutateTopo(() => parsed);
+                showToast("Shema uvožena — shranite.");
+              };
+              reader.readAsText(file);
+            };
+            input.click();
+          }}
+          onAutoNumber={() => mutateTopo((t) => autoNumberCameraBadges(t))}
+          onDuplicate={() => selectedNodeId && mutateTopo((t) => duplicateNodeInTopo(t, selectedNodeId))}
+          onCopy={() => {
+            const n = selectedNodeId ? topo.nodes.find((x) => x.id === selectedNodeId) : undefined;
+            if (n) setClipboard(JSON.parse(JSON.stringify(n)));
+          }}
+          onPaste={() => {
+            if (!clipboard || !editMode) return;
+            const id = newId();
+            mutateTopo((t) => ({
+              ...t,
+              nodes: [...t.nodes, { ...clipboard, id, x: clipboard.x + 32, y: clipboard.y + 32, deviceRef: undefined }],
+            }));
+            setSelectedNodeId(id);
+          }}
+          onMeasure={() => {
+            setMeasureMode((m) => !m);
+            setMeasurePts([]);
+          }}
+          onToggleLayers={() => setShowLayers((v) => !v)}
+          onFullscreen={() => {
+            if (!fullscreen && shellRef.current?.requestFullscreen) {
+              void shellRef.current.requestFullscreen();
+              setFullscreen(true);
+            } else if (document.fullscreenElement) {
+              void document.exitFullscreen();
+              setFullscreen(false);
+            } else setFullscreen((f) => !f);
+          }}
+          onFitView={() => setCanvasZoom(1)}
+          onAlign={(mode) => {
+            const ids = selectedNodeId ? [selectedNodeId] : topo.nodes.map((n) => n.id);
+            mutateTopo((t) => alignNodes(t, ids, mode));
+          }}
+        />
+        {showLayers ? (
+          <SchemaLayersPanel
+            visibility={topo.layerVisibility}
+            onChange={(v) => mutateTopo((t) => ({ ...t, layerVisibility: v }))}
+            planNotes={topo.planNotes ?? ""}
+            onPlanNotes={(notes) => mutateTopo((t) => ({ ...t, planNotes: notes || undefined }))}
+          />
+        ) : null}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <button type="button" disabled={!editMode} onClick={clearDrawing} className="text-[var(--vo-muted)] hover:text-[var(--vo-danger)] disabled:opacity-40">
             Počisti risbo
           </button>
-          <button
-            type="button"
-            disabled={!editMode || selectedPathIdx === null}
-            onClick={removeSelectedPath}
-            className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-danger)] disabled:opacity-40"
-          >
-            Izbriši izbrano črto
+          <button type="button" disabled={!editMode || selectedPathIdx === null} onClick={removeSelectedPath} className="text-[var(--vo-muted)] hover:text-[var(--vo-danger)] disabled:opacity-40">
+            Izbriši črto
           </button>
           <button
             type="button"
@@ -494,44 +683,16 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             </button>
           </div>
           <span className="text-xs text-[var(--vo-muted)]">Čvorov ({topo.nodes.length})</span>
-          {selectedNodeId ? (
+          {selectedNodeId && editMode ? (
             <>
-              <button
-                type="button"
-                onClick={() => rotateNode(selectedNodeId, -15)}
-                className="rounded border border-[var(--vo-border)] px-2 py-1 text-xs text-[var(--vo-muted)] hover:text-[var(--vo-fg)]"
-              >
-                Obrni -15°
+              <button type="button" onClick={() => rotateNode(selectedNodeId, -15)} className="rounded border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)]">
+                -15°
               </button>
-              <button
-                type="button"
-                onClick={() => rotateNode(selectedNodeId, 15)}
-                className="rounded border border-[var(--vo-border)] px-2 py-1 text-xs text-[var(--vo-muted)] hover:text-[var(--vo-fg)]"
-              >
-                Obrni +15°
+              <button type="button" onClick={() => rotateNode(selectedNodeId, 15)} className="rounded border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)]">
+                +15°
               </button>
             </>
           ) : null}
-          <button
-            type="button"
-            disabled={!dbConfigured}
-            onClick={() => void save()}
-            className="rounded-lg bg-[var(--vo-accent)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
-          >
-            Shrani načrt
-          </button>
-          <button
-            type="button"
-            className="rounded border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)] hover:text-[var(--vo-fg)]"
-            onClick={() =>
-              downloadTextFile(
-                `visionone-bom-${client.slug ?? client.id}.csv`,
-                buildDesignBomCsv(client, topo.nodes),
-              )
-            }
-          >
-            Izvoži BOM (CSV)
-          </button>
         </div>
 
         {editMode ? (
@@ -544,7 +705,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   placeholder="npr. 0,02"
                   value={topo.planCalibration?.metersPerPx ?? 0}
                   onChange={(n) =>
-                    setTopo((t) => ({
+                    mutateTopo((t) => ({
                       ...t,
                       planCalibration: n > 0 ? { metersPerPx: n } : undefined,
                     }))
@@ -557,7 +718,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                 <select
                   value={topo.snapGridPx ?? 0}
                   onChange={(e) =>
-                    setTopo((t) => ({
+                    mutateTopo((t) => ({
                       ...t,
                       snapGridPx: Number(e.target.value) || undefined,
                     }))
@@ -628,7 +789,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
               placeholder="https://…"
               value={topo.planBackgroundUrl ?? ""}
               onChange={(e) =>
-                setTopo((t) => ({
+                mutateTopo((t) => ({
                   ...t,
                   planBackgroundUrl: e.target.value.trim() || undefined,
                   planBackgroundDataUrl: e.target.value.trim() ? undefined : t.planBackgroundDataUrl,
@@ -654,7 +815,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   reader.onload = () => {
                     const url = typeof reader.result === "string" ? reader.result : "";
                     if (!url.startsWith("data:")) return;
-                    setTopo((t) => ({
+                    mutateTopo((t) => ({
                       ...t,
                       planBackgroundDataUrl: url,
                       planBackgroundUrl: undefined,
@@ -668,7 +829,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
               type="button"
               className="rounded border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)] hover:text-[var(--vo-danger)]"
               onClick={() =>
-                setTopo((t) => ({ ...t, planBackgroundUrl: undefined, planBackgroundDataUrl: undefined }))
+                mutateTopo((t) => ({ ...t, planBackgroundUrl: undefined, planBackgroundDataUrl: undefined }))
               }
             >
               Odstrani ozadje
@@ -691,7 +852,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             className="relative min-h-[520px] w-full origin-top-left"
             style={{ transform: `scale(${canvasZoom})`, transformOrigin: "0 0" }}
           >
-          {(topo.planBackgroundDataUrl ?? topo.planBackgroundUrl) ? (
+          {layers.background !== false && (topo.planBackgroundDataUrl ?? topo.planBackgroundUrl) ? (
             <div
               className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.92]"
               style={{
@@ -712,7 +873,8 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             />
           ) : null}
           <svg className="absolute inset-0 h-full w-full">
-            {topo.nodes.map((n) => {
+            {layers.fov !== false &&
+              topo.nodes.map((n) => {
               if (!nodeShowsFov(n)) return null;
               const { cx, cy } = nodeAnchor(n, globalIconSize);
               const plan = n.cameraPlan;
@@ -796,6 +958,8 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
             })}
             {(topo.floorPlanPaths ?? []).map((path, i) => {
               const isCable = path.kind === "cable";
+              if (isCable && layers.cables === false) return null;
+              if (!isCable && layers.walls === false) return null;
               const sel = selectedPathIdx === i;
               const strokeCol = sel
                 ? "rgba(56, 189, 248, 0.98)"
@@ -835,28 +999,41 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                 strokeLinejoin="round"
               />
             ) : null}
-            {topo.edges.map((edge, i) => {
+            {layers.edges !== false &&
+              topo.edges.map((edge, i) => {
               const a = topo.nodes.find((n) => n.id === edge.from);
               const b = topo.nodes.find((n) => n.id === edge.to);
               if (!a || !b) return null;
               const aa = nodeAnchor(a, globalIconSize);
               const bb = nodeAnchor(b, globalIconSize);
+              const mx = (aa.cx + bb.cx) / 2;
+              const my = (aa.cy + bb.cy) / 2;
+              const lbl = edge.label ?? edge.cableType;
               return (
-                <line
-                  key={`${edge.from}-${edge.to}-${i}`}
-                  x1={aa.cx}
-                  y1={aa.cy}
-                  x2={bb.cx}
-                  y2={bb.cy}
-                  stroke="var(--vo-accent)"
-                  strokeWidth={2}
-                  opacity={0.6}
-                />
+                <g key={`${edge.from}-${edge.to}-${i}`}>
+                  <line x1={aa.cx} y1={aa.cy} x2={bb.cx} y2={bb.cy} stroke="var(--vo-accent)" strokeWidth={2} opacity={0.6} />
+                  {lbl ? (
+                    <text x={mx} y={my} fill="var(--vo-fg)" fontSize={9} textAnchor="middle" dominantBaseline="middle">
+                      {lbl}
+                    </text>
+                  ) : null}
+                </g>
               );
             })}
+            {measurePts.length === 2 ? (
+              <line
+                x1={measurePts[0].x}
+                y1={measurePts[0].y}
+                x2={measurePts[1].x}
+                y2={measurePts[1].y}
+                stroke="#22d3ee"
+                strokeWidth={2}
+                strokeDasharray="6 4"
+              />
+            ) : null}
           </svg>
 
-          {topo.nodes.map((n) => {
+          {layers.devices !== false && topo.nodes.map((n) => {
             const iconKey = resolveIconKey(n);
             const sz = resolveIconSize(n, globalIconSize);
             const st = getNodeStatus(n);
@@ -886,6 +1063,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   if (e.button !== 0) return;
                   e.stopPropagation();
                   const rect = e.currentTarget.getBoundingClientRect();
+                  dragBaselineRef.current = cloneTopology(topo);
                   setDragging({
                     id: n.id,
                     dx: (e.clientX - rect.left) / canvasZoom,

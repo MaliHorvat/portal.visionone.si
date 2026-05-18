@@ -74,8 +74,26 @@ function parsePlanMeta(raw: unknown): TopologyCanvasNode["planMeta"] {
     ports,
     rtspUser: str("rtspUser"),
     rtspPass: str("rtspPass"),
+    photoBefore: str("photoBefore")?.startsWith("data:") ? str("photoBefore") : undefined,
+    photoAfter: str("photoAfter")?.startsWith("data:") ? str("photoAfter") : undefined,
+    photoNvr: str("photoNvr")?.startsWith("data:") ? str("photoNvr") : undefined,
   };
   return Object.values(meta).some((v) => v !== undefined && v !== "") ? meta : undefined;
+}
+
+function parseLayerVisibility(raw: unknown): ClientTopologyState["layerVisibility"] {
+  if (!raw || typeof raw !== "object") return undefined;
+  const p = raw as Record<string, unknown>;
+  const b = (k: string) => (typeof p[k] === "boolean" ? p[k] : undefined);
+  const lv = {
+    background: b("background"),
+    walls: b("walls"),
+    cables: b("cables"),
+    fov: b("fov"),
+    devices: b("devices"),
+    edges: b("edges"),
+  };
+  return Object.values(lv).some((v) => v !== undefined) ? lv : undefined;
 }
 
 export function parseTopologyState(raw: unknown): ClientTopologyState {
@@ -124,6 +142,8 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
     .map((e) => ({
       from: typeof e.from === "string" ? e.from : "",
       to: typeof e.to === "string" ? e.to : "",
+      label: typeof e.label === "string" ? e.label : undefined,
+      cableType: typeof e.cableType === "string" ? e.cableType : undefined,
     }))
     .filter((e) => e.from && e.to);
 
@@ -143,6 +163,9 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
       return { points, kind, cableType };
     })
     .filter((p) => p.points.length > 1);
+  const planNotes = typeof o.planNotes === "string" ? o.planNotes : undefined;
+  const mapBackgroundUrl =
+    typeof o.mapBackgroundUrl === "string" && o.mapBackgroundUrl.trim() ? o.mapBackgroundUrl.trim() : undefined;
   return {
     nodes,
     edges,
@@ -151,5 +174,8 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
     planBackgroundDataUrl,
     planCalibration,
     snapGridPx,
+    planNotes,
+    layerVisibility: parseLayerVisibility(o.layerVisibility),
+    mapBackgroundUrl,
   };
 }

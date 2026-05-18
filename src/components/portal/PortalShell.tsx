@@ -8,15 +8,20 @@ import {
   Boxes,
   ChevronDown,
   ChevronUp,
+  Clock,
+  FileText,
   LayoutDashboard,
+  LayoutGrid,
   Package,
   RadioTower,
   Settings,
   Shield,
+  StickyNote,
   UserCircle,
   Users,
   Wrench,
   Video,
+  Network,
 } from "lucide-react";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import type { NavPermissionKey } from "@/lib/nav-permissions";
@@ -37,6 +42,17 @@ const navSections: NavSection[] = [
     items: [
       { href: "/portal/stranke", label: "Objekti & stranke", icon: Users, permission: "clients", adminOnly: true },
       { href: "/portal/zahtevki", label: "Zahtevki", icon: Wrench, permission: "service-requests" },
+      { href: "/portal/ponudbe", label: "Ponudbe", icon: FileText, permission: "offers", adminOnly: true },
+      { href: "/portal/opomniki", label: "Opomniki", icon: Bell, permission: "dashboard" },
+      { href: "/portal/cas", label: "Sledenje času", icon: Clock, permission: "time-tracking" },
+      { href: "/portal/belezke", label: "Beležke", icon: StickyNote, permission: "dashboard" },
+    ],
+  },
+  {
+    title: "ORODJA",
+    items: [
+      { href: "/portal/orodja", label: "Kalkulatorji", icon: Network, permission: "tools" },
+      { href: "/portal/rack-dizajner", label: "Rack dizajner", icon: LayoutGrid, permission: "rack-designer" },
     ],
   },
   {

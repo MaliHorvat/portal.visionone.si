@@ -17,6 +17,8 @@ import {
   Wifi,
 } from "lucide-react";
 import { usePortalRole } from "@/context/PortalRoleContext";
+import { PortalQuickActions } from "@/components/portal/PortalQuickActions";
+import { clientProfilePath } from "@/lib/client-url";
 import type {
   ClientDashboardCard,
   PortalDashboardPayload,
@@ -212,6 +214,8 @@ export function PortalDashboardView({ initial }: Props) {
         </span>
       </section>
 
+      <PortalQuickActions />
+
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--vo-muted)]">
           Hitre povezave
@@ -266,9 +270,11 @@ function QuickCard({
 
 function ClientStatusCard({ card }: { card: ClientDashboardCard }) {
   const ok = card.state === "ok";
+  const href = `${clientProfilePath({ id: card.id, slug: "" })}?tab=shema`;
   return (
-    <div
-      className={`min-w-[260px] max-w-[280px] shrink-0 rounded-xl border p-4 shadow-[var(--vo-card-shadow)] ${
+    <Link
+      href={href}
+      className={`block min-w-[260px] max-w-[280px] shrink-0 rounded-xl border p-4 shadow-[var(--vo-card-shadow)] transition hover:border-[var(--vo-accent)] ${
         ok ? "border-[var(--vo-border)] bg-[var(--vo-surface)]" : "border-red-500/40 bg-red-950/10"
       }`}
     >
@@ -310,6 +316,7 @@ function ClientStatusCard({ card }: { card: ClientDashboardCard }) {
           </ul>
         </div>
       ) : null}
-    </div>
+      <p className="mt-3 text-[10px] font-medium text-[var(--vo-accent)]">Odpri shemo →</p>
+    </Link>
   );
 }
