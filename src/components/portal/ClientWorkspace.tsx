@@ -37,6 +37,8 @@ import {
   Wrench,
 } from "lucide-react";
 import { getFavoriteClientIds, toggleFavoriteClient } from "@/lib/portal-prefs";
+import { ClientProfileEditor } from "./ClientProfileEditor";
+import { ClientInternalNotes } from "./ClientInternalNotes";
 
 const TABS: { id: WorkspaceTab; label: string; icon: ElementType }[] = [
   { id: "kamere", label: "Kamere", icon: Camera },
@@ -204,7 +206,19 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
                   {client.email}
                 </span>
               ) : null}
+              <span className="inline-flex items-center gap-1 rounded-full border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)]">
+                <Camera className="h-3.5 w-3.5" aria-hidden />
+                {client.cameras.length} kamer
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-muted)]">
+                <Boxes className="h-3.5 w-3.5" aria-hidden />
+                {client.nvrs.length} NVR · {client.switches.length} stikala
+              </span>
             </div>
+            <div className="mt-3">
+              <ClientProfileEditor ctx={ctx} onOpenPonudbe={() => selectTab("ponudbe")} />
+            </div>
+            <ClientInternalNotes clientId={client.id} />
           </div>
           <button
             type="button"

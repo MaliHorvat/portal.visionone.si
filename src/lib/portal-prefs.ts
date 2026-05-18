@@ -7,6 +7,7 @@ const LAST_TAB_KEY = "vo-portal-client-last-tab";
 const QUICK_HIDDEN_KEY = "vo-portal-quick-actions-hidden";
 const DASH_COMPACT_KEY = "vo-portal-dashboard-compact";
 const DASH_FAV_ONLY_KEY = "vo-portal-dashboard-favorites-only";
+const CLIENT_NOTES_KEY = "vo-portal-client-internal-notes";
 
 function readJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -99,6 +100,18 @@ export function setDashboardFavoritesOnly(v: boolean): void {
   writeJson(DASH_FAV_ONLY_KEY, v);
 }
 
+export function getClientInternalNote(clientId: string): string {
+  const map = readJson<Record<string, string>>(CLIENT_NOTES_KEY, {});
+  return map[clientId] ?? "";
+}
+
+export function setClientInternalNote(clientId: string, note: string): void {
+  const map = readJson<Record<string, string>>(CLIENT_NOTES_KEY, {});
+  if (note.trim()) map[clientId] = note.trim();
+  else delete map[clientId];
+  writeJson(CLIENT_NOTES_KEY, map);
+}
+
 export function clearPortalLocalPrefs(): void {
   if (typeof window === "undefined") return;
   [
@@ -109,6 +122,7 @@ export function clearPortalLocalPrefs(): void {
     QUICK_HIDDEN_KEY,
     DASH_COMPACT_KEY,
     DASH_FAV_ONLY_KEY,
+    CLIENT_NOTES_KEY,
     "vo_nav_section_orders",
   ].forEach((k) => localStorage.removeItem(k));
 }

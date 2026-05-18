@@ -90,6 +90,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
       phone: String(form.get("phone") ?? ""),
       email: String(form.get("email") ?? ""),
       packageId: String(form.get("packageId") ?? "") || null,
+      health: String(form.get("health") ?? "ok") === "alarm" ? "alarm" : "ok",
     };
     const url = editClientId ? `/api/clients/${encodeURIComponent(editClientId)}` : "/api/clients";
     const method = editClientId ? "PUT" : "POST";
@@ -336,7 +337,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
               defaultValue={
                 editClientId ? clients.find((c) => c.id === editClientId)?.package?.id ?? "" : ""
               }
-              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
+              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
             >
               <option value="">— brez paketa —</option>
               {packages.map((p) => (
@@ -344,6 +345,14 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                   {p.name} ({p.price} €)
                 </option>
               ))}
+            </select>
+            <select
+              name="health"
+              defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.health ?? "ok" : "ok"}
+              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+            >
+              <option value="ok">Status: objekt OK</option>
+              <option value="alarm">Status: alarm</option>
             </select>
           </div>
           {error ? <p className="text-sm text-red-700">{error}</p> : null}

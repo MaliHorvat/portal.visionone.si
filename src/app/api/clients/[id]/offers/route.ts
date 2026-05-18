@@ -23,7 +23,7 @@ export async function GET(_request: Request, ctx: Ctx) {
   }
 }
 
-export async function POST(_request: Request, ctx: Ctx) {
+export async function POST(request: Request, ctx: Ctx) {
   const guard = await requirePortalSession();
   if (guard) return guard;
   if (!prisma) return jsonError("Baza ni nastavljena.", 503);
@@ -31,7 +31,9 @@ export async function POST(_request: Request, ctx: Ctx) {
     const { id: clientId } = await ctx.params;
     const own = await requireOwnedClient(clientId);
     if (!own.ok) return own.response;
-    const offer = await createEmptyOffer(clientId);
+    const body = await request.json().catch(() => ({}));
+    const title = typeof body?.title === "string" ? body.title : undefined;
+    const offer = await createEmptyOffer(clientId, { title });
     await appendAuditLog(own.session.username, "client_offer_create", `${clientId} → ${offer.id}`);
     return NextResponse.json({ offer }, { status: 201 });
   } catch (e) {

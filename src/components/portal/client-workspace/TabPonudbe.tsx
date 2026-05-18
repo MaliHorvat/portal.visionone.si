@@ -1,8 +1,10 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Copy, Download } from "lucide-react";
 import { usePortalToast } from "@/context/PortalToastContext";
 import { DecimalInput } from "@/components/portal/DecimalInput";
+import { exportOfferLinesCsv } from "@/lib/portal-export";
 import { OfferLineTable, type OfferLineRow } from "./OfferLineTable";
 import type { WorkspaceCtx } from "./types";
 
@@ -13,6 +15,7 @@ type LineRow = OfferLineRow;
 
 type OfferDto = {
   id: string;
+  title?: string;
   offerDate: string;
   clientAddress: string;
   notes: string;
@@ -73,7 +76,10 @@ function formatOfferPlainText(
   rows: LineRow[],
   totals: { net: number; vat: number; gross: number },
 ): string {
-  const hdr = [`PONUDBA`, `Stranka: ${clientName}`, `Datum: ${draft.offerDate}`, `Naslov: ${draft.clientAddress}`, ""].join("\n");
+  const titleLine = draft.title?.trim() ? `Naslov ponudbe: ${draft.title}` : "";
+  const hdr = [`PONUDBA`, titleLine, `Stranka: ${clientName}`, `Datum: ${draft.offerDate}`, `Naslov: ${draft.clientAddress}`, ""]
+    .filter(Boolean)
+    .join("\n");
   const lines = rows.map(
     (l) =>
       `${l.section === "material" ? "[MAT]" : "[DEL]"} ${l.code}\t${l.description}\t${l.qty} ${l.unit} \u00D7 ${l.unitPrice} ${EUR} (popust ${l.discountPct}%) => ${lineNet(l).toFixed(2)} ${EUR}`,
@@ -121,11 +127,15 @@ async function imageToDataUrl(url: string): Promise<string | null> {
 export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
   const { client, clientId, dbConfigured } = ctx;
-  const [offers, setOffers] = useState<{ id: string; updatedAt?: string }[]>([]);
+  const [offers, setOffers] = useState<
+    { id: string; title?: string; offerDate?: string; updatedAt?: string }[]
+  >([]);
   const [sel, setSel] = useState<string | null>(null);
   const [draft, setDraft] = useState<OfferDto | null>(null);
   const [rows, setRows] = useState<LineRow[]>([]);
   const [busy, setBusy] = useState(false);
+  const [newOfferTitle, setNewOfferTitle] = useState("");
+  const savedSnapshot = useRef("");
 
   const loadList = useCallback(async () => {
     if (!dbConfigured) return;
@@ -133,7 +143,14 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
     if (!r.ok) return;
     const j = await r.json();
     const list = (j.offers ?? []) as OfferDto[];
-    setOffers(list.map((x) => ({ id: x.id, updatedAt: x.updatedAt })));
+    setOffers(
+      list.map((x) => ({
+        id: x.id,
+        title: x.title,
+        offerDate: x.offerDate,
+        updatedAt: x.updatedAt,
+      })),
+    );
     setSel((prev) => prev ?? list[0]?.id ?? null);
   }, [clientId, dbConfigured]);
 
@@ -145,9 +162,22 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       const o = j.offer as OfferDto;
       setDraft(o);
       setRows(dtoToRows(o));
+      savedSnapshot.current = JSON.stringify({ draft: o, rows: dtoToRows(o) });
     },
     [clientId],
   );
+
+  const isDirty = useMemo(() => {
+    if (!draft) return false;
+    return savedSnapshot.current !== JSON.stringify({ draft, rows });
+  }, [draft, rows]);
+
+  function offerLabel(o: { id: string; title?: string; offerDate?: string }) {
+    const t = o.title?.trim();
+    if (t) return t;
+    if (o.offerDate) return `Ponudba ${o.offerDate}`;
+    return o.id.slice(0, 8) + "…";
+  }
 
   useEffect(() => {
     void loadList();
@@ -179,7 +209,23 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
     const j = await r.json();
     await loadList();
     setSel(j.offer.id);
+    setNewOfferTitle("");
     showToast("Nova ponudba ustvarjena.");
+  }
+
+  async function duplicateCurrentOffer() {
+    if (!sel || !dbConfigured) return;
+    setBusy(true);
+    const r = await fetch(`/api/clients/${clientId}/offers/${sel}/duplicate`, { method: "POST" });
+    setBusy(false);
+    if (!r.ok) {
+      showToast("Podvajanje ni uspelo.", "err");
+      return;
+    }
+    const j = await r.json();
+    await loadList();
+    setSel(j.offer.id);
+    showToast("Ponudba podvojena.");
   }
 
   async function saveOffer() {
@@ -200,6 +246,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        title: draft.title ?? "",
         offerDate: draft.offerDate,
         clientAddress: draft.clientAddress || client.address,
         notes: draft.notes,
@@ -308,7 +355,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
           <img src="/visionone-mark.png" alt="" style="height:34px;width:34px;object-fit:contain" />
           <img src="/visionone-wordmark.png" alt="" style="height:18px;object-fit:contain" />
         </div>
-        <h1>Ponudba</h1>
+        <h1>${escapeHtml(draft.title?.trim() || "Ponudba")}</h1>
         <div class="meta">
           <div><b>Stranka:</b> ${escapeHtml(client.name)}</div>
           <div><b>Datum:</b> ${escapeHtml(draft.offerDate || "—")}</div>
@@ -343,7 +390,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       if (markData) doc.addImage(markData, "PNG", 14, 8, 12, 12);
       if (wordmarkData) doc.addImage(wordmarkData, "PNG", 28, 9.5, 44, 9);
       doc.setFontSize(14);
-      doc.text("Ponudba", 14, 26);
+      doc.text(draft.title?.trim() || "Ponudba", 14, 26);
       doc.setFontSize(10);
       let y = 34;
       doc.text(`Stranka: ${client.name}`, 14, y);
@@ -415,19 +462,43 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       <div className="flex flex-wrap items-center gap-2">
         <select
           value={sel ?? ""}
-          onChange={(e) => setSel(e.target.value || null)}
-          className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-sm"
+          onChange={(e) => {
+            if (isDirty && !confirm("Imate neshranjene spremembe. Nadaljujem?")) return;
+            setSel(e.target.value || null);
+          }}
+          className="max-w-[min(100%,280px)] rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-sm"
         >
           <option value="">— izberi ponudbo —</option>
           {offers.map((o) => (
             <option key={o.id} value={o.id}>
-              {o.id.slice(0, 8)}…
+              {offerLabel(o)}
             </option>
           ))}
         </select>
+        <input
+          type="text"
+          value={newOfferTitle}
+          onChange={(e) => setNewOfferTitle(e.target.value)}
+          placeholder="Ime nove ponudbe (opcijsko)"
+          className="min-w-[160px] rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-xs"
+        />
         <button type="button" disabled={busy || !dbConfigured} onClick={() => void createOffer()} className="rounded-lg bg-[var(--vo-accent)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">
           Nova ponudba
         </button>
+        <button
+          type="button"
+          disabled={!sel || busy || !dbConfigured}
+          onClick={() => void duplicateCurrentOffer()}
+          className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs font-semibold disabled:opacity-40"
+        >
+          <Copy className="h-3.5 w-3.5" />
+          Podvoji
+        </button>
+        {isDirty ? (
+          <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
+            Neshranjeno
+          </span>
+        ) : null}
         <button
           type="button"
           disabled={!draft || busy}
@@ -452,6 +523,25 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         >
           PDF
         </button>
+        <button
+          type="button"
+          disabled={!draft || rows.length === 0}
+          onClick={() =>
+            exportOfferLinesCsv(
+              rows.map((l) => ({
+                code: l.code,
+                description: l.description,
+                qty: l.qty,
+                unitPrice: l.unitPrice,
+                discountPct: l.discountPct,
+              })),
+            )
+          }
+          className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-3 py-2 text-xs font-semibold disabled:opacity-40"
+        >
+          <Download className="h-3.5 w-3.5" />
+          CSV
+        </button>
         <button type="button" disabled={busy || !sel || !dbConfigured} onClick={() => void saveOffer()} className="ml-auto rounded-lg bg-[var(--vo-accent)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">
           Shrani
         </button>
@@ -462,8 +552,19 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
 
       {draft ? (
         <div className="space-y-4 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
-          <h3 className="text-lg font-semibold text-[var(--vo-fg)]">Urejanje ponudbe</h3>
+          <h3 className="text-lg font-semibold text-[var(--vo-fg)]">
+            {draft.title?.trim() || "Urejanje ponudbe"}
+          </h3>
           <div className="grid gap-3 md:grid-cols-2">
+            <label className="text-xs md:col-span-2">
+              <span className="text-[var(--vo-muted)]">Ime / naslov ponudbe</span>
+              <input
+                value={draft.title ?? ""}
+                onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                placeholder="npr. Ponudba video nadzor 2026"
+                className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-medium"
+              />
+            </label>
             <label className="text-xs">
               <span className="text-[var(--vo-muted)]">Stranka</span>
               <input readOnly value={client.name} className="mt-1 w-full rounded border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-2 py-1.5" />

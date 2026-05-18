@@ -25,11 +25,69 @@ export async function listClientOffers(clientId: string) {
   });
 }
 
-export async function createEmptyOffer(clientId: string) {
+export async function listAllOffersForSession(ownerUsername: string | null, isAdmin: boolean) {
   requireDb();
+  const where = isAdmin || !ownerUsername ? {} : { client: { ownerUsername } };
+  return prisma!.clientOffer.findMany({
+    where,
+    orderBy: { updatedAt: "desc" },
+    include: {
+      client: { select: { id: true, name: true, slug: true } },
+      lines: { orderBy: { sortOrder: "asc" } },
+    },
+    take: 500,
+  });
+}
+
+export async function createEmptyOffer(clientId: string, opts?: { title?: string }) {
+  requireDb();
+  const client = await prisma!.client.findUnique({
+    where: { id: clientId },
+    select: { address: true, name: true },
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const defaultTitle = opts?.title?.trim() || `Ponudba — ${client?.name ?? "stranka"} (${today})`;
   return prisma!.clientOffer.create({
-    data: { clientId },
+    data: {
+      clientId,
+      title: defaultTitle,
+      offerDate: today,
+      clientAddress: client?.address ?? "",
+    },
     include: { lines: true },
+  });
+}
+
+export async function duplicateOffer(offerId: string) {
+  requireDb();
+  const src = await getOffer(offerId);
+  if (!src) throw new Error("Ponudba ne obstaja.");
+  const baseTitle = (src.title || "Ponudba").trim();
+  return prisma!.clientOffer.create({
+    data: {
+      clientId: src.clientId,
+      title: `${baseTitle} (kopija)`,
+      offerDate: src.offerDate || new Date().toISOString().slice(0, 10),
+      clientAddress: src.clientAddress,
+      notes: src.notes,
+      totalDiscountPct: src.totalDiscountPct,
+      vatEnabled: src.vatEnabled,
+      vatPct: src.vatPct,
+      lines: {
+        create: src.lines.map((l) => ({
+          section: l.section,
+          sortOrder: l.sortOrder,
+          code: l.code,
+          description: l.description,
+          unit: l.unit,
+          qty: l.qty,
+          unitPrice: l.unitPrice,
+          discountPct: l.discountPct,
+          lineVatPct: l.lineVatPct,
+        })),
+      },
+    },
+    include: { lines: { orderBy: { sortOrder: "asc" } } },
   });
 }
 
@@ -44,6 +102,7 @@ export async function getOffer(offerId: string) {
 export async function updateOfferFull(
   offerId: string,
   patch: {
+    title?: string;
     offerDate?: string;
     clientAddress?: string;
     notes?: string;
@@ -58,6 +117,7 @@ export async function updateOfferFull(
 
   await prisma!.$transaction(async (tx) => {
     const meta: Record<string, string | number | boolean> = {};
+    if (patch.title !== undefined) meta.title = patch.title;
     if (patch.offerDate !== undefined) meta.offerDate = patch.offerDate;
     if (patch.clientAddress !== undefined) meta.clientAddress = patch.clientAddress;
     if (patch.notes !== undefined) meta.notes = patch.notes;

@@ -130,6 +130,7 @@ model ClientOffer {
   id               String   @id @default(cuid())
   clientId         String
   client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title            String   @default("")
   offerDate        String   @default("")
   clientAddress    String   @default("")
   notes            String   @db.Text @default("")

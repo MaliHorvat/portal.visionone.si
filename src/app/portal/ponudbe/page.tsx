@@ -1,268 +1,173 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
-import { Copy, Download, Search, Trash2 } from "lucide-react";
-
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { Download, ExternalLink, Search } from "lucide-react";
 import { AdminGate } from "@/components/portal/AdminGate";
+import { downloadCsv } from "@/lib/portal-export";
+import { clientProfilePath } from "@/lib/client-url";
 
-import { DecimalInput } from "@/components/portal/DecimalInput";
+type OfferRow = {
+  id: string;
+  title: string;
+  offerDate: string;
+  clientAddress: string;
+  updatedAt: string;
+  client: { id: string; name: string; slug: string | null };
+  lines: Array<{ qty: number; unitPrice: number; discountPct: number }>;
+};
 
-import { exportOfferLinesCsv } from "@/lib/portal-export";
+function lineNet(l: { qty: number; unitPrice: number; discountPct: number }) {
+  return l.qty * l.unitPrice * (1 - l.discountPct / 100);
+}
 
-import { mockOfferLines } from "@/lib/mock-data";
+function offerGross(o: OfferRow) {
+  const net = o.lines.reduce((s, l) => s + lineNet(l), 0);
+  return net * 1.22;
+}
 
-import type { OfferLine } from "@/lib/types";
-
-const VAT = 0.22;
-
-function totals(lines: OfferLine[]) {
-  let net = 0;
-
-  for (const l of lines) {
-    const lineNet = l.qty * l.unitPrice * (1 - l.discountPct / 100);
-
-    net += lineNet;
-  }
-
-  const gross = net * (1 + VAT);
-
-  return { net, gross };
+function offerLabel(o: OfferRow) {
+  const t = o.title?.trim();
+  if (t) return t;
+  if (o.offerDate) return `Ponudba ${o.offerDate}`;
+  return o.id.slice(0, 8) + "…";
 }
 
 export default function PonudbePage() {
-  const [lines, setLines] = useState<OfferLine[]>(mockOfferLines);
-
+  const [offers, setOffers] = useState<OfferRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      setLoading(true);
+      try {
+        const r = await fetch("/api/offers", { credentials: "include" });
+        const j = (await r.json()) as { offers?: OfferRow[] };
+        setOffers(j.offers ?? []);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const clients = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const o of offers) map.set(o.client.id, o.client.name);
+    return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1], "sl"));
+  }, [offers]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-
-    if (!q) return lines;
-
-    return lines.filter(
-      (l) =>
-        l.code.toLowerCase().includes(q) ||
-        l.description.toLowerCase().includes(q),
-    );
-  }, [lines, search]);
-
-  const { net, gross } = useMemo(() => totals(lines), [lines]);
-
-  function addLine() {
-    setLines((prev) => [
-      ...prev,
-
-      {
-        id: `l${Date.now()}`,
-
-        code: "NOVO",
-
-        description: "Nova postavka",
-
-        qty: 1,
-
-        unitPrice: 100,
-
-        discountPct: 0,
-      },
-    ]);
-  }
-
-  function duplicateLine(id: string) {
-    const src = lines.find((l) => l.id === id);
-
-    if (!src) return;
-
-    setLines((prev) => [
-      ...prev,
-
-      {
-        ...src,
-        id: `l${Date.now()}`,
-        description: `${src.description} (kopija)`,
-      },
-    ]);
-  }
-
-  function removeLine(id: string) {
-    setLines((prev) => prev.filter((l) => l.id !== id));
-  }
-
-  function updateLine(id: string, patch: Partial<OfferLine>) {
-    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
-  }
+    return offers.filter((o) => {
+      if (clientFilter && o.client.id !== clientFilter) return false;
+      if (!q) return true;
+      return (
+        offerLabel(o).toLowerCase().includes(q) ||
+        o.client.name.toLowerCase().includes(q) ||
+        (o.offerDate ?? "").includes(q)
+      );
+    });
+  }, [offers, search, clientFilter]);
 
   return (
     <AdminGate>
       <div className="space-y-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--vo-fg)]">Ponudbe</h1>
-
-            <p className="mt-1 text-sm text-[var(--vo-muted)]">
-              Postavke z DDV izračunom — shranjevanje prek Go API (še ni
-              povezano).
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => exportOfferLinesCsv(lines)}
-              disabled={lines.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--vo-border)] px-3 py-2 text-sm hover:bg-[var(--vo-surface-2)] disabled:opacity-50"
-            >
-              <Download className="h-4 w-4" />
-              Izvozi CSV
-            </button>
-
-            <button
-              type="button"
-              onClick={addLine}
-              className="rounded-lg bg-[var(--vo-accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--vo-accent-hover)]"
-            >
-              Dodaj postavko
-            </button>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--vo-fg)]">Vse ponudbe</h1>
+          <p className="mt-1 text-sm text-[var(--vo-muted)]">
+            Pregled ponudb po vseh strankah. Urejanje v profilu stranke → zavihek Ponudbe.
+          </p>
         </div>
 
-        <div className="relative max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--vo-muted)]" />
-
-          <input
-            type="search"
-            placeholder="Išči po kodi ali opisu…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] py-2 pl-9 pr-3 text-sm"
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--vo-muted)]" />
+            <input
+              type="search"
+              placeholder="Išči po imenu ponudbe ali stranki…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] py-2 pl-9 pr-3 text-sm"
+            />
+          </div>
+          <select
+            value={clientFilter}
+            onChange={(e) => setClientFilter(e.target.value)}
+            className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-3 py-2 text-sm"
+          >
+            <option value="">Vse stranke</option>
+            {clients.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={filtered.length === 0}
+            onClick={() =>
+              downloadCsv("visionone-vse-ponudbe.csv", [
+                ["Ime ponudbe", "Stranka", "Datum", "Postavk", "Ocena bruto €", "Posodobljeno"],
+                ...filtered.map((o) => [
+                  offerLabel(o),
+                  o.client.name,
+                  o.offerDate,
+                  String(o.lines.length),
+                  offerGross(o).toFixed(2),
+                  new Date(o.updatedAt).toLocaleString("sl-SI"),
+                ]),
+              ])
+            }
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--vo-border)] px-3 py-2 text-sm disabled:opacity-50"
+          >
+            <Download className="h-4 w-4" />
+            CSV
+          </button>
+          <span className="text-xs text-[var(--vo-muted)]">
+            {loading ? "Nalaganje…" : `${filtered.length} ponudb`}
+          </span>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] shadow-[var(--vo-card-shadow)]">
-          <table className="min-w-[800px] w-full text-left text-sm">
+        <div className="overflow-x-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)]">
+          <table className="min-w-full text-left text-sm">
             <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
               <tr>
-                <th className="px-3 py-2 font-medium">Koda</th>
-
-                <th className="px-3 py-2 font-medium">Opis</th>
-
-                <th className="px-3 py-2 font-medium">Kol.</th>
-
-                <th className="px-3 py-2 font-medium">Cena</th>
-
-                <th className="px-3 py-2 font-medium">Popust %</th>
-
-                <th className="px-3 py-2 font-medium w-24" />
+                <th className="px-4 py-3 font-medium">Ponudba</th>
+                <th className="px-4 py-3 font-medium">Stranka</th>
+                <th className="px-4 py-3 font-medium">Datum</th>
+                <th className="px-4 py-3 font-medium">Postavke</th>
+                <th className="px-4 py-3 font-medium text-right">Ocena (bruto)</th>
+                <th className="px-4 py-3 w-28" />
               </tr>
             </thead>
-
             <tbody>
-              {filtered.map((l) => (
-                <tr key={l.id} className="border-b border-[var(--vo-border)]">
-                  <td className="px-3 py-2">
-                    <input
-                      value={l.code}
-                      onChange={(e) =>
-                        updateLine(l.id, { code: e.target.value })
-                      }
-                      className="w-full rounded border border-transparent bg-transparent px-1 py-0.5 font-mono text-xs hover:border-[var(--vo-border)]"
-                    />
-                  </td>
-
-                  <td className="px-3 py-2">
-                    <input
-                      value={l.description}
-                      onChange={(e) =>
-                        updateLine(l.id, { description: e.target.value })
-                      }
-                      className="w-full min-w-[200px] rounded border border-transparent bg-transparent px-1 py-0.5 hover:border-[var(--vo-border)]"
-                    />
-                  </td>
-
-                  <td className="px-3 py-2">
-                    <DecimalInput
-                      value={l.qty}
-                      onChange={(qty) => updateLine(l.id, { qty })}
-                      className="w-16 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-1 py-0.5"
-                    />
-                  </td>
-
-                  <td className="px-3 py-2">
-                    <DecimalInput
-                      value={l.unitPrice}
-                      onChange={(unitPrice) => updateLine(l.id, { unitPrice })}
-                      className="w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-1 py-0.5"
-                    />
-                  </td>
-
-                  <td className="px-3 py-2">
-                    <DecimalInput
-                      value={l.discountPct}
-                      onChange={(discountPct) =>
-                        updateLine(l.id, { discountPct })
-                      }
-                      className="w-16 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-1 py-0.5"
-                    />
-                  </td>
-
-                  <td className="px-3 py-2">
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        title="Podvoji"
-                        onClick={() => duplicateLine(l.id)}
-                        className="rounded p-1 text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)]"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </button>
-
-                      <button
-                        type="button"
-                        title="Izbriši"
-                        onClick={() => removeLine(l.id)}
-                        className="rounded p-1 text-[var(--vo-danger)] hover:bg-[var(--vo-surface-2)]"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+              {filtered.map((o) => (
+                <tr key={o.id} className="border-t border-[var(--vo-border)]">
+                  <td className="px-4 py-3 font-medium text-[var(--vo-fg)]">{offerLabel(o)}</td>
+                  <td className="px-4 py-3 text-[var(--vo-muted)]">{o.client.name}</td>
+                  <td className="px-4 py-3">{o.offerDate || "—"}</td>
+                  <td className="px-4 py-3">{o.lines.length}</td>
+                  <td className="px-4 py-3 text-right">{offerGross(o).toFixed(2)} €</td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`${clientProfilePath(o.client)}?tab=ponudbe`}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-[var(--vo-accent)] hover:underline"
+                    >
+                      Uredi
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-
-          {filtered.length === 0 ? (
-            <p className="p-4 text-center text-sm text-[var(--vo-muted)]">
-              Ni postavk za iskalni niz.
+          {!loading && filtered.length === 0 ? (
+            <p className="p-6 text-center text-sm text-[var(--vo-muted)]">
+              Ni ponudb. Ustvarite jih v profilu stranke.
             </p>
           ) : null}
-        </div>
-
-        <div className="flex flex-wrap justify-end gap-8 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-6 py-4 text-sm">
-          <div>
-            <div className="text-[var(--vo-muted)]">Skupaj brez DDV</div>
-
-            <div className="text-lg font-bold text-[var(--vo-fg)]">
-              {net.toFixed(2)} €
-            </div>
-          </div>
-
-          <div>
-            <div className="text-[var(--vo-muted)]">Skupaj z DDV (22 %)</div>
-
-            <div className="text-lg font-bold text-[var(--vo-accent)]">
-              {gross.toFixed(2)} €
-            </div>
-          </div>
-
-          <div>
-            <div className="text-[var(--vo-muted)]">Postavk</div>
-
-            <div className="text-lg font-bold text-[var(--vo-fg)]">
-              {lines.length}
-            </div>
-          </div>
         </div>
       </div>
     </AdminGate>

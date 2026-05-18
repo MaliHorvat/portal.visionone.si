@@ -50,6 +50,7 @@ export async function PUT(request: Request, ctx: Ctx) {
     }));
 
     const offer = await updateOfferFull(offerId, {
+      title: body?.title !== undefined ? String(body.title) : undefined,
       offerDate: body?.offerDate !== undefined ? String(body.offerDate) : undefined,
       clientAddress: body?.clientAddress !== undefined ? String(body.clientAddress) : undefined,
       notes: body?.notes !== undefined ? String(body.notes) : undefined,
