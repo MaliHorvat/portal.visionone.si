@@ -153,6 +153,27 @@ export interface TopologyCanvasNode {
   rotationDeg?: number;
   deviceRef?: { kind: TopologyDeviceKind; id: string };
   cameraPlan?: CameraPlanOverlay;
+  /** Vizualna ikona na shemi (npr. camera-dome, raspberry). */
+  iconKey?: string;
+  appearance?: {
+    displayName?: string;
+    iconColor?: string;
+    iconSizePx?: number;
+    showFov?: boolean;
+    fovColor?: string;
+  };
+  /** IP, model … ko ni v inventarju ali kot lokalni override. */
+  planMeta?: {
+    ip?: string;
+    model?: string;
+    manufacturer?: string;
+    comment?: string;
+    floor?: string;
+    mac?: string;
+    ports?: number;
+    rtspUser?: string;
+    rtspPass?: string;
+  };
 }
 
 export interface TopologyCanvasEdge {

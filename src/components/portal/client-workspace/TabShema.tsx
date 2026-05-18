@@ -1,9 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EthernetPort, HardDrive } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { usePortalToast } from "@/context/PortalToastContext";
 import { DecimalInput } from "@/components/portal/DecimalInput";
+import { SchemaDeviceInspector } from "@/components/portal/schema/SchemaDeviceInspector";
+import {
+  SchemaIconPalette,
+  type InventoryDragItem,
+  type SymbolDragItem,
+} from "@/components/portal/schema/SchemaIconPalette";
+import { SchemaIcon } from "@/components/portal/schema/SchemaIcon";
+import { catalogEntry } from "@/lib/schema-icon-catalog";
+import { defaultIconForDeviceKind, isCameraIcon } from "@/lib/schema-icons";
+import {
+  nodeShowsFov,
+  resolveDisplayName,
+  resolveIconColor,
+  resolveIconKey,
+  resolveIconSize,
+  resolveIp,
+} from "@/lib/schema-node-utils";
 import { parseTopologyState } from "@/lib/topology-parse";
 import {
   buildDesignBomCsv,
@@ -23,23 +40,11 @@ import type {
 } from "@/lib/types";
 import type { WorkspaceCtx } from "./types";
 
-/** Za krog marker naj FOV začne iz njegove sredine. */
 const CAMERA_DOT_LENS_FORWARD_PX = 0;
-const CAMERA_DOT_SIZE_PX = 11;
-const CAMERA_DOT_CENTER_X_OFFSET = 32; // center znotraj "w-16" vozlišča
-const CAMERA_DOT_CENTER_Y_OFFSET = CAMERA_DOT_SIZE_PX / 2;
 
-type DragPayload = { kind: TopologyDeviceKind; id: string; label: string };
-type PaletteItem = DragPayload & { status: "online" | "offline" };
-
-function Dot({ status }: { status: "online" | "offline" }) {
-  return (
-    <span
-      className={`inline-block h-2 w-2 shrink-0 rounded-full ${
-        status === "online" ? "bg-[var(--vo-ok)]" : "bg-[var(--vo-danger)]"
-      }`}
-    />
-  );
+function nodeAnchor(n: TopologyCanvasNode, globalIconSize: number) {
+  const sz = resolveIconSize(n, globalIconSize);
+  return { cx: n.x + sz / 2, cy: n.y + sz / 2, sz };
 }
 
 function newId() {
@@ -72,36 +77,6 @@ function cameraFovPath(
   return `M ${vx} ${vy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
 }
 
-function DeviceGlyph({
-  kind,
-  status,
-  rotationDeg,
-}: {
-  kind: TopologyDeviceKind | undefined;
-  status: "online" | "offline";
-  rotationDeg?: number;
-}) {
-  const className = "h-8 w-8 drop-shadow-md";
-  const iconStyle = {
-    color: status === "online" ? "var(--vo-ok)" : "var(--vo-danger)",
-    transform: `rotate(${rotationDeg ?? 0}deg)`,
-  };
-  if (kind === "camera") {
-    return (
-      <span
-        className={`inline-block size-[11px] shrink-0 rounded-full border border-black/35 shadow-sm ${
-          status === "online" ? "bg-[var(--vo-ok)]" : "bg-[var(--vo-danger)]"
-        }`}
-        style={{ transform: `rotate(${rotationDeg ?? 0}deg)` }}
-        title={status === "online" ? "Dosegljiva" : "Nedosegljiva"}
-        aria-hidden
-      />
-    );
-  }
-  if (kind === "switch") return <EthernetPort className={className} style={iconStyle} aria-hidden />;
-  return <HardDrive className={className} style={iconStyle} aria-hidden />;
-}
-
 export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
   const { client, clientId, dbConfigured, reload, applyClient } = ctx;
@@ -120,6 +95,8 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   const [selectedPathIdx, setSelectedPathIdx] = useState<number | null>(null);
   const [drawStrokeKind, setDrawStrokeKind] = useState<"wall" | "cable">("wall");
   const [cableTypeDraft, setCableTypeDraft] = useState("Cat6");
+  const [canvasZoom, setCanvasZoom] = useState(1);
+  const [globalIconSize, setGlobalIconSize] = useState(40);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const cableTotalM = useMemo(
@@ -163,74 +140,115 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     };
   }, [clientId, dbConfigured]);
 
-  const palette: { title: string; items: PaletteItem[] }[] = [
-    {
-      title: "Kamere",
-      items: client.cameras.map((c) => ({
-        kind: "camera" as const,
-        id: c.id,
-        label: `${c.tag ? `${c.tag} ` : ""}${c.name}`.trim(),
-        status: c.status === "online" ? "online" : "offline",
-      })),
-    },
-    {
-      title: "Snemalniki",
-      items: client.nvrs.map((r) => ({
-        kind: "recorder" as const,
-        id: r.id,
-        label: r.name,
-        status: r.status === "online" ? "online" : "offline",
-      })),
-    },
-    {
-      title: "Switchi",
-      items: client.switches.map((s) => ({
-        kind: "switch" as const,
-        id: s.id,
-        label: s.name,
-        status: s.status === "online" ? "online" : "offline",
-      })),
-    },
-    {
-      title: "Diski",
-      items: client.disks.map((d) => ({
-        kind: "disk" as const,
-        id: d.id,
-        label: d.label,
-        status: d.health === "ok" ? "online" : "offline",
-      })),
-    },
-  ];
+  const inventoryGroups: { title: string; items: InventoryDragItem[] }[] = useMemo(
+    () => [
+      {
+        title: "Kamere",
+        items: client.cameras.map((c) => ({
+          type: "inventory" as const,
+          kind: "camera" as const,
+          id: c.id,
+          label: `${c.tag ? `${c.tag} ` : ""}${c.name}`.trim(),
+        })),
+      },
+      {
+        title: "Snemalniki",
+        items: client.nvrs.map((r) => ({
+          type: "inventory" as const,
+          kind: "recorder" as const,
+          id: r.id,
+          label: r.name,
+        })),
+      },
+      {
+        title: "Switchi",
+        items: client.switches.map((s) => ({
+          type: "inventory" as const,
+          kind: "switch" as const,
+          id: s.id,
+          label: s.name,
+        })),
+      },
+      {
+        title: "Diski",
+        items: client.disks.map((d) => ({
+          type: "inventory" as const,
+          kind: "disk" as const,
+          id: d.id,
+          label: d.label,
+        })),
+      },
+    ],
+    [client],
+  );
 
-  const onPaletteDragStart = (e: React.DragEvent, item: DragPayload) => {
-    if (!editMode) return;
-    e.dataTransfer.setData("application/json", JSON.stringify(item));
-    e.dataTransfer.effectAllowed = "copy";
-  };
+  const selectedNode = useMemo(
+    () => (selectedNodeId ? topo.nodes.find((n) => n.id === selectedNodeId) : undefined),
+    [selectedNodeId, topo.nodes],
+  );
+
+  const patchNode = useCallback((id: string, patch: Partial<TopologyCanvasNode>) => {
+    setTopo((t) => ({
+      ...t,
+      nodes: t.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)),
+    }));
+  }, []);
 
   const onCanvasDrop = (e: React.DragEvent) => {
-    if (!editMode) return;
+    if (!editMode || !canvasRef.current) return;
     e.preventDefault();
-    const raw = e.dataTransfer.getData("application/json");
-    if (!raw || !canvasRef.current) return;
-    let payload: DragPayload;
+    const raw =
+      e.dataTransfer.getData("application/vnd.visionone.schema") ||
+      e.dataTransfer.getData("application/json");
+    if (!raw) return;
+    let parsed: SymbolDragItem | InventoryDragItem | { kind: TopologyDeviceKind; id: string; label: string };
     try {
-      payload = JSON.parse(raw) as DragPayload;
+      parsed = JSON.parse(raw) as SymbolDragItem | InventoryDragItem | { kind: TopologyDeviceKind; id: string; label: string };
     } catch {
       return;
     }
     const rect = canvasRef.current.getBoundingClientRect();
     const g = topo.snapGridPx;
-    const x = Math.max(20, snapCoord(Math.round(e.clientX - rect.left - 48), g));
-    const y = Math.max(20, snapCoord(Math.round(e.clientY - rect.top - 20), g));
+    const dropX = (e.clientX - rect.left) / canvasZoom;
+    const dropY = (e.clientY - rect.top) / canvasZoom;
+    const half = globalIconSize / 2;
+    const x = Math.max(8, snapCoord(Math.round(dropX - half), g));
+    const y = Math.max(8, snapCoord(Math.round(dropY - half), g));
+
+    if ("type" in parsed && parsed.type === "symbol") {
+      const sym = parsed as SymbolDragItem;
+      const entry = catalogEntry(sym.iconKey);
+      const node: TopologyCanvasNode = {
+        id: newId(),
+        label: sym.label,
+        x,
+        y,
+        iconKey: sym.iconKey,
+        appearance: { iconColor: entry.defaultColor, showFov: isCameraIcon(sym.iconKey) },
+        cameraPlan: isCameraIcon(sym.iconKey) ? { fovDeg: 70, reachPx: 150 } : undefined,
+      };
+      setTopo((t) => ({ ...t, nodes: [...t.nodes, node] }));
+      setSelectedNodeId(node.id);
+      return;
+    }
+
+    const inv =
+      "type" in parsed && parsed.type === "inventory"
+        ? parsed
+        : { type: "inventory" as const, kind: parsed.kind, id: parsed.id, label: parsed.label };
+    const iconKey = defaultIconForDeviceKind(inv.kind);
     const node: TopologyCanvasNode = {
       id: newId(),
-      label: payload.label,
+      label: inv.label,
       x,
       y,
-      deviceRef: { kind: payload.kind, id: payload.id },
+      deviceRef: { kind: inv.kind, id: inv.id },
+      iconKey,
+      appearance: { iconColor: catalogEntry(iconKey).defaultColor, showFov: inv.kind === "camera" },
+      cameraPlan: inv.kind === "camera" ? { fovDeg: 70, reachPx: 150 } : undefined,
     };
     setTopo((t) => ({ ...t, nodes: [...t.nodes, node] }));
+    setSelectedNodeId(node.id);
   };
 
   const onNodeClick = (id: string) => {
@@ -286,6 +304,11 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
         n.id === selectedNodeId ? { ...n, cameraPlan: { ...n.cameraPlan, ...patch } } : n,
       ),
     }));
+  };
+
+  const getNodeStatus = (n: TopologyCanvasNode): "online" | "offline" | "unknown" => {
+    if (!n.deviceRef) return "unknown";
+    return getDeviceStatus(n.deviceRef.kind, n.deviceRef.id);
   };
 
   const getDeviceStatus = (kind: TopologyDeviceKind, id: string): "online" | "offline" => {
@@ -401,43 +424,20 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
   }, [dragging, topo.snapGridPx]);
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row">
-      <div className="w-full shrink-0 space-y-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs lg:w-56">
-        <p className="font-semibold text-[var(--vo-fg)]">Naprave (drag &amp; drop)</p>
-        <p className="text-[var(--vo-muted)]">
-          Klikni dve napravi na platnu za povezavo. Drugi klik prekliče. Desni klik na kartico — odstrani.
-        </p>
+    <div className="flex min-h-[640px] flex-col gap-2 xl:flex-row">
+      <SchemaIconPalette
+        inventoryGroups={inventoryGroups}
+        editMode={editMode}
+        dbConfigured={dbConfigured}
+        getDeviceStatus={getDeviceStatus}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
         {connectFrom ? (
-          <p className="rounded bg-[var(--vo-accent-muted)] px-2 py-1 text-[var(--vo-accent)]">
-            Izberite drugo napravo za povezavo…
+          <p className="rounded-lg bg-[var(--vo-accent-muted)] px-3 py-1.5 text-xs text-[var(--vo-accent)]">
+            Izberite drugo napravo za povezavo (drugi klik prekliče). Desni klik na ikono — odstrani.
           </p>
         ) : null}
-        {palette.map((g) => (
-          <div key={g.title}>
-            <div className="mt-2 font-medium text-[var(--vo-muted)]">{g.title}</div>
-            <ul className="mt-1 space-y-1">
-              {g.items.map((item) => {
-                const status = item.kind === "camera" || item.kind === "recorder" || item.kind === "switch"
-                  ? getDeviceStatus(item.kind, item.id)
-                  : item.status;
-                return (
-                <li
-                  key={`${item.kind}-${item.id}`}
-                  draggable={dbConfigured}
-                  onDragStart={(e) => onPaletteDragStart(e, item)}
-                  className="flex cursor-grab items-center gap-2 rounded border border-[var(--vo-border)] px-2 py-1 active:cursor-grabbing"
-                >
-                  <Dot status={status} />
-                  {item.label}
-                </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </div>
-
-      <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -472,7 +472,28 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           >
             Počisti platno
           </button>
-          <span className="ml-auto text-xs text-[var(--vo-muted)]">Čvorov ({topo.nodes.length})</span>
+          <div className="ml-auto flex items-center gap-1 rounded border border-[var(--vo-border)] px-1">
+            <button
+              type="button"
+              className="rounded p-1 text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)]"
+              onClick={() => setCanvasZoom((z) => Math.max(0.4, Math.round((z - 0.1) * 10) / 10))}
+              aria-label="Pomanjšaj"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <span className="min-w-[3rem] text-center text-[10px] text-[var(--vo-muted)]">
+              {Math.round(canvasZoom * 100)}%
+            </span>
+            <button
+              type="button"
+              className="rounded p-1 text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)]"
+              onClick={() => setCanvasZoom((z) => Math.min(2, Math.round((z + 0.1) * 10) / 10))}
+              aria-label="Povečaj"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <span className="text-xs text-[var(--vo-muted)]">Čvorov ({topo.nodes.length})</span>
           {selectedNodeId ? (
             <>
               <button
@@ -655,98 +676,10 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           </div>
         ) : null}
 
-        {editMode && selectedNodeId ? (
-          (() => {
-            const sel = topo.nodes.find((n) => n.id === selectedNodeId);
-            const cp = sel?.cameraPlan;
-            if (!sel || sel.deviceRef?.kind !== "camera") return null;
-            return (
-              <div className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-3 py-2 text-xs">
-                <p className="mb-2 font-semibold text-[var(--vo-fg)]">Kamera na načrtu (pokritost)</p>
-                <div className="flex flex-wrap gap-2">
-                  <label className="flex flex-col text-[var(--vo-muted)]">
-                    Št. oznake
-                    <input
-                      type="number"
-                      value={cp?.badge ?? ""}
-                      placeholder="—"
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        patchCameraPlan(v === "" ? { badge: undefined } : { badge: Number(v) || 0 });
-                      }}
-                      className="mt-0.5 w-20 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
-                    />
-                  </label>
-                  <label className="flex flex-col text-[var(--vo-muted)]">
-                    Višina (m)
-                    <DecimalInput
-                      value={cp?.mountHeightM ?? 0}
-                      placeholder="3"
-                      onChange={(mountHeightM) =>
-                        patchCameraPlan(mountHeightM > 0 ? { mountHeightM } : { mountHeightM: undefined })
-                      }
-                      className="mt-0.5 w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
-                    />
-                  </label>
-                  <label className="flex flex-col text-[var(--vo-muted)]">
-                    Naklon (°)
-                    <DecimalInput
-                      value={cp?.tiltDeg ?? 0}
-                      placeholder="15"
-                      onChange={(tiltDeg) => patchCameraPlan(tiltDeg > 0 ? { tiltDeg } : { tiltDeg: undefined })}
-                      className="mt-0.5 w-20 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
-                    />
-                  </label>
-                  <label className="flex flex-col text-[var(--vo-muted)]">
-                    FOV (°)
-                    <DecimalInput
-                      value={cp?.fovDeg ?? 0}
-                      placeholder="70"
-                      onChange={(fovDeg) => patchCameraPlan(fovDeg > 0 ? { fovDeg } : { fovDeg: undefined })}
-                      className="mt-0.5 w-20 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
-                    />
-                  </label>
-                  <label className="flex flex-col text-[var(--vo-muted)]">
-                    Doseg (px)
-                    <DecimalInput
-                      value={cp?.reachPx ?? 0}
-                      placeholder="150"
-                      onChange={(reachPx) => patchCameraPlan(reachPx > 0 ? { reachPx } : { reachPx: undefined })}
-                      className="mt-0.5 w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
-                    />
-                  </label>
-                  <label className="flex cursor-pointer items-end gap-2 pb-1 text-[var(--vo-muted)]">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(cp?.showDoriZones)}
-                      onChange={(e) =>
-                        patchCameraPlan({ showDoriZones: e.target.checked ? true : undefined })
-                      }
-                      className="rounded border-[var(--vo-border)]"
-                    />
-                    DORI obroči (poenostavljeno)
-                  </label>
-                  <label className="flex flex-col text-[var(--vo-muted)]">
-                    IR doseg (px)
-                    <DecimalInput
-                      value={cp?.irReachPx ?? 0}
-                      placeholder="opcijsko"
-                      onChange={(irReachPx) => patchCameraPlan(irReachPx > 0 ? { irReachPx } : { irReachPx: undefined })}
-                      className="mt-0.5 w-24 rounded border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1 text-[var(--vo-fg)]"
-                    />
-                  </label>
-                </div>
-                <p className="mt-2 text-[var(--vo-muted)]">
-                  Obrnite krog (‑15° / +15°) za smer „streha“ polja vidnosti. DORI je orientacijski model (ne EN 62676 certifikacija).
-                </p>
-              </div>
-            );
-          })()
-        ) : null}
 
         <div
           ref={canvasRef}
-          className="relative min-h-[420px] overflow-hidden rounded-xl border border-[var(--vo-border)] bg-[var(--vo-bg)]"
+          className="relative min-h-[480px] flex-1 overflow-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-bg)]"
           onDragOver={(e) => e.preventDefault()}
           onDrop={onCanvasDrop}
           onPointerDown={startDraw}
@@ -754,6 +687,10 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           onPointerUp={endDraw}
           onPointerLeave={endDraw}
         >
+          <div
+            className="relative min-h-[520px] w-full origin-top-left"
+            style={{ transform: `scale(${canvasZoom})`, transformOrigin: "0 0" }}
+          >
           {(topo.planBackgroundDataUrl ?? topo.planBackgroundUrl) ? (
             <div
               className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.92]"
@@ -776,9 +713,8 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           ) : null}
           <svg className="absolute inset-0 h-full w-full">
             {topo.nodes.map((n) => {
-              if (n.deviceRef?.kind !== "camera") return null;
-              const cx = n.x + CAMERA_DOT_CENTER_X_OFFSET;
-              const cy = n.y + CAMERA_DOT_CENTER_Y_OFFSET;
+              if (!nodeShowsFov(n)) return null;
+              const { cx, cy } = nodeAnchor(n, globalIconSize);
               const plan = n.cameraPlan;
               const fovDeg = plan?.fovDeg ?? 70;
               const reach = plan?.reachPx ?? 150;
@@ -790,10 +726,11 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                 reach,
                 CAMERA_DOT_LENS_FORWARD_PX,
               );
-              const st = getDeviceStatus("camera", n.deviceRef.id);
+              const st = getNodeStatus(n);
+              const fovHex = n.appearance?.fovColor ?? (st === "online" ? "#3b82f6" : "#f87171");
               const fill =
                 st === "online" ? "rgba(59, 130, 246, 0.28)" : "rgba(248, 113, 113, 0.22)";
-              const stroke = st === "online" ? "rgba(59, 130, 246, 0.65)" : "rgba(248, 113, 113, 0.55)";
+              const stroke = fovHex;
               const { vx, vy, br } = cameraLensVertex(cx, cy, n.rotationDeg ?? 0, CAMERA_DOT_LENS_FORWARD_PX);
               const fov = Number.isFinite(fovDeg) && fovDeg > 0 ? Math.min(fovDeg, 359) : 70;
               const half = (fov * Math.PI) / 360;
@@ -902,13 +839,15 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
               const a = topo.nodes.find((n) => n.id === edge.from);
               const b = topo.nodes.find((n) => n.id === edge.to);
               if (!a || !b) return null;
+              const aa = nodeAnchor(a, globalIconSize);
+              const bb = nodeAnchor(b, globalIconSize);
               return (
                 <line
                   key={`${edge.from}-${edge.to}-${i}`}
-                  x1={a.x + 48}
-                  y1={a.y + 22}
-                  x2={b.x + 48}
-                  y2={b.y + 22}
+                  x1={aa.cx}
+                  y1={aa.cy}
+                  x2={bb.cx}
+                  y2={bb.cy}
                   stroke="var(--vo-accent)"
                   strokeWidth={2}
                   opacity={0.6}
@@ -918,24 +857,21 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           </svg>
 
           {topo.nodes.map((n) => {
-            const kind = n.deviceRef?.kind;
-            const isCamera = kind === "camera";
-            const isRecorder = kind === "recorder";
-            const isSwitch = kind === "switch";
-            const st = kind && n.deviceRef ? getDeviceStatus(kind, n.deviceRef.id) : "offline";
+            const iconKey = resolveIconKey(n);
+            const sz = resolveIconSize(n, globalIconSize);
+            const st = getNodeStatus(n);
+            const showCamBadge =
+              isCameraIcon(iconKey) && n.cameraPlan?.badge != null && Number.isFinite(n.cameraPlan.badge);
+            const ip = resolveIp(n, client);
             return (
               <div
                 key={n.id}
                 role="button"
                 tabIndex={0}
-                className={`absolute cursor-pointer select-none ${
-                  isCamera || isRecorder || isSwitch
-                    ? "w-16"
-                    : "w-28 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-[11px] shadow-md"
-                } ${connectFrom === n.id ? "ring-2 ring-[var(--vo-accent)]" : ""} ${
-                  selectedNodeId === n.id ? "ring-2 ring-[var(--vo-accent)]" : ""
-                }`}
-                style={{ left: n.x, top: n.y }}
+                className={`absolute cursor-pointer select-none text-center ${
+                  connectFrom === n.id ? "ring-2 ring-[var(--vo-accent)] ring-offset-1" : ""
+                } ${selectedNodeId === n.id ? "ring-2 ring-[var(--vo-accent)] ring-offset-1" : ""}`}
+                style={{ left: n.x, top: n.y, width: sz }}
                 onClick={() => {
                   setSelectedNodeId(n.id);
                   onNodeClick(n.id);
@@ -952,45 +888,35 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   const rect = e.currentTarget.getBoundingClientRect();
                   setDragging({
                     id: n.id,
-                    dx: e.clientX - rect.left,
-                    dy: e.clientY - rect.top,
+                    dx: (e.clientX - rect.left) / canvasZoom,
+                    dy: (e.clientY - rect.top) / canvasZoom,
                   });
                 }}
               >
-                {isCamera || isRecorder || isSwitch ? (
-                  <div className="relative flex flex-col items-center">
-                    {isCamera && n.cameraPlan?.badge != null && Number.isFinite(n.cameraPlan.badge) ? (
-                      <span className="absolute -right-0.5 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-0.5 text-[8px] font-bold text-white shadow-sm">
-                        {n.cameraPlan.badge}
-                      </span>
-                    ) : null}
-                    <DeviceGlyph kind={kind} status={st} rotationDeg={n.rotationDeg} />
-                    <div className="mt-1 w-full truncate text-center text-[10px] font-medium text-[var(--vo-fg)]">{n.label}</div>
-                    <div className="w-full truncate text-center font-mono text-[10px] text-[var(--vo-muted)]">
-                      {n.deviceRef?.kind === "camera"
-                        ? client.cameras.find((c) => c.id === n.deviceRef?.id)?.ip ?? ""
-                        : n.deviceRef?.kind === "recorder"
-                          ? client.nvrs.find((r) => r.id === n.deviceRef?.id)?.ip ?? ""
-                          : n.deviceRef?.kind === "switch"
-                            ? client.switches.find((s) => s.id === n.deviceRef?.id)?.ip ?? ""
-                            : ""}
-                    </div>
-                    {isCamera && (n.cameraPlan?.mountHeightM != null || n.cameraPlan?.tiltDeg != null) ? (
-                      <div className="mt-0.5 rounded bg-black/55 px-1.5 py-0.5 text-[9px] font-medium text-white shadow">
-                        {n.cameraPlan.mountHeightM != null ? `${n.cameraPlan.mountHeightM}m` : "?m"}
-                        {" · "}
-                        {n.cameraPlan.tiltDeg != null ? `${n.cameraPlan.tiltDeg}°` : "?°"}
-                      </div>
-                    ) : null}
+                <div className="relative flex flex-col items-center">
+                  {showCamBadge ? (
+                    <span className="absolute -right-0.5 -top-1 z-10 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-0.5 text-[8px] font-bold text-white shadow-sm">
+                      {n.cameraPlan!.badge}
+                    </span>
+                  ) : null}
+                  <SchemaIcon
+                    iconKey={iconKey}
+                    color={resolveIconColor(n)}
+                    size={sz}
+                    status={st}
+                    rotationDeg={n.rotationDeg ?? 0}
+                  />
+                  <div className="mt-1 max-w-[120px] truncate text-[10px] font-medium text-[var(--vo-fg)]">
+                    {resolveDisplayName(n, client)}
                   </div>
-                ) : (
-                  <>
-                    <div className="truncate font-medium text-[var(--vo-fg)]">{n.label}</div>
-                  </>
-                )}
+                  {ip ? (
+                    <div className="max-w-[120px] truncate font-mono text-[9px] text-[var(--vo-muted)]">{ip}</div>
+                  ) : null}
+                </div>
               </div>
             );
           })}
+          </div>
         </div>
 
         <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs">
@@ -1014,6 +940,24 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
           </ul>
         </div>
       </div>
+
+      {selectedNode ? (
+        <SchemaDeviceInspector
+          client={client}
+          clientId={clientId}
+          dbConfigured={dbConfigured}
+          node={selectedNode}
+          edges={topo.edges}
+          allNodes={topo.nodes}
+          status={getNodeStatus(selectedNode)}
+          onClose={() => setSelectedNodeId(null)}
+          onPatchNode={(patch) => patchNode(selectedNode.id, patch)}
+          onPatchCameraPlan={patchCameraPlan}
+          onReloadClient={reload}
+          globalIconSize={globalIconSize}
+          onGlobalIconSize={setGlobalIconSize}
+        />
+      ) : null}
     </div>
   );
 }

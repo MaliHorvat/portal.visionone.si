@@ -1,3 +1,4 @@
+import { defaultIconForDeviceKind, parseSchemaIconKey } from "@/lib/schema-icons";
 import type {
   CameraPlanOverlay,
   ClientTopologyState,
@@ -44,6 +45,39 @@ function parseCameraPlan(raw: unknown): CameraPlanOverlay | undefined {
   return { badge, mountHeightM, tiltDeg, fovDeg, reachPx, showDoriZones, irReachPx };
 }
 
+function parseAppearance(raw: unknown): TopologyCanvasNode["appearance"] {
+  if (!raw || typeof raw !== "object") return undefined;
+  const p = raw as Record<string, unknown>;
+  const displayName = typeof p.displayName === "string" ? p.displayName : undefined;
+  const iconColor = typeof p.iconColor === "string" ? p.iconColor : undefined;
+  const iconSizePx =
+    typeof p.iconSizePx === "number" && Number.isFinite(p.iconSizePx) ? p.iconSizePx : undefined;
+  const showFov = typeof p.showFov === "boolean" ? p.showFov : undefined;
+  const fovColor = typeof p.fovColor === "string" ? p.fovColor : undefined;
+  if (!displayName && !iconColor && iconSizePx === undefined && showFov === undefined && !fovColor)
+    return undefined;
+  return { displayName, iconColor, iconSizePx, showFov, fovColor };
+}
+
+function parsePlanMeta(raw: unknown): TopologyCanvasNode["planMeta"] {
+  if (!raw || typeof raw !== "object") return undefined;
+  const p = raw as Record<string, unknown>;
+  const str = (k: string) => (typeof p[k] === "string" ? p[k] : undefined);
+  const ports = typeof p.ports === "number" && Number.isFinite(p.ports) ? p.ports : undefined;
+  const meta = {
+    ip: str("ip"),
+    model: str("model"),
+    manufacturer: str("manufacturer"),
+    comment: str("comment"),
+    floor: str("floor"),
+    mac: str("mac"),
+    ports,
+    rtspUser: str("rtspUser"),
+    rtspPass: str("rtspPass"),
+  };
+  return Object.values(meta).some((v) => v !== undefined && v !== "") ? meta : undefined;
+}
+
 export function parseTopologyState(raw: unknown): ClientTopologyState {
   if (!raw || typeof raw !== "object") return { nodes: [], edges: [], floorPlanPaths: [] };
   const o = raw as Record<string, unknown>;
@@ -67,15 +101,24 @@ export function parseTopologyState(raw: unknown): ClientTopologyState {
   const pathsRaw = Array.isArray(o.floorPlanPaths) ? o.floorPlanPaths : [];
   const nodes: TopologyCanvasNode[] = nodesRaw
     .filter((n): n is Record<string, unknown> => !!n && typeof n === "object")
-    .map((n, i) => ({
-      id: typeof n.id === "string" ? n.id : `n-${i}`,
-      label: typeof n.label === "string" ? n.label : "Naprava",
-      x: typeof n.x === "number" ? n.x : 80 + (i % 5) * 120,
-      y: typeof n.y === "number" ? n.y : 80 + Math.floor(i / 5) * 100,
-      rotationDeg: typeof n.rotationDeg === "number" ? n.rotationDeg : 0,
-      deviceRef: parseDeviceRef(n.deviceRef),
-      cameraPlan: parseCameraPlan(n.cameraPlan),
-    }));
+    .map((n, i) => {
+      const deviceRef = parseDeviceRef(n.deviceRef);
+      const iconKey =
+        parseSchemaIconKey(n.iconKey) ??
+        (deviceRef ? defaultIconForDeviceKind(deviceRef.kind) : "generic");
+      return {
+        id: typeof n.id === "string" ? n.id : `n-${i}`,
+        label: typeof n.label === "string" ? n.label : "Naprava",
+        x: typeof n.x === "number" ? n.x : 80 + (i % 5) * 120,
+        y: typeof n.y === "number" ? n.y : 80 + Math.floor(i / 5) * 100,
+        rotationDeg: typeof n.rotationDeg === "number" ? n.rotationDeg : 0,
+        deviceRef,
+        cameraPlan: parseCameraPlan(n.cameraPlan),
+        iconKey,
+        appearance: parseAppearance(n.appearance),
+        planMeta: parsePlanMeta(n.planMeta),
+      };
+    });
   const edges: TopologyCanvasEdge[] = edgesRaw
     .filter((e): e is Record<string, unknown> => !!e && typeof e === "object")
     .map((e) => ({
