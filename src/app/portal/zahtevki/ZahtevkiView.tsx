@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Download } from "lucide-react";
+import { exportServiceRequestsCsv } from "@/lib/portal-export";
 import type { ClientSummary, ServiceRequest, ServiceRequestPriority, ServiceRequestStatus } from "@/lib/types";
 
 type Props = {
@@ -29,6 +31,8 @@ export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | ServiceRequestStatus>("all");
 
   const sorted = useMemo(
     () =>
@@ -39,6 +43,20 @@ export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
       }),
     [requests],
   );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return sorted.filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (!q) return true;
+      const clientName = clients.find((c) => c.id === r.clientId)?.name ?? "";
+      return (
+        r.title.toLowerCase().includes(q) ||
+        (r.description ?? "").toLowerCase().includes(q) ||
+        clientName.toLowerCase().includes(q)
+      );
+    });
+  }, [sorted, search, statusFilter, clients]);
 
   async function createRequest(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -107,6 +125,46 @@ export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
         </div>
       ) : null}
 
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-sm">
+        <input
+          type="search"
+          placeholder="Išči zahtevke…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="min-w-[160px] flex-1 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-xs"
+        >
+          <option value="all">Vsi statusi</option>
+          {(Object.keys(STATUS_LABEL) as ServiceRequestStatus[]).map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABEL[s]}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-3 py-1.5 text-xs hover:bg-[var(--vo-surface-2)]"
+          onClick={() =>
+            exportServiceRequestsCsv(
+              filtered.map((r) => ({
+                title: r.title,
+                clientName: clients.find((c) => c.id === r.clientId)?.name ?? "",
+                status: STATUS_LABEL[r.status],
+                priority: PRIORITY_LABEL[r.priority],
+                dueDate: r.dueDate ?? "",
+              })),
+            )
+          }
+        >
+          <Download className="h-3.5 w-3.5" /> CSV
+        </button>
+        <span className="text-xs text-[var(--vo-muted)]">{filtered.length} zapisov</span>
+      </div>
+
       {showForm ? (
         <form
           onSubmit={createRequest}
@@ -168,7 +226,7 @@ export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
             Ni zahtevkov.
           </li>
         ) : null}
-        {sorted.map((r) => (
+        {filtered.map((r) => (
           <li
             key={r.id}
             className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-3 shadow-[var(--vo-card-shadow)]"

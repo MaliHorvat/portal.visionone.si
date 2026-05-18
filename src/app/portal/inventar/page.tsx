@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AdminGate } from "@/components/portal/AdminGate";
 import { DecimalInput } from "@/components/portal/DecimalInput";
+import { downloadCsv } from "@/lib/portal-export";
 
 type Item = {
   id: string;
@@ -38,6 +39,27 @@ export default function InventarPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [f, setF] = useState<Item>(emptyItem());
   const [editId, setEditId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [lowOnly, setLowOnly] = useState(false);
+
+  const visibleItems = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return items.filter((row) => {
+      if (lowOnly && row.qty > row.minQty) return false;
+      if (!q) return true;
+      return (
+        row.name.toLowerCase().includes(q) ||
+        row.model.toLowerCase().includes(q) ||
+        row.sku.toLowerCase().includes(q) ||
+        row.supplier.toLowerCase().includes(q)
+      );
+    });
+  }, [items, search, lowOnly]);
+
+  const stockValue = useMemo(
+    () => items.reduce((sum, row) => sum + row.qty * row.unitPrice, 0),
+    [items],
+  );
 
   useEffect(() => {
     try {
@@ -87,6 +109,45 @@ export default function InventarPage() {
           <button type="submit" className="rounded bg-[var(--vo-accent)] px-3 py-2 font-semibold text-white md:col-span-3">{editId ? "Shrani spremembe" : "Dodaj artikel"}</button>
         </form>
 
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-sm">
+          <input
+            type="search"
+            placeholder="Išči artikel…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="min-w-[160px] flex-1 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5"
+          />
+          <label className="inline-flex items-center gap-1 text-xs text-[var(--vo-muted)]">
+            <input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} />
+            Samo nizka zaloga
+          </label>
+          <button
+            type="button"
+            className="rounded-lg border border-[var(--vo-border)] px-3 py-1.5 text-xs hover:bg-[var(--vo-surface-2)]"
+            onClick={() =>
+              downloadCsv("inventar.csv", [
+                ["Ime", "Model", "SKU", "Količina", "Enota", "Cena", "Minimum", "Dobavitelj", "Lokacija"],
+                ...visibleItems.map((row) => [
+                  row.name,
+                  row.model,
+                  row.sku,
+                  String(row.qty),
+                  row.unit,
+                  String(row.unitPrice),
+                  String(row.minQty),
+                  row.supplier,
+                  row.location,
+                ]),
+              ])
+            }
+          >
+            Izvozi CSV
+          </button>
+          <span className="text-xs text-[var(--vo-muted)]">
+            Vrednost zaloge: <strong className="text-[var(--vo-fg)]">{stockValue.toFixed(2)} €</strong>
+          </span>
+        </div>
+
         <div className="overflow-x-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] shadow-[var(--vo-card-shadow)]">
           <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
@@ -95,7 +156,7 @@ export default function InventarPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((row) => {
+              {visibleItems.map((row) => {
                 const low = row.qty <= row.minQty;
                 return (
                   <tr key={row.id} className="border-b border-[var(--vo-border)] last:border-0">

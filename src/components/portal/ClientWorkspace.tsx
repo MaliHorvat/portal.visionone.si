@@ -16,7 +16,7 @@ import { TabTimeline } from "./client-workspace/TabTimeline";
 import { TabField } from "./client-workspace/TabField";
 import type { WorkspaceCtx, WorkspaceTab } from "./client-workspace/types";
 import { parseWorkspaceTab } from "./client-workspace/types";
-import { pushRecentClient } from "@/lib/portal-workspace-prefs";
+import { getLastClientTab, pushRecentClient, setLastClientTab } from "@/lib/portal-prefs";
 import {
   Building2,
   Boxes,
@@ -33,8 +33,10 @@ import {
   Network,
   Shield,
   Smartphone,
+  Star,
   Wrench,
 } from "lucide-react";
+import { getFavoriteClientIds, toggleFavoriteClient } from "@/lib/portal-prefs";
 
 const TABS: { id: WorkspaceTab; label: string; icon: ElementType }[] = [
   { id: "kamere", label: "Kamere", icon: Camera },
@@ -61,6 +63,7 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
   const [tab, setTab] = useState<WorkspaceTab>(initialTab);
   const [visited, setVisited] = useState<Set<WorkspaceTab>>(() => new Set([initialTab]));
   const [client, setClient] = useState(initialClient);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     setClient(initialClient);
@@ -84,6 +87,7 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
 
   const selectTab = useCallback((id: WorkspaceTab) => {
     setTab(id);
+    setLastClientTab(client.id, id);
     setVisited((v) => new Set(v).add(id));
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -91,7 +95,7 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
       const qs = url.searchParams.toString();
       window.history.replaceState(null, "", qs ? `${url.pathname}?${qs}` : url.pathname);
     }
-  }, []);
+  }, [client.id]);
 
   const reload = useCallback(async () => {
     if (!dbConfigured) return;
@@ -103,7 +107,21 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
 
   useEffect(() => {
     pushRecentClient(client.id, client.name);
+    setIsFavorite(getFavoriteClientIds().includes(client.id));
   }, [client.id, client.name]);
+
+  useEffect(() => {
+    const remembered = getLastClientTab(client.id);
+    if (remembered && remembered !== initialTab) {
+      setTab(remembered);
+      setVisited((v) => new Set(v).add(remembered));
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("tab", remembered);
+        window.history.replaceState(null, "", `${url.pathname}?${url.searchParams.toString()}`);
+      }
+    }
+  }, [client.id, initialTab]);
 
   const ctx: WorkspaceCtx = useMemo(
     () => ({
@@ -136,7 +154,17 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
       <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold text-[var(--vo-fg)]">{client.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-[var(--vo-fg)]">{client.name}</h1>
+              <button
+                type="button"
+                title={isFavorite ? "Odstrani iz priljubljenih" : "Dodaj med priljubljene"}
+                onClick={() => setIsFavorite(toggleFavoriteClient(client.id).includes(client.id))}
+                className="rounded p-1 text-[var(--vo-muted)] hover:text-amber-400"
+              >
+                <Star className={`h-5 w-5 ${isFavorite ? "fill-amber-400 text-amber-400" : ""}`} />
+              </button>
+            </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-1 font-medium ${
@@ -188,6 +216,23 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
             Terenski način
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="text-xs text-[var(--vo-muted)]">
+          Skok na zavihek
+          <select
+            value={tab}
+            onChange={(e) => selectTab(e.target.value as WorkspaceTab)}
+            className="ml-2 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-1.5 text-xs text-[var(--vo-fg)]"
+          >
+            {TABS.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <nav className="flex flex-wrap gap-1 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] p-1 text-xs font-medium md:text-sm">

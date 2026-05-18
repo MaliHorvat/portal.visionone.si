@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   Boxes,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Clock,
   FileText,
+  HelpCircle,
   LayoutDashboard,
   LayoutGrid,
   Package,
   RadioTower,
+  Search,
   Settings,
   Shield,
   StickyNote,
@@ -23,9 +27,14 @@ import {
   Video,
   Network,
 } from "lucide-react";
+import { PortalBreadcrumbs } from "@/components/portal/PortalBreadcrumbs";
+import { PortalCommandPalette } from "@/components/portal/PortalCommandPalette";
+import { PortalShortcutsHelp } from "@/components/portal/PortalShortcutsHelp";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import type { NavPermissionKey } from "@/lib/nav-permissions";
+import { getSidebarCollapsed, setSidebarCollapsed } from "@/lib/portal-prefs";
 import { roleLabel } from "@/lib/portal-roles";
+import { usePortalNavCounts } from "@/lib/use-portal-counts";
 
 type NavItem = { href: string; label: string; icon: React.ElementType; permission: NavPermissionKey; adminOnly?: boolean };
 type NavSection = { title: string; items: NavItem[] };
@@ -80,6 +89,11 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const [showResults, setShowResults] = useState(false);
   const [pendingAccessRequests, setPendingAccessRequests] = useState(0);
   const [sectionOrders, setSectionOrders] = useState<Record<string, string[]>>({});
+  const [sidebarCollapsed, setSidebarCollapsedState] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const navCounts = usePortalNavCounts(true);
 
   const current = useMemo(() => {
     const qs = searchParams.toString();
@@ -98,6 +112,48 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       })),
     [navPermissions, role],
   );
+
+  useEffect(() => {
+    setSidebarCollapsedState(getSidebarCollapsed());
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        if (e.key === "Escape") {
+          setCommandOpen(false);
+          setShortcutsOpen(false);
+        }
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandOpen(true);
+      }
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setShortcutsOpen(true);
+      }
+      if (e.key === "/" && !e.ctrlKey) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  function toggleSidebar() {
+    const next = !sidebarCollapsed;
+    setSidebarCollapsedState(next);
+    setSidebarCollapsed(next);
+  }
+
+  function navBadge(href: string): number | null {
+    if (href === "/portal/zahtevki" && navCounts.openRequests > 0) return navCounts.openRequests;
+    if (href === "/portal/opomniki" && navCounts.overdueReminders > 0) return navCounts.overdueReminders;
+    return null;
+  }
 
   useEffect(() => {
     try {
@@ -195,19 +251,36 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-[var(--vo-bg)]">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--vo-border)] bg-[var(--vo-surface)] md:flex">
-        <div className="border-b border-[var(--vo-border)] px-4 py-4">
-          <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-[var(--vo-fg)]">
-            <img src="/visionone-mark.png" alt="VisionOne znak" className="h-9 w-9 rounded object-contain" />
-            <img src="/visionone-wordmark.png" alt="VisionOne napis" className="h-6 w-auto object-contain" />
+      <aside
+        className={`hidden shrink-0 flex-col border-r border-[var(--vo-border)] bg-[var(--vo-surface)] transition-[width] md:flex ${
+          sidebarCollapsed ? "w-[4.5rem]" : "w-64"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-[var(--vo-border)] px-3 py-3">
+          <Link href="/" className={`flex items-center gap-2 ${sidebarCollapsed ? "mx-auto" : ""}`}>
+            <img src="/visionone-mark.png" alt="VisionOne" className="h-9 w-9 rounded object-contain" />
+            {!sidebarCollapsed ? (
+              <img src="/visionone-wordmark.png" alt="VisionOne" className="h-6 w-auto object-contain" />
+            ) : null}
           </Link>
+          {!sidebarCollapsed ? (
+            <button type="button" onClick={toggleSidebar} className="rounded border border-[var(--vo-border)] p-1 text-[var(--vo-muted)]" title="Skrči">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          ) : (
+            <button type="button" onClick={toggleSidebar} className="mx-auto rounded border border-[var(--vo-border)] p-1 text-[var(--vo-muted)]" title="Razširi">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          )}
         </div>
         <nav className="flex flex-1 flex-col gap-3 overflow-auto px-2 py-3">
           {orderedVisible.map((section) => (
             <div key={section.title}>
-              <div className="px-3 pb-1 text-[10px] font-semibold tracking-[0.11em] text-[var(--vo-muted)]/90">
-                {section.title}
-              </div>
+              {!sidebarCollapsed ? (
+                <div className="px-3 pb-1 text-[10px] font-semibold tracking-[0.11em] text-[var(--vo-muted)]/90">
+                  {section.title}
+                </div>
+              ) : null}
               <div className="flex flex-col gap-0.5">
                 {section.items.map(({ href, label, icon: Icon }, idx) => {
                   const active = href.includes("?")
@@ -226,8 +299,18 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                         }`}
                       >
                         <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                        {label}
+                        {!sidebarCollapsed ? (
+                          <>
+                            <span className="truncate">{label}</span>
+                            {navBadge(href) != null ? (
+                              <span className="ml-auto rounded-full bg-red-500/90 px-1.5 py-0 text-[10px] font-bold text-white">
+                                {navBadge(href)}
+                              </span>
+                            ) : null}
+                          </>
+                        ) : null}
                       </Link>
+                      {!sidebarCollapsed ? (
                       <div className="hidden items-center gap-0.5 group-hover:flex">
                         <button
                           type="button"
@@ -248,6 +331,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                           <ChevronDown className="h-3 w-3" />
                         </button>
                       </div>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -280,14 +364,31 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="relative flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCommandOpen(true)}
+              className="hidden items-center gap-1 rounded-lg border border-[var(--vo-border)] px-2 py-1.5 text-xs text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] md:inline-flex"
+              title="Ctrl+K"
+            >
+              <Search className="h-3.5 w-3.5" /> Paleta
+            </button>
+            <button
+              type="button"
+              onClick={() => setShortcutsOpen(true)}
+              className="hidden rounded-lg border border-[var(--vo-border)] p-1.5 text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] md:block"
+              title="Bližnjice (?)"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </button>
             <div className="relative hidden md:block">
               <input
+                ref={searchRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => setShowResults(true)}
                 onBlur={() => window.setTimeout(() => setShowResults(false), 120)}
-                placeholder="Iskanje (stranke, uporabniki, opomniki)…"
-                className="w-80 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5 text-sm"
+                placeholder="Iskanje (/) …"
+                className="w-72 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5 text-sm lg:w-80"
               />
               {showResults && results.length > 0 ? (
                 <div className="absolute right-0 z-20 mt-1 max-h-80 w-80 overflow-auto rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] p-1 shadow-xl">
@@ -343,6 +444,17 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <div className="border-b border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 md:hidden">
+          <div className="mb-2 flex gap-2">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Iskanje…"
+              className="min-w-0 flex-1 rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-sm"
+            />
+            <button type="button" onClick={() => setCommandOpen(true)} className="rounded-lg border border-[var(--vo-border)] px-2 py-1.5 text-xs">
+              ⌘K
+            </button>
+          </div>
           <nav className="flex gap-1 overflow-x-auto">
             {orderedVisible.flatMap((s) => s.items).map(({ href, label }) => {
               const active = href.includes("?")
@@ -365,8 +477,13 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
 
-        <div className="flex-1 overflow-auto p-4 md:p-6">{children}</div>
+        <div className="flex-1 overflow-auto p-4 md:p-6">
+          <PortalBreadcrumbs />
+          {children}
+        </div>
       </div>
+      <PortalCommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
+      <PortalShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }

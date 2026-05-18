@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { exportRemindersCsv } from "@/lib/portal-export";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { mockClientPortalClientId } from "@/lib/mock-data";
 import type { ClientSummary, MaintenanceReminder, ReminderKind } from "@/lib/types";
@@ -26,11 +27,28 @@ export function OpomnikiView({ reminders, clients, dbConfigured }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [kindFilter, setKindFilter] = useState<"all" | ReminderKind>("all");
+  const [showCompleted, setShowCompleted] = useState(false);
 
-  const rows =
+  const baseRows =
     role !== "admin"
       ? reminders.filter((r) => r.clientId === mockClientPortalClientId)
       : reminders;
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return baseRows.filter((r) => {
+      if (!showCompleted && r.completed) return false;
+      if (kindFilter !== "all" && r.kind !== kindFilter) return false;
+      if (!q) return true;
+      return (
+        r.title.toLowerCase().includes(q) ||
+        r.clientName.toLowerCase().includes(q) ||
+        r.dueDate.includes(q)
+      );
+    });
+  }, [baseRows, search, kindFilter, showCompleted]);
 
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,6 +135,49 @@ export function OpomnikiView({ reminders, clients, dbConfigured }: Props) {
           {notice}
         </div>
       ) : null}
+
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-sm">
+        <input
+          type="search"
+          placeholder="Išči opomnike…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="min-w-[160px] flex-1 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5"
+        />
+        <select
+          value={kindFilter}
+          onChange={(e) => setKindFilter(e.target.value as typeof kindFilter)}
+          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-xs"
+        >
+          <option value="all">Vse vrste</option>
+          {(Object.keys(KIND_LABELS) as ReminderKind[]).map((k) => (
+            <option key={k} value={k}>
+              {KIND_LABELS[k]}
+            </option>
+          ))}
+        </select>
+        <label className="inline-flex items-center gap-1 text-xs text-[var(--vo-muted)]">
+          <input type="checkbox" checked={showCompleted} onChange={(e) => setShowCompleted(e.target.checked)} />
+          Zaključeni
+        </label>
+        <button
+          type="button"
+          className="rounded-lg border border-[var(--vo-border)] px-3 py-1.5 text-xs hover:bg-[var(--vo-surface-2)]"
+          onClick={() =>
+            exportRemindersCsv(
+              rows.map((r) => ({
+                title: r.title,
+                clientName: r.clientName,
+                dueDate: r.dueDate,
+                completed: r.completed,
+              })),
+            )
+          }
+        >
+          Izvozi CSV
+        </button>
+        <span className="text-xs text-[var(--vo-muted)]">{rows.length} opomnikov</span>
+      </div>
 
       {showForm && role === "admin" ? (
         <form

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
-import { getFavoriteClientIds, getRecentClients, toggleFavoriteClient } from "@/lib/portal-workspace-prefs";
+import { exportClientsCsv } from "@/lib/portal-export";
+import { getFavoriteClientIds, getRecentClients, toggleFavoriteClient } from "@/lib/portal-prefs";
 import { PortalContextMenu, type ContextMenuItem } from "@/components/portal/PortalContextMenu";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { clientProfilePath } from "@/lib/client-url";
@@ -31,12 +32,36 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
   const [orderedClients, setOrderedClients] = useState(clients);
   const [dragId, setDragId] = useState<string | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
+  const [healthFilter, setHealthFilter] = useState<"all" | "ok" | "alarm">("all");
+  const [sortBy, setSortBy] = useState<"name" | "health">("name");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   useEffect(() => {
     setFavoriteIds(getFavoriteClientIds());
   }, []);
 
   const recentClients = useMemo(() => getRecentClients(), []);
+
+  const filteredClients = useMemo(() => {
+    let list = orderedClients;
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.address ?? "").toLowerCase().includes(q) ||
+          (c.contact ?? "").toLowerCase().includes(q),
+      );
+    }
+    if (healthFilter !== "all") list = list.filter((c) => c.health === healthFilter);
+    if (favoritesOnly) list = list.filter((c) => favoriteIds.includes(c.id));
+    list = [...list].sort((a, b) => {
+      if (sortBy === "health") return a.health.localeCompare(b.health) || a.name.localeCompare(b.name, "sl");
+      return a.name.localeCompare(b.name, "sl");
+    });
+    return list;
+  }, [orderedClients, search, healthFilter, favoritesOnly, favoriteIds, sortBy]);
 
   useEffect(() => {
     setOrderedClients(clients);
@@ -136,6 +161,11 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
         id: "open",
         label: "Odpri profil",
         onClick: () => router.push(clientProfilePath(client)),
+      },
+      {
+        id: "open-new",
+        label: "Odpri v novem zavihku",
+        onClick: () => window.open(clientProfilePath(client), "_blank", "noopener,noreferrer"),
       },
       {
         id: "edit",
@@ -239,6 +269,57 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
         </section>
       )}
 
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-sm">
+        <input
+          type="search"
+          placeholder="Išči stranke…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="min-w-[180px] flex-1 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5"
+        />
+        <select
+          value={healthFilter}
+          onChange={(e) => setHealthFilter(e.target.value as typeof healthFilter)}
+          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-xs"
+        >
+          <option value="all">Vsi statusi</option>
+          <option value="ok">Samo OK</option>
+          <option value="alarm">Samo alarm</option>
+        </select>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-xs"
+        >
+          <option value="name">Ime</option>
+          <option value="health">Zdravje</option>
+        </select>
+        <label className="inline-flex items-center gap-1 text-xs text-[var(--vo-muted)]">
+          <input type="checkbox" checked={favoritesOnly} onChange={(e) => setFavoritesOnly(e.target.checked)} />
+          Priljubljene
+        </label>
+        <button
+          type="button"
+          className="rounded-lg border border-[var(--vo-border)] px-3 py-1.5 text-xs hover:bg-[var(--vo-surface-2)]"
+          onClick={() =>
+            exportClientsCsv(
+              filteredClients.map((c) => ({
+                name: c.name,
+                address: c.address,
+                contact: c.contact,
+                phone: c.phone,
+                email: c.email,
+                package: c.package?.name ?? "",
+                health: c.health,
+              })),
+            )
+          }
+        >
+          Izvozi CSV
+        </button>
+        <span className="text-xs text-[var(--vo-muted)]">{filteredClients.length} / {orderedClients.length}</span>
+      </div>
+
       {showForm ? (
         <form
           onSubmit={handleSave}
@@ -282,7 +363,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
             Ni strank.
           </div>
         ) : null}
-        {orderedClients.map((c) => (
+        {filteredClients.map((c) => (
           <div
             key={`m-${c.id}`}
             className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 shadow-[var(--vo-card-shadow)]"
@@ -363,7 +444,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                 </td>
               </tr>
             ) : null}
-            {orderedClients.map((c) => (
+            {filteredClients.map((c) => (
               <tr
                 key={c.id}
                 className="border-b border-[var(--vo-border)] last:border-0"

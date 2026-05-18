@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Settings2 } from "lucide-react";
 import {
   Boxes,
   Clock,
@@ -13,6 +15,7 @@ import {
   Bell,
   Radio,
 } from "lucide-react";
+import { getHiddenQuickActions, toggleQuickActionHidden } from "@/lib/portal-prefs";
 
 const actions = [
   { href: "/portal/stranke", label: "Objekti & stranke", icon: Users },
@@ -28,12 +31,49 @@ const actions = [
 ] as const;
 
 export function PortalQuickActions() {
+  const [hidden, setHidden] = useState<string[]>([]);
+  const [customize, setCustomize] = useState(false);
+
+  useEffect(() => {
+    setHidden(getHiddenQuickActions());
+  }, []);
+
+  const visible = actions.filter((a) => !hidden.includes(a.href));
+
   return (
     <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-      <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Hitri dostopi</h2>
-      <p className="mt-1 text-xs text-[var(--vo-muted)]">Pogosto uporabljene sekcije portala.</p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Hitri dostopi</h2>
+          <p className="mt-1 text-xs text-[var(--vo-muted)]">Pogosto uporabljene sekcije portala.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCustomize((v) => !v)}
+          className="rounded border border-[var(--vo-border)] p-1.5 text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)]"
+          title="Prilagodi"
+        >
+          <Settings2 className="h-4 w-4" />
+        </button>
+      </div>
+      {customize ? (
+        <ul className="mt-3 space-y-1 rounded border border-[var(--vo-border)] p-2 text-xs">
+          {actions.map((a) => (
+            <li key={a.href}>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={!hidden.includes(a.href)}
+                  onChange={() => setHidden(toggleQuickActionHidden(a.href))}
+                />
+                {a.label}
+              </label>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {actions.map(({ href, label, icon: Icon }) => (
+        {visible.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}

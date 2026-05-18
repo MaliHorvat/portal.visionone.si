@@ -1,24 +1,36 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ElementType } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   Boxes,
   Camera,
+  Download,
   HardDrive,
   LayoutDashboard,
   Link2,
+  RefreshCw,
   Router,
   Server,
   Settings,
+  Star,
   Video,
   Wifi,
 } from "lucide-react";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { PortalQuickActions } from "@/components/portal/PortalQuickActions";
 import { clientProfilePath } from "@/lib/client-url";
+import { exportDashboardCsv, exportRemindersCsv } from "@/lib/portal-export";
+import {
+  getDashboardCompact,
+  getDashboardFavoritesOnly,
+  getFavoriteClientIds,
+  setDashboardCompact,
+  setDashboardFavoritesOnly,
+} from "@/lib/portal-prefs";
 import type {
   ClientDashboardCard,
   PortalDashboardPayload,
@@ -30,16 +42,45 @@ type Props = {
 
 export function PortalDashboardView({ initial }: Props) {
   const { role } = usePortalRole();
+  const router = useRouter();
   const [now, setNow] = useState(() => new Date());
+  const [lastRefresh, setLastRefresh] = useState(() => new Date());
+  const [refreshing, setRefreshing] = useState(false);
+  const [favOnly, setFavOnly] = useState(false);
+  const [compact, setCompact] = useState(false);
+  const [reminderFilter, setReminderFilter] = useState<"all" | "open">("open");
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setFavOnly(getDashboardFavoritesOnly());
+    setCompact(getDashboardCompact());
+    setFavoriteIds(getFavoriteClientIds());
+  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(id);
   }, []);
 
-  const clients = useMemo(() => initial.clients, [initial.clients]);
+  const clients = useMemo(() => {
+    let list = initial.clients;
+    if (favOnly) list = list.filter((c) => favoriteIds.includes(c.id));
+    return list;
+  }, [initial.clients, favOnly, favoriteIds]);
+
+  const reminders = useMemo(() => {
+    if (reminderFilter === "all") return initial.reminders;
+    return initial.reminders.filter((r) => !r.completed);
+  }, [initial.reminders, reminderFilter]);
 
   const totals = initial.totals;
+
+  async function refreshDashboard() {
+    setRefreshing(true);
+    router.refresh();
+    setLastRefresh(new Date());
+    window.setTimeout(() => setRefreshing(false), 600);
+  }
 
   return (
     <div className="space-y-8 pb-10">
@@ -55,12 +96,51 @@ export function PortalDashboardView({ initial }: Props) {
             ) : null}
           </p>
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-mono tabular-nums text-[var(--vo-fg)]">
-            {now.toLocaleTimeString("sl-SI", { hour: "2-digit", minute: "2-digit" })}
-          </div>
-          <div className="text-xs text-[var(--vo-muted)]">
-            {now.toLocaleDateString("sl-SI", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => void refreshDashboard()}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-2 py-1 text-xs hover:bg-[var(--vo-surface-2)] disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} /> Osveži
+          </button>
+          <button
+            type="button"
+            onClick={() => exportDashboardCsv({ clients, totals })}
+            className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-2 py-1 text-xs hover:bg-[var(--vo-surface-2)]"
+          >
+            <Download className="h-3.5 w-3.5" /> CSV
+          </button>
+          <label className="inline-flex items-center gap-1 text-xs text-[var(--vo-muted)]">
+            <input
+              type="checkbox"
+              checked={favOnly}
+              onChange={(e) => {
+                setFavOnly(e.target.checked);
+                setDashboardFavoritesOnly(e.target.checked);
+              }}
+            />
+            <Star className="h-3 w-3" /> Priljubljene
+          </label>
+          <label className="inline-flex items-center gap-1 text-xs text-[var(--vo-muted)]">
+            <input
+              type="checkbox"
+              checked={compact}
+              onChange={(e) => {
+                setCompact(e.target.checked);
+                setDashboardCompact(e.target.checked);
+              }}
+            />
+            Kompaktno
+          </label>
+          <div className="text-right">
+            <div className="text-2xl font-mono tabular-nums text-[var(--vo-fg)]">
+              {now.toLocaleTimeString("sl-SI", { hour: "2-digit", minute: "2-digit" })}
+            </div>
+            <div className="text-xs text-[var(--vo-muted)]">
+              Osveženo {lastRefresh.toLocaleTimeString("sl-SI", { hour: "2-digit", minute: "2-digit" })}
+            </div>
           </div>
         </div>
       </header>
@@ -80,16 +160,38 @@ export function PortalDashboardView({ initial }: Props) {
         </div>
       </section>
 
-      <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-        <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Vzdrževanje &amp; opomniki</h2>
-        {initial.reminders.length === 0 ? (
+      <section className={`rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] shadow-[var(--vo-card-shadow)] ${compact ? "p-3" : "p-5"}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Vzdrževanje &amp; opomniki</h2>
+          <div className="flex gap-2 text-xs">
+            <select
+              value={reminderFilter}
+              onChange={(e) => setReminderFilter(e.target.value as "all" | "open")}
+              className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1"
+            >
+              <option value="open">Odprti</option>
+              <option value="all">Vsi</option>
+            </select>
+            <button
+              type="button"
+              className="rounded border border-[var(--vo-border)] px-2 py-1 hover:bg-[var(--vo-surface-2)]"
+              onClick={() => exportRemindersCsv(initial.reminders)}
+            >
+              Izvozi
+            </button>
+            <Link href="/portal/opomniki" className="rounded border border-[var(--vo-border)] px-2 py-1 text-[var(--vo-accent)] hover:bg-[var(--vo-surface-2)]">
+              Vsi →
+            </Link>
+          </div>
+        </div>
+        {reminders.length === 0 ? (
           <p className="mt-4 flex items-center gap-2 text-sm text-[var(--vo-muted)]">
             <Activity className="h-4 w-4 opacity-60" aria-hidden />
             Trenutno ni aktivnih opomnikov za vzdrževanje.
           </p>
         ) : (
           <ul className="mt-4 divide-y divide-[var(--vo-border)]">
-            {initial.reminders.map((r) => (
+            {reminders.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                 <span className="text-[var(--vo-fg)]">{r.title}</span>
                 <span className="text-xs text-[var(--vo-muted)]">

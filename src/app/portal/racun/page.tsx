@@ -1,3 +1,4 @@
+import { PortalRacunExtras } from "@/components/portal/PortalRacunExtras";
 import { NastavitvePortalPassword } from "../nastavitve/NastavitvePortalPassword";
 
 export default async function PortalRacunPage() {
@@ -10,6 +11,7 @@ export default async function PortalRacunPage() {
           geslo za dostop do portala.
         </p>
       </div>
+      <PortalRacunExtras />
       <NastavitvePortalPassword />
     </div>
   );
