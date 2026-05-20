@@ -29,17 +29,26 @@ export async function PUT(request: Request, ctx: Ctx) {
     const allowed = await getClientForSession(id, session ?? undefined);
     if (!allowed) return jsonError("Stranka ne obstaja.", 404);
     const body = await request.json();
-    const updated = await updateClient(id, {
-      name: body?.name,
-      address: body?.address,
-      contact: body?.contact,
-      phone: body?.phone,
-      email: body?.email,
-      health: body?.health === "alarm" ? "alarm" : body?.health === "ok" ? "ok" : undefined,
-      packageId: body?.packageId === undefined ? undefined : body.packageId,
-      topologyData: body?.topologyData,
-      rackData: body?.rackData,
-    });
+    const tagsRaw = body?.tags;
+    const tags = Array.isArray(tagsRaw)
+      ? tagsRaw.filter((x: unknown): x is string => typeof x === "string").map((t) => t.trim()).filter(Boolean)
+      : undefined;
+    const updated = await updateClient(
+      id,
+      {
+        name: body?.name,
+        address: body?.address,
+        contact: body?.contact,
+        phone: body?.phone,
+        email: body?.email,
+        health: body?.health === "alarm" ? "alarm" : body?.health === "ok" ? "ok" : undefined,
+        packageId: body?.packageId === undefined ? undefined : body.packageId,
+        topologyData: body?.topologyData,
+        rackData: body?.rackData,
+        tags,
+      },
+      session?.username ?? "",
+    );
     return NextResponse.json({ client: updated });
   } catch (e) {
     console.error(e);

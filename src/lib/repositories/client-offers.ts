@@ -39,7 +39,10 @@ export async function listAllOffersForSession(ownerUsername: string | null, isAd
   });
 }
 
-export async function createEmptyOffer(clientId: string, opts?: { title?: string }) {
+export async function createEmptyOffer(
+  clientId: string,
+  opts?: { title?: string; templateLines?: OfferLineInput[] },
+) {
   requireDb();
   const client = await prisma!.client.findUnique({
     where: { id: clientId },
@@ -47,12 +50,31 @@ export async function createEmptyOffer(clientId: string, opts?: { title?: string
   });
   const today = new Date().toISOString().slice(0, 10);
   const defaultTitle = opts?.title?.trim() || `Ponudba — ${client?.name ?? "stranka"} (${today})`;
+  const lines = opts?.templateLines ?? [];
   return prisma!.clientOffer.create({
     data: {
       clientId,
       title: defaultTitle,
       offerDate: today,
       clientAddress: client?.address ?? "",
+      offerStatus: "draft",
+      offerNumber: "",
+      lines:
+        lines.length > 0
+          ? {
+              create: lines.map((l, i) => ({
+                section: l.section,
+                sortOrder: i,
+                code: l.code,
+                description: l.description,
+                unit: l.unit,
+                qty: l.qty,
+                unitPrice: l.unitPrice,
+                discountPct: l.discountPct,
+                lineVatPct: l.lineVatPct,
+              })),
+            }
+          : undefined,
     },
     include: { lines: true },
   });
@@ -73,6 +95,8 @@ export async function duplicateOffer(offerId: string) {
       totalDiscountPct: src.totalDiscountPct,
       vatEnabled: src.vatEnabled,
       vatPct: src.vatPct,
+      offerNumber: "",
+      offerStatus: "draft",
       lines: {
         create: src.lines.map((l) => ({
           section: l.section,
@@ -99,6 +123,28 @@ export async function getOffer(offerId: string) {
   });
 }
 
+async function allocateOfferNumberIfEmpty(offerId: string, offerDate: string): Promise<void> {
+  const cur = await prisma!.clientOffer.findUnique({
+    where: { id: offerId },
+    select: { offerNumber: true, offerDate: true },
+  });
+  if (!cur || (cur.offerNumber ?? "").trim() !== "") return;
+  const y = (offerDate || cur.offerDate || new Date().toISOString().slice(0, 10)).slice(0, 4);
+  const year = Number(y) || new Date().getFullYear();
+  const prefix = `PON-${year}-`;
+  const existing = await prisma!.clientOffer.findMany({
+    where: { offerNumber: { startsWith: prefix } },
+    select: { offerNumber: true },
+  });
+  let max = 0;
+  for (const e of existing) {
+    const m = /^PON-\d+-(\d+)$/.exec(e.offerNumber.trim());
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  const next = `${prefix}${String(max + 1).padStart(4, "0")}`;
+  await prisma!.clientOffer.update({ where: { id: offerId }, data: { offerNumber: next } });
+}
+
 export async function updateOfferFull(
   offerId: string,
   patch: {
@@ -109,6 +155,8 @@ export async function updateOfferFull(
     totalDiscountPct?: number;
     vatEnabled?: boolean;
     vatPct?: number;
+    offerStatus?: string;
+    offerNumber?: string;
     lines?: OfferLineInput[];
   },
 ) {
@@ -124,6 +172,8 @@ export async function updateOfferFull(
     if (patch.totalDiscountPct !== undefined) meta.totalDiscountPct = patch.totalDiscountPct;
     if (patch.vatEnabled !== undefined) meta.vatEnabled = patch.vatEnabled;
     if (patch.vatPct !== undefined) meta.vatPct = patch.vatPct;
+    if (patch.offerStatus !== undefined) meta.offerStatus = patch.offerStatus;
+    if (patch.offerNumber !== undefined) meta.offerNumber = patch.offerNumber;
 
     await tx.clientOffer.update({
       where: { id: offerId },
@@ -147,6 +197,12 @@ export async function updateOfferFull(
       });
     }
   });
+
+  const row = await prisma!.clientOffer.findUnique({
+    where: { id: offerId },
+    select: { offerDate: true },
+  });
+  await allocateOfferNumberIfEmpty(offerId, patch.offerDate ?? row?.offerDate ?? "");
 
   return getOffer(offerId);
 }

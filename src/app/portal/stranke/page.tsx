@@ -18,6 +18,7 @@ function mockSummaries() {
     email: c.email,
     package: c.package,
     health: c.health,
+    tags: c.tags ?? [],
   }));
 }
 

@@ -22,6 +22,8 @@ export interface ClientSummary {
   email: string;
   package: SubscriptionPackageDto | null;
   health: ClientHealth;
+  /** Oznake stranke (npr. VIP, teren). */
+  tags: string[];
 }
 
 export interface CameraDevice {

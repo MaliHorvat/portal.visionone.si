@@ -49,6 +49,7 @@ export async function POST(request: Request) {
     });
     void sendTelegramNotification(
       `🗓️ Nov opomnik\nNaslov: ${created.title}\nStranka: ${created.clientName || "-"}\nRok: ${created.dueDate}\nTip: ${created.kind}`,
+      "reminder",
     );
     return NextResponse.json({ reminder: created }, { status: 201 });
   } catch (e) {

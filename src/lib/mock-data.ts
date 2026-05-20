@@ -96,6 +96,7 @@ const baseClients: ClientDetail[] = [
     email: "j.novak@logistika-kranj.si",
     package: mockPackages[1],
     health: "ok",
+    tags: ["VIP", "teren"],
     cameras: [
       { id: "cam1", name: "Vhod sever", ip: "10.20.1.50", model: "Axis P3265", status: "online" },
       { id: "cam2", name: "Rampni prostor", ip: "10.20.1.51", model: "Hikvision DS-2CD2xxx", status: "online" },
@@ -121,6 +122,7 @@ const baseClients: ClientDetail[] = [
     email: "ana.kovac@retailpark.si",
     package: mockPackages[2],
     health: "alarm",
+    tags: [],
     cameras: [
       { id: "cam10", name: "Vhod zahod", ip: "10.50.2.18", model: "Dahua IPC-HFW", status: "offline" },
       { id: "cam11", name: "Parking", ip: "10.50.2.19", model: "Dahua IPC-HFW", status: "online" },
@@ -146,6 +148,7 @@ const baseClients: ClientDetail[] = [
     email: "uprava@stanovanja.si",
     package: mockPackages[0],
     health: "ok",
+    tags: ["stanovanja"],
     cameras: [
       { id: "cam20", name: "Dvigalo A", ip: "192.168.88.40", model: "Ubiquiti G4", status: "online" },
     ],

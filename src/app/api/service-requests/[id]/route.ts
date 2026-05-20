@@ -47,6 +47,7 @@ export async function PUT(request: Request, ctx: Ctx) {
     await appendAuditLog(session.username, "service_request_update", `${updated.id}|${updated.status}|${updated.priority}`);
     void sendTelegramNotification(
       `🛠️ Posodobljen zahtevek\nNaslov: ${updated.title}\nStatus: ${updated.status}\nPrioriteta: ${updated.priority}\nStranka: ${updated.clientName || "-"}`,
+      "service_request",
     );
     return NextResponse.json({ request: updated });
   } catch (e) {

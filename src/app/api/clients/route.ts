@@ -24,6 +24,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const name = String(body?.name ?? "").trim();
     if (!name) return jsonError("Polje 'name' je obvezno.");
+    const tagsRaw = body?.tags;
+    const tags = Array.isArray(tagsRaw)
+      ? tagsRaw.filter((x: unknown): x is string => typeof x === "string").map((t) => t.trim()).filter(Boolean)
+      : [];
     const created = await createClientForSession({
       name,
       address: body?.address ?? "",
@@ -32,6 +36,7 @@ export async function POST(request: Request) {
       email: body?.email ?? "",
       health: body?.health === "alarm" ? "alarm" : "ok",
       packageId: body?.packageId ?? null,
+      tags,
     }, session ?? undefined);
     return NextResponse.json({ client: created }, { status: 201 });
   } catch (e) {

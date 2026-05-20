@@ -42,11 +42,36 @@ model Client {
   deviceChecks DeviceCheck[]
   documents ClientDocument[]
   fieldVisits FieldVisit[]
+  profileNote ClientProfileNote?
+  profileChanges ClientProfileChangeLog[]
+  /** Oznake (niz nizov) — JSON polje, npr. ["VIP","teren"]. */
+  tags      Json     @default("[]")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([packageId])
   @@index([ownerUsername])
+}
+
+model ClientProfileNote {
+  clientId  String   @id
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  content   String   @db.Text @default("")
+  updatedBy String   @default("")
+  updatedAt DateTime @updatedAt
+}
+
+model ClientProfileChangeLog {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  field     String
+  oldValue  String   @db.Text @default("")
+  newValue  String   @db.Text @default("")
+  username  String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([clientId, createdAt])
 }
 
 model ClientDocument {
@@ -137,11 +162,28 @@ model ClientOffer {
   totalDiscountPct Float    @default(0)
   vatEnabled       Boolean  @default(true)
   vatPct           Float    @default(22)
+  /** Številka dokumenta, npr. PON-2026-0001 */
+  offerNumber      String   @default("")
+  /** draft | sent | accepted | rejected */
+  offerStatus      String   @default("draft")
   lines            ClientOfferLine[]
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   @@index([clientId])
+  @@index([offerNumber])
+}
+
+model OfferTemplate {
+  id              String   @id @default(cuid())
+  ownerUsername   String   @default("admin")
+  name            String
+  /** JSON: niz postavk { section, code, description, unit, qty, unitPrice, discountPct, lineVatPct } */
+  lines           Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([ownerUsername])
 }
 
 model ClientOfferLine {
@@ -235,11 +277,47 @@ model ServiceRequest {
   dueDate       String               @default("")
   createdBy     String               @default("portal")
   assignee      String               @default("")
+  attachments   ServiceRequestAttachment[]
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
 
   @@index([ownerUsername, status, priority])
   @@index([clientId])
+}
+
+model ServiceRequestAttachment {
+  id               String         @id @default(cuid())
+  serviceRequestId String
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  originalName     String
+  mimeType         String         @default("application/octet-stream")
+  sizeBytes        Int            @default(0)
+  data             Bytes          @db.LongBlob
+  createdAt        DateTime       @default(now())
+
+  @@index([serviceRequestId])
+}
+
+model PortalIpamEntry {
+  id              String   @id @default(cuid())
+  ownerUsername   String   @default("admin")
+  ip              String
+  name            String   @default("")
+  mac             String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([ownerUsername, ip])
+}
+
+model TelegramNotificationRule {
+  id       String      @id @default(cuid())
+  botId    String
+  bot      TelegramBot @relation(fields: [botId], references: [id], onDelete: Cascade)
+  eventKey String
+  enabled  Boolean     @default(true)
+
+  @@unique([botId, eventKey])
 }
 
 model FieldVisit {
@@ -378,6 +456,7 @@ model TelegramBot {
   name   String
   token  String @db.Text
   chatId String
+  rules  TelegramNotificationRule[]
 }
 
 model UserNote {

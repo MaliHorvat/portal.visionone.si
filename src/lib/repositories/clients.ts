@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma, isDbConfigured } from "@/lib/db";
+import { appendClientProfileChanges } from "@/lib/repositories/client-profile";
 import { getMockClient, getMockClients } from "@/lib/mock-data";
 import type { PortalSessionPayload } from "@/lib/portal-session-verify";
 import { slugifyName } from "@/lib/slug";
@@ -86,6 +87,11 @@ function mapHealth(h: string): ClientHealth {
   return h === "alarm" ? "alarm" : "ok";
 }
 
+function parseClientTags(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((x): x is string => typeof x === "string").map((t) => t.trim()).filter(Boolean);
+}
+
 function mapClientSummary(c: DbClient): ClientSummary {
   return {
     id: c.id,
@@ -97,6 +103,7 @@ function mapClientSummary(c: DbClient): ClientSummary {
     email: c.email,
     package: mapPackage(c.package),
     health: mapHealth(c.health),
+    tags: parseClientTags((c as { tags?: unknown }).tags),
   };
 }
 
@@ -187,6 +194,7 @@ export async function listClients(): Promise<ClientSummary[]> {
       email: c.email,
       package: c.package,
       health: c.health,
+      tags: c.tags ?? [],
     }));
   }
   let rows: Awaited<ReturnType<NonNullable<typeof prisma>["client"]["findMany"]>>;
@@ -314,6 +322,8 @@ export interface UpsertClientInput {
   email?: string;
   health?: ClientHealth;
   packageId?: string | null;
+  /** Oznake stranke */
+  tags?: string[];
   topologyData?: Prisma.InputJsonValue;
   rackData?: Prisma.InputJsonValue;
 }
@@ -335,6 +345,7 @@ export async function createClient(data: UpsertClientInput): Promise<ClientDetai
       health: data.health ?? "ok",
       sortOrder: (max._max.sortOrder ?? 0) + 1,
       packageId: data.packageId ?? null,
+      tags: (data.tags ?? []) as unknown as Prisma.InputJsonValue,
     },
     include: {
       package: true,
@@ -369,6 +380,7 @@ export async function createClientForSession(
       sortOrder: (max._max.sortOrder ?? 0) + 1,
       packageId: data.packageId ?? null,
       ownerUsername: session?.username?.trim() || "admin",
+      tags: (data.tags ?? []) as unknown as Prisma.InputJsonValue,
     },
     include: {
       package: true,
@@ -384,10 +396,24 @@ export async function createClientForSession(
 export async function updateClient(
   id: string,
   data: Partial<UpsertClientInput>,
+  actor?: string,
 ): Promise<ClientDetail> {
   if (!isDbConfigured() || !prisma) {
     throw new Error("DB ni nastavljena.");
   }
+  const prev = await prisma.client.findUnique({
+    where: { id },
+    select: {
+      name: true,
+      address: true,
+      contact: true,
+      phone: true,
+      email: true,
+      health: true,
+      packageId: true,
+      tags: true,
+    },
+  });
   let newSlug: string | undefined;
   if (data.name !== undefined) {
     newSlug = await allocateUniqueClientSlug(data.name, id);
@@ -405,6 +431,7 @@ export async function updateClient(
       packageId: data.packageId === undefined ? undefined : data.packageId,
       topologyData: data.topologyData === undefined ? undefined : data.topologyData,
       rackData: data.rackData === undefined ? undefined : data.rackData,
+      tags: data.tags === undefined ? undefined : (data.tags as unknown as Prisma.InputJsonValue),
     },
     include: {
       package: true,
@@ -414,6 +441,25 @@ export async function updateClient(
       disks: true,
     },
   });
+  if (actor?.trim() && prev) {
+    const changes: Array<{ field: string; oldValue: string; newValue: string }> = [];
+    const push = (field: string, oldVal: unknown, newVal: unknown) => {
+      const o = String(oldVal ?? "");
+      const n = String(newVal ?? "");
+      if (o !== n) changes.push({ field, oldValue: o.slice(0, 4000), newValue: n.slice(0, 4000) });
+    };
+    if (data.name !== undefined) push("name", prev.name, data.name);
+    if (data.address !== undefined) push("address", prev.address, data.address);
+    if (data.contact !== undefined) push("contact", prev.contact, data.contact);
+    if (data.phone !== undefined) push("phone", prev.phone, data.phone);
+    if (data.email !== undefined) push("email", prev.email, data.email);
+    if (data.health !== undefined) push("health", prev.health, data.health);
+    if (data.packageId !== undefined) push("packageId", prev.packageId ?? "", data.packageId ?? "");
+    if (data.tags !== undefined) {
+      push("tags", JSON.stringify(parseClientTags(prev.tags)), JSON.stringify(data.tags ?? []));
+    }
+    if (changes.length) await appendClientProfileChanges(id, actor.trim(), changes);
+  }
   return mapClientDetail(row);
 }
 

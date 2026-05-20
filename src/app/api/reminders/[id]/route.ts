@@ -35,6 +35,7 @@ export async function PUT(request: Request, ctx: Ctx) {
     });
     void sendTelegramNotification(
       `🔁 Opomnik posodobljen\nNaslov: ${updated.title}\nStranka: ${updated.clientName || "-"}\nRok: ${updated.dueDate}\nStatus: ${updated.completed ? "opravljeno" : "odprto"}`,
+      "reminder",
     );
     return NextResponse.json({ reminder: updated });
   } catch (e) {
@@ -52,7 +53,7 @@ export async function DELETE(_request: Request, ctx: Ctx) {
     const { id } = await ctx.params;
     if (!(await reminderBelongsToSession(id, session))) return jsonError("Opomnik ne obstaja.", 404);
     await deleteReminder(id);
-    void sendTelegramNotification(`🗑️ Opomnik izbrisan\nID: ${id}`);
+    void sendTelegramNotification(`🗑️ Opomnik izbrisan\nID: ${id}`, "reminder");
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error(e);

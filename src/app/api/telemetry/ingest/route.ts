@@ -120,6 +120,7 @@ export async function POST(request: Request) {
       if (status === "offline" && previous?.status !== "offline") {
         void sendTelegramNotification(
           `🚨 Naprava offline\nStranka: ${registered.client?.name || "-"}\nNaprava: ${name}\nIP: ${ip}\nAgent: ${agentId}`,
+          "device_offline",
         );
       }
 

@@ -9,7 +9,13 @@ export async function GET() {
   if (!isDbConfigured() || !prisma) return jsonError("DB ni nastavljena.", 500);
   try {
     const bots = await prisma.telegramBot.findMany({ orderBy: { name: "asc" } });
-    return NextResponse.json({ bots });
+    const { ensureDefaultRulesForBot } = await import("@/lib/repositories/telegram-rules");
+    await Promise.all(bots.map((b) => ensureDefaultRulesForBot(b.id)));
+    const withRules = await prisma.telegramBot.findMany({
+      orderBy: { name: "asc" },
+      include: { rules: true },
+    });
+    return NextResponse.json({ bots: withRules });
   } catch (e) {
     console.error(e);
     return jsonError("Napaka pri branju botov.", 500);
@@ -27,6 +33,8 @@ export async function POST(request: Request) {
     const chatId = String(body?.chatId ?? "").trim();
     if (!name || !token || !chatId) return jsonError("Ime, token in chatId so obvezni.");
     const bot = await prisma.telegramBot.create({ data: { name, token, chatId } });
+    const { ensureDefaultRulesForBot } = await import("@/lib/repositories/telegram-rules");
+    await ensureDefaultRulesForBot(bot.id);
     await appendAuditLog("admin", "telegram_bot_create", name);
     return NextResponse.json({ bot }, { status: 201 });
   } catch (e) {

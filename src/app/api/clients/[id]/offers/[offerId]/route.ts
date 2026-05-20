@@ -49,6 +49,10 @@ export async function PUT(request: Request, ctx: Ctx) {
       lineVatPct: Number.isFinite(Number(l.lineVatPct)) ? Number(l.lineVatPct) : 22,
     }));
 
+    const VALID_STATUS = new Set(["draft", "sent", "accepted", "rejected"]);
+    const st = body?.offerStatus !== undefined ? String(body.offerStatus) : undefined;
+    const offerStatus = st && VALID_STATUS.has(st) ? st : undefined;
+
     const offer = await updateOfferFull(offerId, {
       title: body?.title !== undefined ? String(body.title) : undefined,
       offerDate: body?.offerDate !== undefined ? String(body.offerDate) : undefined,
@@ -58,6 +62,8 @@ export async function PUT(request: Request, ctx: Ctx) {
         body?.totalDiscountPct !== undefined ? Number(body.totalDiscountPct) : undefined,
       vatEnabled: body?.vatEnabled !== undefined ? Boolean(body.vatEnabled) : undefined,
       vatPct: body?.vatPct !== undefined ? Number(body.vatPct) : undefined,
+      offerStatus,
+      offerNumber: body?.offerNumber !== undefined ? String(body.offerNumber) : undefined,
       lines,
     });
     await appendAuditLog(own.session.username, "client_offer_save", offerId);

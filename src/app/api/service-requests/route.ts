@@ -57,6 +57,7 @@ export async function POST(request: Request) {
     await appendAuditLog(session.username, "service_request_create", `${created.id}|${created.title}`);
     void sendTelegramNotification(
       `🆕 Nov zahtevek\nNaslov: ${created.title}\nPrioriteta: ${created.priority}\nStranka: ${created.clientName || "-"}\nUstvaril: ${session.username}`,
+      "service_request",
     );
     return NextResponse.json({ request: created }, { status: 201 });
   } catch (e) {
