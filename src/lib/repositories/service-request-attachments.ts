@@ -29,7 +29,7 @@ export async function addAttachment(
       originalName,
       mimeType: mimeType || "application/octet-stream",
       sizeBytes: data.length,
-      data,
+      data: new Uint8Array(data),
     },
     select: { id: true, originalName: true, sizeBytes: true, createdAt: true },
   });
