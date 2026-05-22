@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { jsonError, requirePortalSession, requirePortalRole } from "@/lib/api-guard";
+import { jsonError, requirePortalRole } from "@/lib/api-guard";
 import { getPortalSession } from "@/lib/get-portal-session";
 import { createClientForSession } from "@/lib/repositories/clients";
 import { appendAuditLog } from "@/lib/repositories/audit-log";

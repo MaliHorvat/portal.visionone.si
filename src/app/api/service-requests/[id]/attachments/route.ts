@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
 import { getPortalSession } from "@/lib/get-portal-session";
-import {
-  addAttachment,
-  deleteAttachment,
-  listAttachments,
-} from "@/lib/repositories/service-request-attachments";
+import { addAttachment, listAttachments } from "@/lib/repositories/service-request-attachments";
 import { getServiceRequestForSession } from "@/lib/repositories/service-requests";
 
 type Ctx = { params: Promise<{ id: string }> };

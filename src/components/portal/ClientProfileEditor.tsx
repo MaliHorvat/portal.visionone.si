@@ -6,10 +6,12 @@ import {
   Copy,
   ExternalLink,
   FileText,
+  History,
   MapPin,
   Pencil,
   Phone,
   Printer,
+  StickyNote,
   X,
 } from "lucide-react";
 import { usePortalRole } from "@/context/PortalRoleContext";
@@ -37,7 +39,16 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
     email: client.email ?? "",
     packageId: client.package?.id ?? "",
     health: client.health as ClientHealth,
+    tags: (client.tags ?? []).join(", "),
   });
+  const [internalNote, setInternalNote] = useState("");
+  const [noteMeta, setNoteMeta] = useState<{ updatedBy: string; updatedAt: string | null } | null>(null);
+  const [noteBusy, setNoteBusy] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyRows, setHistoryRows] = useState<
+    Array<{ id: string; field: string; oldValue: string; newValue: string; username: string; createdAt: string }>
+  >([]);
+  const [historyBusy, setHistoryBusy] = useState(false);
 
   useEffect(() => {
     setForm({
@@ -48,8 +59,25 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
       email: client.email ?? "",
       packageId: client.package?.id ?? "",
       health: client.health,
+      tags: (client.tags ?? []).join(", "),
     });
   }, [client]);
+
+  useEffect(() => {
+    if (!dbConfigured) return;
+    void fetch(`/api/clients/${client.id}/internal-note`, { credentials: "include" })
+      .then((r) => r.json())
+      .then(
+        (j: { content?: string; updatedBy?: string; updatedAt?: string | null }) => {
+          setInternalNote(j.content ?? "");
+          setNoteMeta({
+            updatedBy: j.updatedBy ?? "",
+            updatedAt: j.updatedAt ?? null,
+          });
+        },
+      )
+      .catch(() => {});
+  }, [client.id, dbConfigured]);
 
   useEffect(() => {
     if (role !== "admin" || !dbConfigured) return;
@@ -73,6 +101,10 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
         email: form.email.trim(),
         packageId: form.packageId || null,
         health: form.health,
+        tags: form.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
       }),
     });
     setBusy(false);
@@ -131,6 +163,49 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
       "_blank",
       "noopener,noreferrer",
     );
+  }
+
+  async function saveInternalNote() {
+    if (!dbConfigured) return;
+    setNoteBusy(true);
+    const res = await fetch(`/api/clients/${client.id}/internal-note`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: internalNote }),
+    });
+    setNoteBusy(false);
+    if (!res.ok) {
+      showToast("Shranjevanje opombe ni uspelo.", "err");
+      return;
+    }
+    showToast("Interna opomba shranjena.");
+    void fetch(`/api/clients/${client.id}/internal-note`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((j: { updatedBy?: string; updatedAt?: string | null }) => {
+        setNoteMeta({ updatedBy: j.updatedBy ?? "", updatedAt: j.updatedAt ?? null });
+      })
+      .catch(() => {});
+  }
+
+  async function toggleHistory() {
+    const next = !showHistory;
+    setShowHistory(next);
+    if (!next || !dbConfigured) return;
+    setHistoryBusy(true);
+    const res = await fetch(`/api/clients/${client.id}/profile-history`, { credentials: "include" });
+    setHistoryBusy(false);
+    if (!res.ok) return;
+    const j = (await res.json()) as {
+      changes?: Array<{
+        id: string;
+        field: string;
+        oldValue: string;
+        newValue: string;
+        username: string;
+        createdAt: string;
+      }>;
+    };
+    setHistoryRows(j.changes ?? []);
   }
 
   function printProfile() {
@@ -239,6 +314,15 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
               <option value="alarm">Alarm</option>
             </select>
           </label>
+          <label className="text-xs sm:col-span-2">
+            <span className="text-[var(--vo-muted)]">Oznake (vejica)</span>
+            <input
+              value={form.tags}
+              onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
+              placeholder="VIP, teren"
+              className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm"
+            />
+          </label>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <button
@@ -263,7 +347,20 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
   }
 
   return (
+    <div className="space-y-3">
     <div className="flex flex-wrap items-center gap-2">
+      {(client.tags ?? []).length > 0 ? (
+        <div className="flex w-full flex-wrap gap-1 pb-1">
+          {client.tags.map((t) => (
+            <span
+              key={t}
+              className="rounded-full bg-[var(--vo-surface-2)] px-2 py-0.5 text-[10px] text-[var(--vo-muted)]"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      ) : null}
       {canEdit ? (
         <button
           type="button"
@@ -344,6 +441,25 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
         <Printer className="h-3.5 w-3.5" />
         Natisni
       </button>
+      {dbConfigured ? (
+        <a
+          href={`/api/clients/${client.id}/vcard`}
+          download={`${client.name.replace(/\s+/g, "-")}.vcf`}
+          className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs hover:bg-[var(--vo-surface-2)]"
+        >
+          vCard
+        </a>
+      ) : null}
+      {canEdit && dbConfigured ? (
+        <button
+          type="button"
+          onClick={() => void toggleHistory()}
+          className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs hover:bg-[var(--vo-surface-2)]"
+        >
+          <History className="h-3.5 w-3.5" />
+          Zgodovina
+        </button>
+      ) : null}
       {onOpenPonudbe ? (
         <button
           type="button"
@@ -354,6 +470,59 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
           Ponudbe
         </button>
       ) : null}
+    </div>
+    {showHistory && canEdit ? (
+      <div className="max-h-48 overflow-y-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs">
+        {historyBusy ? (
+          <p className="text-[var(--vo-muted)]">Nalagam…</p>
+        ) : historyRows.length === 0 ? (
+          <p className="text-[var(--vo-muted)]">Ni zabeleženih sprememb profila.</p>
+        ) : (
+          <ul className="space-y-2">
+            {historyRows.map((h) => (
+              <li key={h.id} className="border-b border-[var(--vo-border)] pb-2 last:border-0">
+                <span className="font-medium text-[var(--vo-fg)]">{h.field}</span>
+                <span className="text-[var(--vo-muted)]">
+                  {" "}
+                  · {h.username} · {new Date(h.createdAt).toLocaleString("sl-SI")}
+                </span>
+                <div className="mt-0.5 text-[var(--vo-muted)] line-through">{h.oldValue || "—"}</div>
+                <div className="text-[var(--vo-fg)]">{h.newValue || "—"}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    ) : null}
+    {canEdit && dbConfigured ? (
+      <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3">
+        <div className="flex items-center gap-2 text-xs font-semibold text-[var(--vo-fg)]">
+          <StickyNote className="h-3.5 w-3.5" />
+          Interna opomba (samo ekipa)
+        </div>
+        {noteMeta?.updatedAt ? (
+          <p className="mt-1 text-[10px] text-[var(--vo-muted)]">
+            {noteMeta.updatedBy ? `${noteMeta.updatedBy} · ` : ""}
+            {new Date(noteMeta.updatedAt).toLocaleString("sl-SI")}
+          </p>
+        ) : null}
+        <textarea
+          value={internalNote}
+          onChange={(e) => setInternalNote(e.target.value)}
+          rows={3}
+          className="mt-2 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm"
+          placeholder="Opombe za interno uporabo…"
+        />
+        <button
+          type="button"
+          disabled={noteBusy}
+          onClick={() => void saveInternalNote()}
+          className="mt-2 rounded-lg bg-[var(--vo-accent)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+        >
+          {noteBusy ? "Shranjujem…" : "Shrani opombo"}
+        </button>
+      </div>
+    ) : null}
     </div>
   );
 }

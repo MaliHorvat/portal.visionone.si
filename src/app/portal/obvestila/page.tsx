@@ -3,7 +3,20 @@
 import { useEffect, useState } from "react";
 import { AdminGate } from "@/components/portal/AdminGate";
 
-type BotRow = { id: string; name: string; token: string; chatId: string };
+type RuleRow = { id: string; eventKey: string; enabled: boolean };
+type BotRow = {
+  id: string;
+  name: string;
+  token: string;
+  chatId: string;
+  rules?: RuleRow[];
+};
+
+const EVENT_LABELS: Record<string, string> = {
+  service_request: "Nov zahtevek",
+  reminder: "Opomnik",
+  device_offline: "Naprava offline",
+};
 
 export default function ObvestilaPage() {
   const [bots, setBots] = useState<BotRow[]>([]);
@@ -62,6 +75,22 @@ export default function ObvestilaPage() {
     if (!confirm("Izbrisati bota?")) return;
     await fetch(`/api/telegram-bots/${id}`, { method: "DELETE", credentials: "include" });
     if (editingId === id) resetForm();
+    await load();
+  }
+
+  async function toggleRule(botId: string, eventKey: string, enabled: boolean) {
+    setMsg(null);
+    const res = await fetch(`/api/telegram-bots/${botId}/rules`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventKey, enabled }),
+    });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      setMsg(data.error ?? "Posodobitev pravila ni uspela.");
+      return;
+    }
     await load();
   }
 
@@ -157,20 +186,41 @@ export default function ObvestilaPage() {
               {bots.map((b) => (
                 <li
                   key={b.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-[var(--vo-border)] px-3 py-2 text-sm"
+                  className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-sm"
                 >
-                  <span className="font-medium text-[var(--vo-fg)]">{b.name}</span>
-                  <span className="flex gap-2">
-                    <button type="button" className="text-emerald-400 text-xs" onClick={() => void sendTest(b.id)}>
-                      Test
-                    </button>
-                    <button type="button" className="text-[var(--vo-accent)] text-xs" onClick={() => startEdit(b)}>
-                      Uredi
-                    </button>
-                    <button type="button" className="text-[var(--vo-danger)] text-xs" onClick={() => void onDelete(b.id)}>
-                      Briši
-                    </button>
-                  </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-[var(--vo-fg)]">{b.name}</span>
+                    <span className="flex gap-2">
+                      <button type="button" className="text-emerald-400 text-xs" onClick={() => void sendTest(b.id)}>
+                        Test
+                      </button>
+                      <button type="button" className="text-[var(--vo-accent)] text-xs" onClick={() => startEdit(b)}>
+                        Uredi
+                      </button>
+                      <button type="button" className="text-[var(--vo-danger)] text-xs" onClick={() => void onDelete(b.id)}>
+                        Briši
+                      </button>
+                    </span>
+                  </div>
+                  {(b.rules ?? []).length > 0 ? (
+                    <ul className="mt-2 space-y-1 border-t border-[var(--vo-border)] pt-2">
+                      {b.rules!.map((r) => (
+                        <li key={r.id} className="flex items-center justify-between gap-2 text-xs">
+                          <span className="text-[var(--vo-muted)]">
+                            {EVENT_LABELS[r.eventKey] ?? r.eventKey}
+                          </span>
+                          <label className="inline-flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={r.enabled}
+                              onChange={(e) => void toggleRule(b.id, r.eventKey, e.target.checked)}
+                            />
+                            {r.enabled ? "Vklop" : "Izklop"}
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </li>
               ))}
             </ul>

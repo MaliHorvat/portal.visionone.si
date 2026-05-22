@@ -19,10 +19,11 @@ export function exportClientsCsv(
     email?: string;
     package?: string;
     health?: string;
+    tags?: string;
   }>,
 ): void {
   downloadCsv("visionone-stranke.csv", [
-    ["Ime", "Naslov", "Kontakt", "Telefon", "E-pošta", "Paket", "Zdravje"],
+    ["Ime", "Naslov", "Kontakt", "Telefon", "E-pošta", "Paket", "Zdravje", "Oznake"],
     ...clients.map((c) => [
       c.name,
       c.address ?? "",
@@ -31,6 +32,7 @@ export function exportClientsCsv(
       c.email ?? "",
       c.package ?? "",
       c.health ?? "",
+      c.tags ?? "",
     ]),
   ]);
 }

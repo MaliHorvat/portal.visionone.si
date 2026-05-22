@@ -13,9 +13,18 @@ const EUR = "\u20AC";
 
 type LineRow = OfferLineRow;
 
+const OFFER_STATUS_LABEL: Record<string, string> = {
+  draft: "Osnutek",
+  sent: "Poslano",
+  accepted: "Sprejeto",
+  rejected: "Zavrnjeno",
+};
+
 type OfferDto = {
   id: string;
   title?: string;
+  offerNumber?: string;
+  offerStatus?: string;
   offerDate: string;
   clientAddress: string;
   notes: string;
@@ -128,13 +137,15 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
   const { client, clientId, dbConfigured } = ctx;
   const [offers, setOffers] = useState<
-    { id: string; title?: string; offerDate?: string; updatedAt?: string }[]
+    { id: string; title?: string; offerNumber?: string; offerStatus?: string; offerDate?: string; updatedAt?: string }[]
   >([]);
   const [sel, setSel] = useState<string | null>(null);
   const [draft, setDraft] = useState<OfferDto | null>(null);
   const [rows, setRows] = useState<LineRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [newOfferTitle, setNewOfferTitle] = useState("");
+  const [templateId, setTemplateId] = useState("");
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string }>>([]);
   const savedSnapshot = useRef("");
 
   const loadList = useCallback(async () => {
@@ -147,6 +158,8 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       list.map((x) => ({
         id: x.id,
         title: x.title,
+        offerNumber: x.offerNumber,
+        offerStatus: x.offerStatus,
         offerDate: x.offerDate,
         updatedAt: x.updatedAt,
       })),
@@ -172,16 +185,33 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
     return savedSnapshot.current !== JSON.stringify({ draft, rows });
   }, [draft, rows]);
 
-  function offerLabel(o: { id: string; title?: string; offerDate?: string }) {
+  function offerLabel(o: {
+    id: string;
+    title?: string;
+    offerNumber?: string;
+    offerStatus?: string;
+    offerDate?: string;
+  }) {
+    const num = o.offerNumber?.trim();
+    const st = o.offerStatus ? OFFER_STATUS_LABEL[o.offerStatus] ?? o.offerStatus : "";
     const t = o.title?.trim();
-    if (t) return t;
-    if (o.offerDate) return `Ponudba ${o.offerDate}`;
-    return o.id.slice(0, 8) + "…";
+    const base = num || t || (o.offerDate ? `Ponudba ${o.offerDate}` : o.id.slice(0, 8) + "…");
+    return st ? `${base} (${st})` : base;
   }
 
   useEffect(() => {
     void loadList();
   }, [loadList]);
+
+  useEffect(() => {
+    if (!dbConfigured) return;
+    void fetch("/api/offer-templates", { credentials: "include" })
+      .then((r) => r.json())
+      .then((j: { templates?: Array<{ id: string; name: string }> }) => {
+        setTemplates((j.templates ?? []).map((t) => ({ id: t.id, name: t.name })));
+      })
+      .catch(() => setTemplates([]));
+  }, [dbConfigured]);
 
   useEffect(() => {
     if (sel) void loadOffer(sel);
@@ -200,7 +230,14 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
   async function createOffer() {
     if (!dbConfigured) return;
     setBusy(true);
-    const r = await fetch(`/api/clients/${clientId}/offers`, { method: "POST" });
+    const r = await fetch(`/api/clients/${clientId}/offers`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title: newOfferTitle.trim() || undefined,
+        templateId: templateId || undefined,
+      }),
+    });
     setBusy(false);
     if (!r.ok) {
       showToast("Ustvarjanje ponudbe ni uspelo.", "err");
@@ -253,6 +290,8 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         totalDiscountPct: draft.totalDiscountPct,
         vatEnabled: draft.vatEnabled,
         vatPct: draft.vatPct,
+        offerStatus: draft.offerStatus,
+        offerNumber: draft.offerNumber ?? "",
         lines,
       }),
     });
@@ -482,6 +521,20 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
           placeholder="Ime nove ponudbe (opcijsko)"
           className="min-w-[160px] rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-xs"
         />
+        {templates.length > 0 ? (
+          <select
+            value={templateId}
+            onChange={(e) => setTemplateId(e.target.value)}
+            className="max-w-[200px] rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-xs"
+          >
+            <option value="">— brez predloge —</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
         <button type="button" disabled={busy || !dbConfigured} onClick={() => void createOffer()} className="rounded-lg bg-[var(--vo-accent)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">
           Nova ponudba
         </button>
@@ -576,6 +629,29 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
                 onChange={(e) => setDraft({ ...draft, offerDate: e.target.value })}
                 className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
               />
+            </label>
+            <label className="text-xs">
+              <span className="text-[var(--vo-muted)]">Številka ponudbe</span>
+              <input
+                value={draft.offerNumber ?? ""}
+                onChange={(e) => setDraft({ ...draft, offerNumber: e.target.value })}
+                placeholder="npr. PON-2026-001"
+                className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-mono text-sm"
+              />
+            </label>
+            <label className="text-xs">
+              <span className="text-[var(--vo-muted)]">Status</span>
+              <select
+                value={draft.offerStatus ?? "draft"}
+                onChange={(e) => setDraft({ ...draft, offerStatus: e.target.value })}
+                className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
+              >
+                {Object.entries(OFFER_STATUS_LABEL).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="text-xs md:col-span-2">
               <span className="text-[var(--vo-muted)]">Naslov stranke</span>

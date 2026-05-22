@@ -77,20 +77,61 @@ export default function OrodjaPage() {
   const [selectedClientId, setSelectedClientId] = useState("");
   const [pingCards, setPingCards] = useState<Array<{ id: string; name: string; ip: string; status: "online" | "offline" }>>([]);
 
+  const [ipamReady, setIpamReady] = useState(false);
+
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("vo_ipam");
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Array<{ ip: string; name: string; mac?: string }>;
-      if (Array.isArray(parsed)) setIpam(parsed);
-    } catch {}
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/portal-ipam", { credentials: "include" });
+        if (res.ok) {
+          const j = (await res.json()) as { entries?: Array<{ ip: string; name: string; mac?: string }> };
+          if (!cancelled && Array.isArray(j.entries) && j.entries.length > 0) {
+            setIpam(j.entries.map((e) => ({ ip: e.ip, name: e.name, mac: e.mac || undefined })));
+            setIpamReady(true);
+            return;
+          }
+        }
+      } catch {
+        /* fallback spodaj */
+      }
+      try {
+        const raw = localStorage.getItem("vo_ipam");
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as Array<{ ip: string; name: string; mac?: string }>;
+        if (!cancelled && Array.isArray(parsed) && parsed.length > 0) {
+          setIpam(parsed);
+          void fetch("/api/portal-ipam", {
+            method: "PUT",
+            credentials: "include",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ entries: parsed }),
+          });
+        }
+      } catch {}
+      if (!cancelled) setIpamReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("vo_ipam", JSON.stringify(ipam));
-    } catch {}
-  }, [ipam]);
+    if (!ipamReady) return;
+    const t = window.setTimeout(() => {
+      void fetch("/api/portal-ipam", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ entries: ipam }),
+      }).catch(() => {
+        try {
+          localStorage.setItem("vo_ipam", JSON.stringify(ipam));
+        } catch {}
+      });
+    }, 600);
+    return () => window.clearTimeout(t);
+  }, [ipam, ipamReady]);
 
   useEffect(() => {
     if (tool !== "ping") return;
@@ -395,7 +436,7 @@ export default function OrodjaPage() {
         <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
           <div className="flex items-center gap-2 text-[var(--vo-fg)]">
             <Network className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />
-            <h2 className="font-semibold">IPAM (lokalno)</h2>
+            <h2 className="font-semibold">IPAM (sinhronizacija z bazo)</h2>
           </div>
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
             <input placeholder="IP" value={ipamIp} onChange={(e) => setIpamIp(e.target.value)} className="w-40 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 font-mono text-sm" />

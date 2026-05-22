@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download } from "lucide-react";
 import { exportServiceRequestsCsv } from "@/lib/portal-export";
@@ -33,6 +33,7 @@ export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ServiceRequestStatus>("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const sorted = useMemo(
     () =>
@@ -264,7 +265,16 @@ export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
               {r.dueDate ? ` · Rok: ${r.dueDate}` : ""}
             </p>
             {r.description ? <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--vo-fg)]/90">{r.description}</p> : null}
-            <div className="mt-2 flex justify-end">
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              {dbConfigured ? (
+                <button
+                  type="button"
+                  onClick={() => setExpandedId((id) => (id === r.id ? null : r.id))}
+                  className="text-xs font-medium text-[var(--vo-accent)] hover:underline"
+                >
+                  {expandedId === r.id ? "Skrij priloge" : "Priloge"}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => void fetch(`/api/service-requests/${r.id}`, { method: "DELETE" }).then(() => router.refresh())}
@@ -273,9 +283,93 @@ export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
                 Izbriši
               </button>
             </div>
+            {expandedId === r.id && dbConfigured ? (
+              <ZahtevkiAttachments requestId={r.id} />
+            ) : null}
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+type AttRow = { id: string; originalName: string; mimeType: string; sizeBytes: number };
+
+function ZahtevkiAttachments({ requestId }: { requestId: string }) {
+  const [files, setFiles] = useState<AttRow[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const r = await fetch(`/api/service-requests/${requestId}/attachments`, { credentials: "include" });
+    if (!r.ok) return;
+    const j = (await r.json()) as { attachments?: AttRow[] };
+    setFiles(j.attachments ?? []);
+  }, [requestId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Datoteka je prevelika (največ 5 MB).");
+      return;
+    }
+    setBusy(true);
+    const fd = new FormData();
+    fd.set("file", file);
+    const r = await fetch(`/api/service-requests/${requestId}/attachments`, {
+      method: "POST",
+      body: fd,
+    });
+    setBusy(false);
+    if (r.ok) void load();
+  }
+
+  async function onDelete(attId: string) {
+    if (!confirm("Izbris priloge?")) return;
+    await fetch(`/api/service-requests/${requestId}/attachments/${attId}`, { method: "DELETE" });
+    void load();
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface-2)] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-[var(--vo-muted)]">Priloge ({files.length})</span>
+        <label className="cursor-pointer text-xs text-[var(--vo-accent)] hover:underline">
+          {busy ? "Nalagam…" : "+ Dodaj datoteko"}
+          <input type="file" className="sr-only" disabled={busy} onChange={(e) => void onUpload(e)} />
+        </label>
+      </div>
+      {files.length === 0 ? (
+        <p className="mt-2 text-xs text-[var(--vo-muted)]">Ni prilog.</p>
+      ) : (
+        <ul className="mt-2 space-y-1">
+          {files.map((f) => (
+            <li key={f.id} className="flex items-center justify-between gap-2 text-xs">
+              <a
+                href={`/api/service-requests/${requestId}/attachments/${f.id}`}
+                className="truncate text-[var(--vo-accent)] hover:underline"
+              >
+                {f.originalName}
+              </a>
+              <span className="shrink-0 text-[var(--vo-muted)]">
+                {(f.sizeBytes / 1024).toFixed(0)} KB
+              </span>
+              <button
+                type="button"
+                onClick={() => void onDelete(f.id)}
+                className="shrink-0 text-red-600 hover:underline"
+              >
+                Briši
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

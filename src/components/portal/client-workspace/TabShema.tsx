@@ -322,14 +322,17 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
     setConnectFrom(null);
   };
 
-  const removeNode = (id: string) => {
-    mutateTopo((t) => ({
-      ...t,
-      nodes: t.nodes.filter((n) => n.id !== id),
-      edges: t.edges.filter((e) => e.from !== id && e.to !== id),
-    }));
-    if (selectedNodeId === id) setSelectedNodeId(null);
-  };
+  const removeNode = useCallback(
+    (id: string) => {
+      mutateTopo((t) => ({
+        ...t,
+        nodes: t.nodes.filter((n) => n.id !== id),
+        edges: t.edges.filter((e) => e.from !== id && e.to !== id),
+      }));
+      if (selectedNodeId === id) setSelectedNodeId(null);
+    },
+    [mutateTopo, selectedNodeId],
+  );
 
   const clearAll = () => {
     if (!editMode) return;

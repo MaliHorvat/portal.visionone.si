@@ -36,6 +36,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
   const [healthFilter, setHealthFilter] = useState<"all" | "ok" | "alarm">("all");
   const [sortBy, setSortBy] = useState<"name" | "health">("name");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     setFavoriteIds(getFavoriteClientIds());
@@ -51,7 +52,8 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
         (c) =>
           c.name.toLowerCase().includes(q) ||
           (c.address ?? "").toLowerCase().includes(q) ||
-          (c.contact ?? "").toLowerCase().includes(q),
+          (c.contact ?? "").toLowerCase().includes(q) ||
+          (c.tags ?? []).some((t) => t.toLowerCase().includes(q)),
       );
     }
     if (healthFilter !== "all") list = list.filter((c) => c.health === healthFilter);
@@ -83,12 +85,18 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
     setError(null);
     setSubmitting(true);
     const form = new FormData(event.currentTarget);
+    const tagsRaw = String(form.get("tags") ?? "");
+    const tags = tagsRaw
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
     const payload = {
       name: String(form.get("name") ?? ""),
       address: String(form.get("address") ?? ""),
       contact: String(form.get("contact") ?? ""),
       phone: String(form.get("phone") ?? ""),
       email: String(form.get("email") ?? ""),
+      tags,
       packageId: String(form.get("packageId") ?? "") || null,
       health: String(form.get("health") ?? "ok") === "alarm" ? "alarm" : "ok",
     };
@@ -105,6 +113,38 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
     setShowForm(false);
     setEditClientId(null);
     router.refresh();
+  }
+
+  async function handleImportCsv(file: File) {
+    setImporting(true);
+    setError(null);
+    try {
+      const text = await file.text();
+      const res = await fetch("/api/clients/import", {
+        method: "POST",
+        headers: { "content-type": "text/plain; charset=utf-8" },
+        body: text,
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        created?: number;
+        errors?: string[];
+        error?: string;
+      };
+      if (!res.ok) {
+        setError(data.error ?? "Uvoz ni uspel.");
+        return;
+      }
+      const errCount = data.errors?.length ?? 0;
+      setNotice(
+        `Uvoženo ${data.created ?? 0} strank${errCount ? ` (${errCount} napak — glej konzolo)` : ""}.`,
+      );
+      if (errCount) console.warn("CSV uvoz:", data.errors);
+      router.refresh();
+    } catch {
+      setError("Branje datoteke ni uspelo.");
+    } finally {
+      setImporting(false);
+    }
   }
 
   async function handleDelete(id: string) {
@@ -312,12 +352,29 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                 email: c.email,
                 package: c.package?.name ?? "",
                 health: c.health,
+                tags: (c.tags ?? []).join(", "),
               })),
             )
           }
         >
           Izvozi CSV
         </button>
+        {dbConfigured ? (
+          <label className="inline-flex cursor-pointer items-center rounded-lg border border-[var(--vo-border)] px-3 py-1.5 text-xs hover:bg-[var(--vo-surface-2)]">
+            {importing ? "Uvažam…" : "Uvozi CSV"}
+            <input
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              className="sr-only"
+              disabled={importing}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void handleImportCsv(f);
+              }}
+            />
+          </label>
+        ) : null}
         <span className="text-xs text-[var(--vo-muted)]">{filteredClients.length} / {orderedClients.length}</span>
       </div>
 
@@ -354,6 +411,14 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
               <option value="ok">Status: objekt OK</option>
               <option value="alarm">Status: alarm</option>
             </select>
+            <input
+              name="tags"
+              placeholder="Oznake (vejica: VIP, teren)"
+              defaultValue={
+                editClientId ? (clients.find((c) => c.id === editClientId)?.tags ?? []).join(", ") : ""
+              }
+              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
+            />
           </div>
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
           <button
@@ -397,6 +462,18 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
               {c.contact || "—"}
               {c.phone ? ` · ${c.phone}` : ""}
             </p>
+            {(c.tags ?? []).length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {c.tags.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full bg-[var(--vo-surface-2)] px-2 py-0.5 text-[10px] text-[var(--vo-muted)]"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            ) : null}
             <div className="mt-3 flex items-center justify-end gap-3">
               <Link
                 href={clientProfilePath(c)}
@@ -484,7 +561,21 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
                         aria-hidden
                       />
                     </button>
-                    {c.name}
+                    <span>
+                      {c.name}
+                      {(c.tags ?? []).length > 0 ? (
+                        <span className="mt-0.5 flex flex-wrap gap-1">
+                          {c.tags.map((t) => (
+                            <span
+                              key={t}
+                              className="rounded-full bg-[var(--vo-surface-2)] px-1.5 py-0.5 text-[10px] font-normal text-[var(--vo-muted)]"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </span>
+                      ) : null}
+                    </span>
                   </span>
                 </td>
                 <td className="px-4 py-3 text-[var(--vo-muted)]">{c.address}</td>
