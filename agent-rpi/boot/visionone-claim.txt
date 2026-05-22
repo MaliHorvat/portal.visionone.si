@@ -1,0 +1,9 @@
+# VisionOne — datoteka za boot particijo (FAT32). Ne brišite te datoteke.
+portal_base_url={{PORTAL_URL}}
+claim_code={{CLAIM_CODE}}
+agent_id={{AGENT_ID}}
+agent_name={{AGENT_NAME}}
+site_label={{SITE_LABEL}}
+client_name={{CLIENT_NAME}}
+os_target=Raspberry Pi OS 64-bit (aarch64)
+generated_at={{GENERATED_AT}}

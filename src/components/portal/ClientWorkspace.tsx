@@ -14,6 +14,7 @@ import { TabVzdrzevanje } from "./client-workspace/TabVzdrzevanje";
 import { TabDokumenti } from "./client-workspace/TabDokumenti";
 import { TabTimeline } from "./client-workspace/TabTimeline";
 import { TabField } from "./client-workspace/TabField";
+import { TabRpiAgent } from "./client-workspace/TabRpiAgent";
 import type { WorkspaceCtx, WorkspaceTab } from "./client-workspace/types";
 import { parseWorkspaceTab } from "./client-workspace/types";
 import { getLastClientTab, pushRecentClient, setLastClientTab } from "@/lib/portal-prefs";
@@ -34,6 +35,7 @@ import {
   Shield,
   Smartphone,
   Star,
+  RadioTower,
   Wrench,
 } from "lucide-react";
 import { getFavoriteClientIds, toggleFavoriteClient } from "@/lib/portal-prefs";
@@ -43,6 +45,7 @@ import { ClientInternalNotes } from "./ClientInternalNotes";
 const TABS: { id: WorkspaceTab; label: string; icon: ElementType }[] = [
   { id: "kamere", label: "Kamere", icon: Camera },
   { id: "oprema", label: "Oprema", icon: Boxes },
+  { id: "rpi", label: "RPi agent", icon: RadioTower },
   { id: "shema", label: "Shema", icon: Network },
   { id: "rack", label: "Rack", icon: Layers },
   { id: "ponudbe", label: "Ponudbe", icon: FileText },
@@ -273,6 +276,7 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
       <div className="min-h-[320px]">
         {panel("kamere", <TabKamere ctx={ctx} />)}
         {panel("oprema", <TabOprema ctx={ctx} />)}
+        {panel("rpi", <TabRpiAgent ctx={ctx} />)}
         {panel("shema", <TabShema ctx={ctx} />)}
         {panel("rack", <TabRack ctx={ctx} />)}
         {panel("ponudbe", <TabPonudbe ctx={ctx} />)}

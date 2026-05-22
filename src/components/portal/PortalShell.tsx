@@ -250,9 +250,9 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   }, [role]);
 
   return (
-    <div className="flex min-h-screen bg-[var(--vo-bg)]">
+    <div className="flex h-dvh overflow-hidden bg-[var(--vo-bg)]">
       <aside
-        className={`hidden shrink-0 flex-col border-r border-[var(--vo-border)] bg-[var(--vo-surface)] transition-[width] md:flex ${
+        className={`sticky top-0 hidden h-dvh max-h-dvh shrink-0 flex-col border-r border-[var(--vo-border)] bg-[var(--vo-surface)] transition-[width] md:flex ${
           sidebarCollapsed ? "w-[4.5rem]" : "w-64"
         }`}
       >
@@ -273,7 +273,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             </button>
           )}
         </div>
-        <nav className="flex flex-1 flex-col gap-3 overflow-auto px-2 py-3">
+        <nav className="vo-sidebar-nav flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden px-2 py-3">
           {orderedVisible.map((section) => (
             <div key={section.title}>
               {!sidebarCollapsed ? (
@@ -346,7 +346,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex items-center justify-between gap-3 border-b border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-2">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex min-w-0 items-center gap-2 md:hidden">
@@ -477,7 +477,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
 
-        <div className="flex-1 overflow-auto p-4 md:p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
           <PortalBreadcrumbs />
           {children}
         </div>
