@@ -4,6 +4,7 @@ import { getPortalSession } from "@/lib/get-portal-session";
 import { getMockClients, mockPackages } from "@/lib/mock-data";
 import { StrankeView } from "./StrankeView";
 import { formatDbLoadError } from "@/lib/db-load-error";
+import { isPrismaJsonParseError, repairAllJsonColumns } from "@/lib/db-json-repair";
 import { listClientsForSession } from "@/lib/repositories/clients";
 
 export const dynamic = "force-dynamic";
@@ -36,9 +37,21 @@ export default async function StrankeListPage() {
       clients = await listClientsForSession(session ?? undefined);
     } catch (err) {
       console.error("[portal/stranke] clients load failed:", err);
-      clients = mockSummaries();
-      dbConfigured = false;
-      loadError = formatDbLoadError(err);
+      if (isPrismaJsonParseError(err)) {
+        try {
+          await repairAllJsonColumns();
+          clients = await listClientsForSession(session ?? undefined);
+        } catch (retryErr) {
+          console.error("[portal/stranke] clients retry failed:", retryErr);
+          clients = mockSummaries();
+          dbConfigured = false;
+          loadError = formatDbLoadError(retryErr);
+        }
+      } else {
+        clients = mockSummaries();
+        dbConfigured = false;
+        loadError = formatDbLoadError(err);
+      }
     }
     if (!loadError) {
       try {

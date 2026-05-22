@@ -10,6 +10,9 @@ export function formatDbLoadError(err: unknown): string {
   if (/P2021|P2022|does not exist|Unknown column|no such table/i.test(raw)) {
     return `Shema baze ne ustreza tej različici aplikacije. ${hint}`;
   }
+  if (/Unexpected end of JSON|JSON input|not valid JSON/i.test(raw)) {
+    return `Podatki v bazi imajo neveljaven JSON (npr. stolpec tags). Zaženite npm run db:fix-json proti produkcijski bazi ali ponovno deployajte (build vključuje sanacijo). ${hint} Prikazani so začasni demo podatki.`;
+  }
   if (/query_engine|wasm|PrismaClient/i.test(raw)) {
     return `Prisma odjemalec ni pravilno nameščen. Na Vercelu ponovno deployajte po usklajenih različicah prisma in @prisma/client (npm install). ${hint}`;
   }

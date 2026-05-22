@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma, isDbConfigured } from "@/lib/db";
+import { isPrismaJsonParseError, repairClientJsonColumns } from "@/lib/db-json-repair";
 import { appendClientProfileChanges } from "@/lib/repositories/client-profile";
 import { getMockClient, getMockClients } from "@/lib/mock-data";
 import type { PortalSessionPayload } from "@/lib/portal-session-verify";
@@ -182,6 +183,45 @@ function mapClientDetail(c: DbClient): ClientDetail {
   };
 }
 
+async function findClientsForSummary(
+  where?: Prisma.ClientWhereInput,
+): Promise<Awaited<ReturnType<NonNullable<typeof prisma>["client"]["findMany"]>>> {
+  if (!prisma) throw new Error("DB ni nastavljena.");
+  const base = {
+    where,
+    include: { package: true },
+  } as const;
+  try {
+    return await prisma.client.findMany({
+      ...base,
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    });
+  } catch (err) {
+    if (isPrismaJsonParseError(err)) {
+      await repairClientJsonColumns();
+      return await prisma.client.findMany({
+        ...base,
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      });
+    }
+    try {
+      return await prisma.client.findMany({
+        ...base,
+        orderBy: { name: "asc" },
+      });
+    } catch (err2) {
+      if (isPrismaJsonParseError(err2)) {
+        await repairClientJsonColumns();
+        return await prisma.client.findMany({
+          ...base,
+          orderBy: { name: "asc" },
+        });
+      }
+      throw err2;
+    }
+  }
+}
+
 export async function listClients(): Promise<ClientSummary[]> {
   if (!isDbConfigured() || !prisma) {
     return getMockClients().map((c) => ({
@@ -197,18 +237,7 @@ export async function listClients(): Promise<ClientSummary[]> {
       tags: c.tags ?? [],
     }));
   }
-  let rows: Awaited<ReturnType<NonNullable<typeof prisma>["client"]["findMany"]>>;
-  try {
-    rows = await prisma.client.findMany({
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      include: { package: true },
-    });
-  } catch {
-    rows = await prisma.client.findMany({
-      orderBy: { name: "asc" },
-      include: { package: true },
-    });
-  }
+  const rows = await findClientsForSummary();
   return rows.map(mapClientSummary);
 }
 
@@ -243,20 +272,7 @@ export async function listClientsForSession(
   session?: Pick<PortalSessionPayload, "role" | "username">,
 ): Promise<ClientSummary[]> {
   if (!isDbConfigured() || !prisma) return listClients();
-  let rows: Awaited<ReturnType<NonNullable<typeof prisma>["client"]["findMany"]>>;
-  try {
-    rows = await prisma.client.findMany({
-      where: scopeWhere(session),
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      include: { package: true },
-    });
-  } catch {
-    rows = await prisma.client.findMany({
-      where: scopeWhere(session),
-      orderBy: { name: "asc" },
-      include: { package: true },
-    });
-  }
+  const rows = await findClientsForSummary(scopeWhere(session));
   return rows.map(mapClientSummary);
 }
 
@@ -271,19 +287,10 @@ export async function getClient(slugOrId: string): Promise<ClientDetail | null> 
     switches: true,
     disks: true,
   } as const;
-  let row = await prisma.client.findUnique({
-    where: { id: slugOrId },
-    include,
-  });
-  if (!row) {
-    row = await prisma.client.findUnique({
-      where: { slug: slugOrId },
-      include,
-    });
-  }
+  const row = await loadClientDetailRow(slugOrId, include, (w) =>
+    prisma!.client.findUnique({ where: w, include }),
+  );
   if (!row) return null;
-  // Ne izvajamo samodejnega UPDATE tukaj, da profil ne čaka dodatne DB mutacije.
-  // Če stranka še nima sluga, stran ostane dostopna tudi preko id.
   return mapClientDetail(row);
 }
 
@@ -300,18 +307,33 @@ export async function getClientForSession(
     disks: true,
   } as const;
   const whereScope = scopeWhere(session);
-  let row = await prisma.client.findFirst({
-    where: { id: slugOrId, ...whereScope },
+  const row = await loadClientDetailRow(
+    slugOrId,
     include,
-  });
-  if (!row) {
-    row = await prisma.client.findFirst({
-      where: { slug: slugOrId, ...whereScope },
-      include,
-    });
-  }
+    (w) => prisma!.client.findFirst({ where: { ...w, ...whereScope }, include }),
+  );
   if (!row) return null;
   return mapClientDetail(row);
+}
+
+async function loadClientDetailRow<T extends { id: string } | { slug: string }>(
+  slugOrId: string,
+  include: Parameters<NonNullable<typeof prisma>["client"]["findUnique"]>[0]["include"],
+  query: (where: { id: string } | { slug: string }) => Promise<T | null>,
+): Promise<T | null> {
+  if (!prisma) return null;
+  const run = async () => {
+    let row = await query({ id: slugOrId });
+    if (!row) row = await query({ slug: slugOrId });
+    return row;
+  };
+  try {
+    return await run();
+  } catch (err) {
+    if (!isPrismaJsonParseError(err)) throw err;
+    await repairClientJsonColumns();
+    return await run();
+  }
 }
 
 export interface UpsertClientInput {

@@ -12,6 +12,7 @@
     "check": "npm run lint && npm run typecheck && npm run test:smoke",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
+    "db:fix-json": "node scripts/fix-client-json.mjs",
     "db:seed": "node --import tsx prisma/seed.ts"
   },
   "dependencies": {
