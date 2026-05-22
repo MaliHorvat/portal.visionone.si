@@ -3,6 +3,7 @@ import { isDbConfigured } from "@/lib/db";
 import { getPortalSession } from "@/lib/get-portal-session";
 import { getMockClients, mockPackages } from "@/lib/mock-data";
 import { StrankeView } from "./StrankeView";
+import { formatDbLoadError } from "@/lib/db-load-error";
 import { listClientsForSession } from "@/lib/repositories/clients";
 
 export const dynamic = "force-dynamic";
@@ -30,15 +31,25 @@ export default async function StrankeListPage() {
   let loadError: string | null = null;
   let dbConfigured = envDb;
 
-  try {
-    [clients, packages] = await Promise.all([listClientsForSession(session ?? undefined), listPackages()]);
-  } catch (err) {
-    console.error("[portal/stranke] DB load failed:", err);
-    clients = mockSummaries();
-    packages = mockPackages;
-    dbConfigured = false;
-    loadError =
-      "Podatkov iz baze ni bilo mogoče naložiti (najpogosteje: produkcijska shema ne ustreza tej različici aplikacije). Zaženite posodobitev sheme proti istemu DATABASE_URL kot na Vercelu (npr. npm run db:push). Podrobnosti so v strežniških dnevnikih (Vercel → Logs). Prikazani so začasni demo podatki.";
+  if (envDb) {
+    try {
+      clients = await listClientsForSession(session ?? undefined);
+    } catch (err) {
+      console.error("[portal/stranke] clients load failed:", err);
+      clients = mockSummaries();
+      dbConfigured = false;
+      loadError = formatDbLoadError(err);
+    }
+    if (!loadError) {
+      try {
+        packages = await listPackages();
+      } catch (err) {
+        console.error("[portal/stranke] packages load failed:", err);
+        packages = mockPackages;
+        dbConfigured = false;
+        loadError = formatDbLoadError(err);
+      }
+    }
   }
 
   return (

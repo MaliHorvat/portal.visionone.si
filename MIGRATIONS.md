@@ -4,8 +4,13 @@ Po vlečenju sprememb sheme na vsakem okolju (lokalno, staging, produkcija):
 
 ```bash
 cd VisionOne_Portal
+npm install
 npx prisma db push
 ```
+
+**Vercel:** v projektu mora biti nastavljen `DATABASE_URL` (isti MySQL kot lokalno). Ob deployu se shema posodobi z `prisma db push` (glej `vercel.json` → `buildCommand`). Če stran še kaže rdeče opozorilo, preverite **Vercel → Logs** in da MySQL dovoli povezave z Vercel strežnikov.
+
+**Prisma:** `prisma` in `@prisma/client` morata biti **ista različica** (npr. 6.19.3). Neskladje povzroči napake ob zagonu.
 
 Za produkcijo lahko namesto `db push` uporabite formalne migracije (`prisma migrate deploy`), če jih vzdržujete v repozitoriju.
 
