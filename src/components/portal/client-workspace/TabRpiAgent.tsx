@@ -61,6 +61,49 @@ export function TabRpiAgent({ ctx }: { ctx: WorkspaceCtx }) {
     }
   }
 
+  async function downloadFrigateBundle() {
+    if (!dbConfigured) {
+      showToast("Baza ni nastavljena.", "err");
+      return;
+    }
+    setBusy(true);
+    setMeta(null);
+    try {
+      const res = await fetch(`/api/clients/${encodeURIComponent(clientId)}/frigate-agent-bundle`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        showToast(j.error ?? "Generiranje Frigate paketa ni uspelo.", "err");
+        return;
+      }
+      const agentId = res.headers.get("X-VisionOne-Agent-Id") ?? "";
+      const claimCode = res.headers.get("X-VisionOne-Claim-Code") ?? "";
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition") ?? "";
+      const m = /filename="([^"]+)"/.exec(cd);
+      const filename = m?.[1] ?? `visionone-frigate-${client.slug ?? clientId}.zip`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      setMeta({
+        agentId,
+        claimCode,
+        claimExpiresAt: "",
+        osTarget: "Docker host (Linux x64/aarch64)",
+      });
+      showToast("Frigate edge paket je prenesen.");
+    } catch {
+      showToast("Prenos ni uspel.", "err");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-6 shadow-[var(--vo-card-shadow)]">
@@ -102,6 +145,15 @@ export function TabRpiAgent({ ctx }: { ctx: WorkspaceCtx }) {
         >
           <Download className="h-4 w-4" />
           {busy ? "Pripravljam paket…" : "Prenesi paket za SD kartico (ZIP)"}
+        </button>
+        <button
+          type="button"
+          disabled={busy || !dbConfigured}
+          onClick={() => void downloadFrigateBundle()}
+          className="ml-2 mt-6 inline-flex items-center gap-2 rounded-lg border border-[var(--vo-border)] px-4 py-2.5 text-sm font-semibold text-[var(--vo-fg)] hover:bg-[var(--vo-surface-2)] disabled:opacity-50"
+        >
+          <Download className="h-4 w-4" />
+          {busy ? "Pripravljam paket…" : "Prenesi Frigate edge paket"}
         </button>
 
         {meta ? (

@@ -27,6 +27,7 @@ export async function POST(request: Request, ctx: Ctx) {
       comment: String(body?.comment ?? "").trim(),
       checkPort: body?.checkPort != null ? Number(body.checkPort) : null,
       streamUrl: String(body?.streamUrl ?? "").trim(),
+      frigateCameraKey: String(body?.frigateCameraKey ?? "").trim(),
     });
     return NextResponse.json({ camera: row }, { status: 201 });
   } catch (e) {

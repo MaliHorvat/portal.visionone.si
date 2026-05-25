@@ -36,6 +36,7 @@ export interface CameraDevice {
   rtspUser?: string;
   rtspPass?: string;
   streamUrl?: string;
+  frigateCameraKey?: string;
   comment?: string;
   tag?: string;
 }

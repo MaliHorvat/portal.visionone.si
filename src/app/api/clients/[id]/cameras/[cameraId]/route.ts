@@ -35,6 +35,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
             ? Number(body.checkPort)
             : undefined,
       streamUrl: body?.streamUrl !== undefined ? String(body.streamUrl) : undefined,
+      frigateCameraKey: body?.frigateCameraKey !== undefined ? String(body.frigateCameraKey) : undefined,
     });
     return NextResponse.json({ camera: row });
   } catch (e) {

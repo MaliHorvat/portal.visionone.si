@@ -44,6 +44,7 @@ const navSections: NavSection[] = [
     title: "PREGLED",
     items: [
       { href: "/portal", label: "Nadzorna plošča", icon: LayoutDashboard, permission: "dashboard" },
+      { href: "/portal/vms", label: "VMS", icon: Video, permission: "vms" },
     ],
   },
   {
