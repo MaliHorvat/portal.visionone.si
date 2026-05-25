@@ -14,6 +14,7 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url);
     const clientId = url.searchParams.get("clientId")?.trim() ?? "";
+    const provider = url.searchParams.get("provider")?.trim() ?? "";
     const takeRaw = Number(url.searchParams.get("take") ?? 50);
     const take = Number.isFinite(takeRaw) ? Math.min(Math.max(takeRaw, 1), 100) : 50;
 
@@ -23,8 +24,8 @@ export async function GET(request: Request) {
 
     const events = await prisma.vmsEvent.findMany({
       where: clientId
-        ? { clientId }
-        : { client: { ownerUsername: session.username } },
+        ? { clientId, ...(provider ? { provider } : {}) }
+        : { client: { ownerUsername: session.username }, ...(provider ? { provider } : {}) },
       orderBy: { startedAt: "desc" },
       take,
       include: {

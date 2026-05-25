@@ -103,6 +103,7 @@ model ClientCamera {
   rtspPass  String @default("")
   streamUrl String @default("")
   frigateCameraKey String @default("")
+  kerberosCameraKey String @default("")
   comment   String @default("")
   tag       String @default("")
   client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -110,6 +111,7 @@ model ClientCamera {
 
   @@index([clientId])
   @@index([clientId, frigateCameraKey])
+  @@index([clientId, kerberosCameraKey])
 }
 
 model ClientRecorder {
@@ -373,6 +375,7 @@ model VmsEdgeInstance {
   client      Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   agentId     String?
   agent       TelemetryAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  provider    String          @default("frigate")
   externalId  String
   name        String          @default("Frigate Edge")
   siteLabel   String          @default("")
@@ -389,6 +392,7 @@ model VmsEdgeInstance {
 
   @@unique([clientId, externalId])
   @@index([agentId])
+  @@index([provider])
   @@index([clientId, status])
 }
 
@@ -402,6 +406,7 @@ model VmsEvent {
   edge             VmsEdgeInstance? @relation(fields: [edgeId], references: [id], onDelete: SetNull)
   cameraId         String?
   camera           ClientCamera?    @relation(fields: [cameraId], references: [id], onDelete: SetNull)
+  provider         String           @default("frigate")
   frigateEventId   String
   frigateCameraKey String
   eventType        String           @default("object")
@@ -422,6 +427,7 @@ model VmsEvent {
   @@index([agentId, startedAt])
   @@index([edgeId, startedAt])
   @@index([cameraId, startedAt])
+  @@index([provider, startedAt])
   @@index([frigateCameraKey])
 }
 

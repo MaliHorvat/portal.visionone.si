@@ -8,6 +8,7 @@ type RawVmsEvent = {
   camera?: unknown;
   cameraKey?: unknown;
   frigateCameraKey?: unknown;
+  kerberosCameraKey?: unknown;
   cameraId?: unknown;
   type?: unknown;
   eventType?: unknown;
@@ -25,14 +26,17 @@ type RawVmsEvent = {
 };
 
 export type VmsIngestPayload = {
+  provider?: unknown;
   agentId?: unknown;
   agentName?: unknown;
   siteLabel?: unknown;
   checkedAt?: unknown;
   edge?: {
+    provider?: unknown;
     externalId?: unknown;
     name?: unknown;
     frigateUrl?: unknown;
+    kerberosUrl?: unknown;
     status?: unknown;
     version?: unknown;
     storagePath?: unknown;
@@ -74,13 +78,14 @@ async function resolveCamera(clientId: string, raw: RawVmsEvent) {
   if (!prisma) return null;
   const cameraId = asString(raw.cameraId);
   const frigateCameraKey = asString(raw.frigateCameraKey ?? raw.cameraKey ?? raw.camera);
+  const kerberosCameraKey = asString(raw.kerberosCameraKey ?? raw.cameraKey ?? raw.camera);
   if (!cameraId && !frigateCameraKey) return null;
   return prisma.clientCamera.findFirst({
     where: {
       clientId,
       OR: [
         ...(cameraId ? [{ id: cameraId }] : []),
-        ...(frigateCameraKey ? [{ frigateCameraKey }, { name: frigateCameraKey }] : []),
+        ...(frigateCameraKey ? [{ frigateCameraKey }, { kerberosCameraKey }, { name: frigateCameraKey }] : []),
       ],
     },
     select: { id: true },
@@ -103,6 +108,7 @@ export async function ingestVmsPayload(payload: VmsIngestPayload) {
   const checkedAt = asDate(payload.checkedAt);
   const agentName = asString(payload.agentName, registered.name);
   const siteLabel = asString(payload.siteLabel, registered.siteLabel);
+  const provider = asString(payload.provider ?? payload.edge?.provider, "frigate") || "frigate";
 
   const agent = await prisma.telemetryAgent.update({
     where: { id: registered.id },
@@ -120,10 +126,11 @@ export async function ingestVmsPayload(payload: VmsIngestPayload) {
     create: {
       clientId: registered.clientId,
       agentId: agent.id,
+      provider,
       externalId: edgeExternalId,
-      name: asString(payload.edge?.name, "Frigate Edge"),
+      name: asString(payload.edge?.name, provider === "kerberos" ? "Kerberos Agent" : "Frigate Edge"),
       siteLabel,
-      frigateUrl: asString(payload.edge?.frigateUrl),
+      frigateUrl: asString(payload.edge?.frigateUrl ?? payload.edge?.kerberosUrl),
       status: asString(payload.edge?.status, "online") || "online",
       version: asString(payload.edge?.version),
       storagePath: asString(payload.edge?.storagePath),
@@ -132,9 +139,10 @@ export async function ingestVmsPayload(payload: VmsIngestPayload) {
     },
     update: {
       agentId: agent.id,
-      name: asString(payload.edge?.name, "Frigate Edge"),
+      provider,
+      name: asString(payload.edge?.name, provider === "kerberos" ? "Kerberos Agent" : "Frigate Edge"),
       siteLabel,
-      frigateUrl: asString(payload.edge?.frigateUrl),
+      frigateUrl: asString(payload.edge?.frigateUrl ?? payload.edge?.kerberosUrl),
       status: asString(payload.edge?.status, "online") || "online",
       version: asString(payload.edge?.version),
       storagePath: asString(payload.edge?.storagePath),
@@ -163,6 +171,7 @@ export async function ingestVmsPayload(payload: VmsIngestPayload) {
         agentId: agent.id,
         edgeId: edge.id,
         cameraId: camera?.id ?? null,
+        provider,
         frigateEventId,
         frigateCameraKey,
         eventType: asString(raw.eventType ?? raw.type, "object") || "object",
@@ -180,6 +189,7 @@ export async function ingestVmsPayload(payload: VmsIngestPayload) {
         agentId: agent.id,
         edgeId: edge.id,
         cameraId: camera?.id ?? undefined,
+        provider,
         frigateCameraKey,
         eventType: asString(raw.eventType ?? raw.type, "object") || "object",
         label: asString(raw.label),

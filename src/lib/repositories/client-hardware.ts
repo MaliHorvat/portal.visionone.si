@@ -38,6 +38,7 @@ export async function createCamera(
     checkPort?: number | null;
     streamUrl?: string;
     frigateCameraKey?: string;
+    kerberosCameraKey?: string;
   },
 ) {
   requireDb();
@@ -54,6 +55,7 @@ export async function createCamera(
       checkPort: data.checkPort ?? null,
       streamUrl: data.streamUrl ?? "",
       frigateCameraKey: data.frigateCameraKey ?? "",
+      kerberosCameraKey: data.kerberosCameraKey ?? "",
       status: "offline",
     },
   });
@@ -73,6 +75,7 @@ export async function updateCamera(
     checkPort: number | null;
     streamUrl: string;
     frigateCameraKey: string;
+    kerberosCameraKey: string;
   }>,
 ) {
   requireDb();

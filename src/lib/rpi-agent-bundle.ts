@@ -7,6 +7,7 @@ import { appendAuditLog } from "@/lib/repositories/audit-log";
 
 const AGENT_RPI_ROOT = path.join(process.cwd(), "agent-rpi");
 const AGENT_FRIGATE_ROOT = path.join(process.cwd(), "agent-frigate");
+const AGENT_KERBEROS_ROOT = path.join(process.cwd(), "agent-kerberos");
 
 export type RpiBundleMeta = {
   clientId: string;
@@ -22,6 +23,10 @@ export type RpiBundleMeta = {
 };
 
 export type FrigateBundleMeta = RpiBundleMeta & {
+  osTarget: "Docker host (Linux x64/aarch64)";
+};
+
+export type KerberosBundleMeta = RpiBundleMeta & {
   osTarget: "Docker host (Linux x64/aarch64)";
 };
 
@@ -51,6 +56,11 @@ function makeFrigateAgentId(clientName: string, clientId: string) {
   return `frigate-${slugPart(clientName)}-${tail}`;
 }
 
+function makeKerberosAgentId(clientName: string, clientId: string) {
+  const tail = clientId.replace(/[^a-z0-9]/gi, "").slice(-6).toLowerCase() || crypto.randomBytes(3).toString("hex");
+  return `kerberos-${slugPart(clientName)}-${tail}`;
+}
+
 function applyTemplate(template: string, vars: Record<string, string>) {
   let out = template;
   for (const [k, v] of Object.entries(vars)) {
@@ -65,6 +75,10 @@ async function readTemplate(rel: string) {
 
 async function readFrigateTemplate(rel: string) {
   return fs.readFile(path.join(AGENT_FRIGATE_ROOT, rel), "utf8");
+}
+
+async function readKerberosTemplate(rel: string) {
+  return fs.readFile(path.join(AGENT_KERBEROS_ROOT, rel), "utf8");
 }
 
 export async function createRpiAgentBundleForClient(
@@ -266,5 +280,104 @@ export async function createFrigateAgentBundleForClient(
     generatedAt,
   };
   const filename = `visionone-frigate-${slugPart(client.name)}.zip`;
+  return { zip, meta, filename };
+}
+
+export async function createKerberosAgentBundleForClient(
+  clientId: string,
+  createdBy: string,
+  portalBaseUrl: string,
+): Promise<{ zip: Uint8Array; meta: KerberosBundleMeta; filename: string }> {
+  if (!isDbConfigured() || !prisma) throw new Error("DB ni nastavljena.");
+
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    select: { id: true, name: true, address: true },
+  });
+  if (!client) throw new Error("Stranka ne obstaja.");
+
+  const agentId = makeKerberosAgentId(client.name, client.id);
+  const agentName = `Kerberos — ${client.name}`;
+  const siteLabel = client.address?.trim() || client.name;
+  const claimCode = makeClaimCode();
+  const ttlDays = 14;
+  const claimExpiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
+  const generatedAt = new Date().toISOString();
+  const portalUrl = portalBaseUrl.replace(/\/$/, "");
+
+  await prisma.telemetryAgent.upsert({
+    where: { externalId: agentId },
+    create: {
+      externalId: agentId,
+      name: agentName,
+      siteLabel,
+      clientId: client.id,
+      lastConfigAt: new Date(),
+      configVersion: 1,
+    },
+    update: {
+      name: agentName,
+      siteLabel,
+      clientId: client.id,
+      lastConfigAt: new Date(),
+      configVersion: { increment: 1 },
+    },
+  });
+
+  await prisma.agentClaimCode.create({
+    data: {
+      code: claimCode,
+      externalId: agentId,
+      name: agentName,
+      siteLabel,
+      clientId: client.id,
+      expiresAt: claimExpiresAt,
+      createdBy,
+    },
+  });
+
+  await appendAuditLog(createdBy, "kerberos_bundle_create", `${agentId} → ${client.id}`);
+
+  const vars: Record<string, string> = {
+    CLIENT_NAME: client.name,
+    AGENT_ID: agentId,
+    AGENT_NAME: agentName,
+    SITE_LABEL: siteLabel,
+    CLAIM_CODE: claimCode,
+    PORTAL_URL: portalUrl,
+    CLAIM_EXPIRES: claimExpiresAt.toLocaleString("sl-SI"),
+    GENERATED_AT: generatedAt,
+  };
+
+  const files: Record<string, Uint8Array> = {};
+  const entries = [
+    ["README-SLO.txt", "README-SLO.txt"],
+    ["docker-compose.yml", "docker-compose.yml"],
+    [".env.example", ".env.example"],
+    [".env", ".env.example"],
+    ["visionone-kerberos-collector/Dockerfile", "visionone-kerberos-collector/Dockerfile"],
+    ["visionone-kerberos-collector/visionone_kerberos_collector.py", "visionone-kerberos-collector/visionone_kerberos_collector.py"],
+  ] as const;
+
+  for (const [zipPath, diskPath] of entries) {
+    const raw = await readKerberosTemplate(diskPath);
+    const text = applyTemplate(raw, vars).replace(/\r\n/g, "\n");
+    files[zipPath] = strToU8(text);
+  }
+
+  const zip = zipSync(files, { level: 6 });
+  const meta: KerberosBundleMeta = {
+    clientId: client.id,
+    clientName: client.name,
+    agentId,
+    agentName,
+    siteLabel,
+    claimCode,
+    claimExpiresAt: claimExpiresAt.toISOString(),
+    portalUrl,
+    osTarget: "Docker host (Linux x64/aarch64)",
+    generatedAt,
+  };
+  const filename = `visionone-kerberos-${slugPart(client.name)}.zip`;
   return { zip, meta, filename };
 }

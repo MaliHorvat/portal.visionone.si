@@ -42,6 +42,7 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
     rtspPass: "",
     model: "",
     frigateCameraKey: "",
+    kerberosCameraKey: "",
     comment: "",
   });
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; camId: string } | null>(null);
@@ -104,7 +105,17 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
       showToast("Dodajanje kamere ni uspelo.", "err");
       return;
     }
-    setForm({ tag: "", name: "", ip: "", rtspUser: "", rtspPass: "", model: "", frigateCameraKey: "", comment: "" });
+    setForm({
+      tag: "",
+      name: "",
+      ip: "",
+      rtspUser: "",
+      rtspPass: "",
+      model: "",
+      frigateCameraKey: "",
+      kerberosCameraKey: "",
+      comment: "",
+    });
     await reload();
     showToast("Kamera dodana.");
   }
@@ -220,6 +231,12 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
           className="min-w-[100px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-mono"
         />
         <input
+          placeholder="Kerberos key"
+          value={form.kerberosCameraKey}
+          onChange={(e) => setForm((f) => ({ ...f, kerberosCameraKey: e.target.value }))}
+          className="min-w-[100px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-mono"
+        />
+        <input
           placeholder="Komentar"
           value={form.comment}
           onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
@@ -244,7 +261,7 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
       </button>
 
       <div className="overflow-x-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] shadow-[var(--vo-card-shadow)]">
-        <table className="min-w-[1040px] w-full text-left text-xs">
+        <table className="min-w-[1120px] w-full text-left text-xs">
           <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
             <tr>
               <th className="px-2 py-2">STATUS</th>
@@ -253,6 +270,7 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
               <th className="px-2 py-2">IP</th>
               <th className="px-2 py-2">MODEL</th>
               <th className="px-2 py-2">FRIGATE</th>
+              <th className="px-2 py-2">KERBEROS</th>
               <th className="px-2 py-2">USER/PASS</th>
               <th className="px-2 py-2">KOMENTAR</th>
               <th className="px-2 py-2">VMS</th>
@@ -262,7 +280,7 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
           <tbody>
             {client.cameras.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-[var(--vo-muted)]">
+                <td colSpan={11} className="px-3 py-8 text-center text-[var(--vo-muted)]">
                   Ni kamer.
                 </td>
               </tr>
@@ -337,6 +355,17 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
                       cam.frigateCameraKey || "—"
                     )}
                   </td>
+                  <td className="px-2 py-2 font-mono text-[var(--vo-muted)]">
+                    {editing ? (
+                      <input
+                        defaultValue={cam.kerberosCameraKey ?? ""}
+                        id={`k-${cam.id}`}
+                        className="w-full rounded border border-[var(--vo-border)] bg-transparent px-1 py-0.5"
+                      />
+                    ) : (
+                      cam.kerberosCameraKey || "—"
+                    )}
+                  </td>
                   <td className="px-2 py-2 text-[var(--vo-muted)]">
                     {editing ? (
                       <span className="flex gap-1">
@@ -391,10 +420,21 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
                           const ip = (document.getElementById(`ip-${cam.id}`) as HTMLInputElement)?.value;
                           const model = (document.getElementById(`m-${cam.id}`) as HTMLInputElement)?.value;
                           const frigateCameraKey = (document.getElementById(`f-${cam.id}`) as HTMLInputElement)?.value;
+                          const kerberosCameraKey = (document.getElementById(`k-${cam.id}`) as HTMLInputElement)?.value;
                           const rtspUser = (document.getElementById(`u-${cam.id}`) as HTMLInputElement)?.value;
                           const rtspPass = (document.getElementById(`p-${cam.id}`) as HTMLInputElement)?.value;
                           const comment = (document.getElementById(`c-${cam.id}`) as HTMLInputElement)?.value;
-                          void saveCam(cam.id, { tag, name, ip, model, frigateCameraKey, rtspUser, rtspPass, comment });
+                          void saveCam(cam.id, {
+                            tag,
+                            name,
+                            ip,
+                            model,
+                            frigateCameraKey,
+                            kerberosCameraKey,
+                            rtspUser,
+                            rtspPass,
+                            comment,
+                          });
                         }}
                       >
                         Shrani

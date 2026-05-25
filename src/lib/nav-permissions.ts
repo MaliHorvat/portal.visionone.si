@@ -1,6 +1,7 @@
 export const NAV_PERMISSION_KEYS = [
   "dashboard",
   "vms",
+  "kerberos-hub",
   "my-account",
   "clients",
   "offers",
@@ -27,6 +28,7 @@ export type NavPermissionKey = (typeof NAV_PERMISSION_KEYS)[number];
 export const NAV_PERMISSION_LABELS: Record<NavPermissionKey, string> = {
   dashboard: "Nadzorna plošča",
   vms: "VMS / Kamere",
+  "kerberos-hub": "Kerberos Hub",
   "my-account": "Moj račun",
   clients: "Objekti & stranke",
   offers: "Ponudbe",
@@ -54,6 +56,7 @@ export function getDefaultNavPermissions(role: "admin" | "operator" | "viewer"):
     return [
       "dashboard",
       "vms",
+      "kerberos-hub",
       "my-account",
       "service-requests",
       "maintenance",
@@ -64,7 +67,7 @@ export function getDefaultNavPermissions(role: "admin" | "operator" | "viewer"):
       "knowledge-base",
     ];
   }
-  return ["dashboard", "vms", "my-account", "service-requests", "maintenance", "my-site"];
+  return ["dashboard", "vms", "kerberos-hub", "my-account", "service-requests", "maintenance", "my-site"];
 }
 
 export function normalizeNavPermissions(input: unknown, role: "admin" | "operator" | "viewer"): NavPermissionKey[] {
