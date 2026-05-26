@@ -324,6 +324,7 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
           nvrName: text(data.get("nvrName")),
           nvrIp: text(data.get("nvrIp")),
           nvrModel: text(data.get("nvrModel")),
+          streamBaseUrl: text(data.get("streamBaseUrl")),
         });
         setNotice("VMS objekt je posodobljen.");
       }
@@ -332,6 +333,7 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
           name: text(data.get("name")),
           channel: Number(text(data.get("channel")) || "1"),
           ip: text(data.get("ip")),
+          rtspUrl: text(data.get("rtspUrl")),
           model: text(data.get("model")),
           enabled: data.get("enabled") === "on",
         });
@@ -600,6 +602,7 @@ function VmsForm({
           <Input name="nvrName" label="NVR ime" />
           <Input name="nvrIp" label="NVR IP (opcijsko)" />
           <Input name="nvrModel" label="NVR model" />
+          <Input name="streamBaseUrl" label="Live stream URL (go2rtc tunel, opcijsko)" />
         </div>
       ) : null}
       {kind === "camera" ? (
@@ -608,6 +611,7 @@ function VmsForm({
           <Input name="name" label="Ime kamere" required />
           <Input name="channel" label="Kanal" type="number" defaultValue="1" required />
           <Input name="ip" label="IP (opcijsko, Pi najde sam)" />
+          <Input name="rtspUrl" label="RTSP URL (opcijsko, privzeto iz NVR kanala)" />
           <Input name="model" label="Model" />
         </div>
       ) : null}
@@ -690,9 +694,15 @@ function VmsEditForm({
             <Input name="nvrName" label="NVR ime" defaultValue={target.data.nvrName} />
             <Input name="nvrIp" label="NVR IP" defaultValue={target.data.nvrIp} placeholder="Samodejno iz mreže" />
             <Input name="nvrModel" label="NVR model" defaultValue={target.data.nvrModel} />
+            <Input
+              name="streamBaseUrl"
+              label="Live stream URL (go2rtc tunel)"
+              defaultValue={target.data.streamBaseUrl}
+              placeholder="https://stream-tunel.example.com"
+            />
           </div>
           <p className="text-xs text-[var(--vo-muted)] md:col-span-3">
-            NVR IP in IP-ji kamer se po namestitvi gatewaya na Pi-ju posodobijo samodejno. Polja spodaj so opcijska ročna override vrednost.
+            NVR IP in IP-ji kamer se po scanu posodobijo samodejno. Za live view nastavi javni go2rtc URL (Cloudflare Tunnel ali drug tunel na Pi-ju, port 1984).
           </p>
         </>
       ) : null}
@@ -702,6 +712,12 @@ function VmsEditForm({
           <Input name="name" label="Ime kamere" defaultValue={target.data.name} required />
           <Input name="channel" label="Kanal" type="number" defaultValue={String(target.data.channel)} required />
           <Input name="ip" label="IP kamere" defaultValue={target.data.ip} placeholder="Samodejno iz mreže" />
+          <Input
+            name="rtspUrl"
+            label="RTSP URL (opcijsko)"
+            defaultValue={target.data.rtspUrl}
+            placeholder="rtsp://user:pass@192.168.1.27:554/Streaming/Channels/101"
+          />
           <Input name="model" label="Model" defaultValue={target.data.model} />
           <Checkbox name="enabled" label="Kamera aktivna" defaultChecked={target.data.enabled} />
         </div>
