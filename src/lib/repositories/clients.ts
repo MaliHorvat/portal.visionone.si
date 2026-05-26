@@ -35,8 +35,6 @@ type DbClient = NonNullable<
     rtspUser: string;
     rtspPass: string;
     streamUrl: string;
-    frigateCameraKey: string;
-    kerberosCameraKey: string;
     comment: string;
     tag: string;
   }>;
@@ -138,8 +136,6 @@ function mapClientDetail(c: DbClient): ClientDetail {
       rtspUser: d.rtspUser,
       rtspPass: d.rtspPass,
       streamUrl: d.streamUrl,
-      frigateCameraKey: d.frigateCameraKey,
-      kerberosCameraKey: d.kerberosCameraKey,
       comment: d.comment,
       tag: d.tag,
     })) ?? [];

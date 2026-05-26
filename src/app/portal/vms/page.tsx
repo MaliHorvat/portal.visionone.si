@@ -1,9 +1,9 @@
-import { isDbConfigured } from "@/lib/db";
-import { VmsView } from "./VmsView";
+import { VmsAdminView } from "@/app/portal/vms/VmsAdminView";
+import { listVmsAdminOverview } from "@/lib/repositories/vms-admin";
 
 export const dynamic = "force-dynamic";
 
-export default function VmsPage() {
-  return <VmsView dbConfigured={isDbConfigured()} />;
+export default async function VmsAdminPage() {
+  const overview = await listVmsAdminOverview();
+  return <VmsAdminView initial={overview} />;
 }
-

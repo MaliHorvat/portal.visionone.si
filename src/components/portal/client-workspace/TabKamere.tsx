@@ -15,16 +15,6 @@ function StatusDot({ status }: { status: string }) {
   );
 }
 
-type VmsClientEvent = {
-  id: string;
-  frigateCameraKey: string;
-  label: string;
-  eventType: string;
-  startedAt: string;
-  snapshotUrl: string;
-  cameraId: string | null;
-};
-
 export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
   const { showToast } = usePortalToast();
   const { client, dbConfigured, reload } = ctx;
@@ -33,7 +23,6 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
   const [live, setLive] = useState<
     Record<string, { status: string; lastSeenAt: string | null; latencyMs: number | null; lastError: string }>
   >({});
-  const [vmsLatest, setVmsLatest] = useState<Record<string, VmsClientEvent>>({});
   const [form, setForm] = useState({
     tag: "",
     name: "",
@@ -41,8 +30,6 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
     rtspUser: "",
     rtspPass: "",
     model: "",
-    frigateCameraKey: "",
-    kerberosCameraKey: "",
     comment: "",
   });
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; camId: string } | null>(null);
@@ -61,11 +48,6 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
           >;
         };
         if (!stopped) setLive(j.statusByCameraId ?? {});
-        const v = await fetch(`/api/clients/${ctx.clientId}/vms`, { cache: "no-store" });
-        if (v.ok) {
-          const vj = (await v.json()) as { latestByCameraId?: Record<string, VmsClientEvent> };
-          if (!stopped) setVmsLatest(vj.latestByCameraId ?? {});
-        }
       } catch {
         // ignore intermittent network/UI polling errors
       }
@@ -105,17 +87,7 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
       showToast("Dodajanje kamere ni uspelo.", "err");
       return;
     }
-    setForm({
-      tag: "",
-      name: "",
-      ip: "",
-      rtspUser: "",
-      rtspPass: "",
-      model: "",
-      frigateCameraKey: "",
-      kerberosCameraKey: "",
-      comment: "",
-    });
+    setForm({ tag: "", name: "", ip: "", rtspUser: "", rtspPass: "", model: "", comment: "" });
     await reload();
     showToast("Kamera dodana.");
   }
@@ -225,18 +197,6 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
           className="min-w-[90px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
         />
         <input
-          placeholder="Frigate key"
-          value={form.frigateCameraKey}
-          onChange={(e) => setForm((f) => ({ ...f, frigateCameraKey: e.target.value }))}
-          className="min-w-[100px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-mono"
-        />
-        <input
-          placeholder="Kerberos key"
-          value={form.kerberosCameraKey}
-          onChange={(e) => setForm((f) => ({ ...f, kerberosCameraKey: e.target.value }))}
-          className="min-w-[100px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-mono"
-        />
-        <input
           placeholder="Komentar"
           value={form.comment}
           onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
@@ -261,7 +221,7 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
       </button>
 
       <div className="overflow-x-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] shadow-[var(--vo-card-shadow)]">
-        <table className="min-w-[1120px] w-full text-left text-xs">
+        <table className="min-w-[920px] w-full text-left text-xs">
           <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
             <tr>
               <th className="px-2 py-2">STATUS</th>
@@ -269,18 +229,15 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
               <th className="px-2 py-2">IME</th>
               <th className="px-2 py-2">IP</th>
               <th className="px-2 py-2">MODEL</th>
-              <th className="px-2 py-2">FRIGATE</th>
-              <th className="px-2 py-2">KERBEROS</th>
               <th className="px-2 py-2">USER/PASS</th>
               <th className="px-2 py-2">KOMENTAR</th>
-              <th className="px-2 py-2">VMS</th>
               <th className="px-2 py-2 text-right">AKCIJE</th>
             </tr>
           </thead>
           <tbody>
             {client.cameras.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-3 py-8 text-center text-[var(--vo-muted)]">
+                <td colSpan={8} className="px-3 py-8 text-center text-[var(--vo-muted)]">
                   Ni kamer.
                 </td>
               </tr>
@@ -290,7 +247,6 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
               const effectiveStatus = liveStatus || cam.status;
               const offline = effectiveStatus !== "online";
               const editing = editId === cam.id;
-              const latestEvent = vmsLatest[cam.id];
               return (
                 <tr
                   key={cam.id}
@@ -344,28 +300,6 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
                       cam.model || "—"
                     )}
                   </td>
-                  <td className="px-2 py-2 font-mono text-[var(--vo-muted)]">
-                    {editing ? (
-                      <input
-                        defaultValue={cam.frigateCameraKey ?? ""}
-                        id={`f-${cam.id}`}
-                        className="w-full rounded border border-[var(--vo-border)] bg-transparent px-1 py-0.5"
-                      />
-                    ) : (
-                      cam.frigateCameraKey || "—"
-                    )}
-                  </td>
-                  <td className="px-2 py-2 font-mono text-[var(--vo-muted)]">
-                    {editing ? (
-                      <input
-                        defaultValue={cam.kerberosCameraKey ?? ""}
-                        id={`k-${cam.id}`}
-                        className="w-full rounded border border-[var(--vo-border)] bg-transparent px-1 py-0.5"
-                      />
-                    ) : (
-                      cam.kerberosCameraKey || "—"
-                    )}
-                  </td>
                   <td className="px-2 py-2 text-[var(--vo-muted)]">
                     {editing ? (
                       <span className="flex gap-1">
@@ -398,16 +332,6 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
                       cam.comment || "—"
                     )}
                   </td>
-                  <td className="max-w-[160px] px-2 py-2 text-[var(--vo-muted)]">
-                    {latestEvent ? (
-                      <span className="flex flex-col">
-                        <span className="truncate text-[var(--vo-fg)]">{latestEvent.label || latestEvent.eventType}</span>
-                        <span>{new Date(latestEvent.startedAt).toLocaleString("sl-SI")}</span>
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
                   <td className="px-2 py-2 text-right">
                     {editing ? (
                       <button
@@ -419,22 +343,10 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
                           const name = (document.getElementById(`n-${cam.id}`) as HTMLInputElement)?.value;
                           const ip = (document.getElementById(`ip-${cam.id}`) as HTMLInputElement)?.value;
                           const model = (document.getElementById(`m-${cam.id}`) as HTMLInputElement)?.value;
-                          const frigateCameraKey = (document.getElementById(`f-${cam.id}`) as HTMLInputElement)?.value;
-                          const kerberosCameraKey = (document.getElementById(`k-${cam.id}`) as HTMLInputElement)?.value;
                           const rtspUser = (document.getElementById(`u-${cam.id}`) as HTMLInputElement)?.value;
                           const rtspPass = (document.getElementById(`p-${cam.id}`) as HTMLInputElement)?.value;
                           const comment = (document.getElementById(`c-${cam.id}`) as HTMLInputElement)?.value;
-                          void saveCam(cam.id, {
-                            tag,
-                            name,
-                            ip,
-                            model,
-                            frigateCameraKey,
-                            kerberosCameraKey,
-                            rtspUser,
-                            rtspPass,
-                            comment,
-                          });
+                          void saveCam(cam.id, { tag, name, ip, model, rtspUser, rtspPass, comment });
                         }}
                       >
                         Shrani

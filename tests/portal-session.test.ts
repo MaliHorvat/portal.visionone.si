@@ -8,8 +8,8 @@ test("sign/verify keeps role and force-password flag", async () => {
     {
       username: "janez",
       role: "operator",
-      mustChangePassword: true,
       navPermissions: ["dashboard"],
+      mustChangePassword: true,
       maxAgeSec: 600,
     },
     "test-secret",
@@ -27,8 +27,8 @@ test("verify fails with wrong secret", async () => {
     {
       username: "ana",
       role: "viewer",
-      mustChangePassword: false,
       navPermissions: ["dashboard"],
+      mustChangePassword: false,
       maxAgeSec: 600,
     },
     "secret-a",

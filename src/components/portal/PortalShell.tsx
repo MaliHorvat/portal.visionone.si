@@ -44,8 +44,6 @@ const navSections: NavSection[] = [
     title: "PREGLED",
     items: [
       { href: "/portal", label: "Nadzorna plošča", icon: LayoutDashboard, permission: "dashboard" },
-      { href: "/portal/vms", label: "VMS", icon: Video, permission: "vms" },
-      { href: "/portal/kerberos", label: "Kerberos Hub", icon: Shield, permission: "kerberos-hub" },
     ],
   },
   {
@@ -72,6 +70,7 @@ const navSections: NavSection[] = [
       { href: "/portal/racun", label: "Moj račun", icon: UserCircle, permission: "my-account" },
       { href: "/portal/inventar", label: "Skladišče", icon: Boxes, permission: "inventory", adminOnly: true },
       { href: "/portal/agents", label: "Agenti", icon: RadioTower, permission: "agents", adminOnly: true },
+      { href: "/portal/vms", label: "VisionOne VMS", icon: Video, permission: "vms-admin", adminOnly: true },
       { href: "/portal/obvestila", label: "Obvestila (Telegram)", icon: Bell, permission: "notifications", adminOnly: true },
       { href: "/portal/kamera-definicije", label: "RTSP definicije", icon: Video, permission: "camera-definitions", adminOnly: true },
       { href: "/portal/audit", label: "Audit log", icon: Shield, permission: "audit-log", adminOnly: true },

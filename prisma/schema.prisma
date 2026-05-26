@@ -40,8 +40,6 @@ model Client {
   agentJobs AgentJob[]
   deviceProbes DeviceProbe[]
   deviceChecks DeviceCheck[]
-  vmsEdgeInstances VmsEdgeInstance[]
-  vmsEvents VmsEvent[]
   documents ClientDocument[]
   fieldVisits FieldVisit[]
   profileNote ClientProfileNote?
@@ -102,16 +100,11 @@ model ClientCamera {
   rtspUser  String @default("")
   rtspPass  String @default("")
   streamUrl String @default("")
-  frigateCameraKey String @default("")
-  kerberosCameraKey String @default("")
   comment   String @default("")
   tag       String @default("")
   client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  vmsEvents VmsEvent[]
 
   @@index([clientId])
-  @@index([clientId, frigateCameraKey])
-  @@index([clientId, kerberosCameraKey])
 }
 
 model ClientRecorder {
@@ -361,74 +354,10 @@ model TelemetryAgent {
   checks     DeviceCheck[]
   jobs       AgentJob[]
   claims     AgentClaimCode[]
-  vmsEdgeInstances VmsEdgeInstance[]
-  vmsEvents  VmsEvent[]
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
   @@index([clientId])
-}
-
-model VmsEdgeInstance {
-  id          String          @id @default(cuid())
-  clientId    String
-  client      Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  agentId     String?
-  agent       TelemetryAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
-  provider    String          @default("frigate")
-  externalId  String
-  name        String          @default("Frigate Edge")
-  siteLabel   String          @default("")
-  frigateUrl  String          @default("")
-  status      String          @default("unknown")
-  version     String          @default("")
-  lastSeenAt  DateTime?
-  lastEventAt DateTime?
-  lastError   String          @default("")
-  storagePath String          @default("")
-  events      VmsEvent[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  @@unique([clientId, externalId])
-  @@index([agentId])
-  @@index([provider])
-  @@index([clientId, status])
-}
-
-model VmsEvent {
-  id               String           @id @default(cuid())
-  clientId         String
-  client           Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  agentId          String?
-  agent            TelemetryAgent?  @relation(fields: [agentId], references: [id], onDelete: SetNull)
-  edgeId           String?
-  edge             VmsEdgeInstance? @relation(fields: [edgeId], references: [id], onDelete: SetNull)
-  cameraId         String?
-  camera           ClientCamera?    @relation(fields: [cameraId], references: [id], onDelete: SetNull)
-  provider         String           @default("frigate")
-  frigateEventId   String
-  frigateCameraKey String
-  eventType        String           @default("object")
-  label            String           @default("")
-  score            Float?
-  zone             String           @default("")
-  severity         String           @default("info")
-  startedAt        DateTime
-  endedAt          DateTime?
-  snapshotUrl      String           @db.Text @default("")
-  clipUrl          String           @db.Text @default("")
-  data             Json?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-
-  @@unique([clientId, frigateEventId])
-  @@index([clientId, startedAt])
-  @@index([agentId, startedAt])
-  @@index([edgeId, startedAt])
-  @@index([cameraId, startedAt])
-  @@index([provider, startedAt])
-  @@index([frigateCameraKey])
 }
 
 model AgentClaimCode {
