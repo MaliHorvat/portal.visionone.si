@@ -9,6 +9,14 @@ import type { VmsAdminCustomerDto, VmsAdminOverviewDto } from "@/lib/repositorie
 
 type FormKind = "customer" | "site" | "camera" | "user" | "claim" | null;
 
+type EditTarget =
+  | { kind: "customer"; data: VmsAdminCustomerDto }
+  | { kind: "site"; data: VmsAdminCustomerDto["sites"][number] }
+  | { kind: "camera"; data: VmsAdminCustomerDto["sites"][number]["cameras"][number] }
+  | { kind: "user"; data: VmsAdminCustomerDto["users"][number] }
+  | { kind: "password"; data: VmsAdminCustomerDto["users"][number] }
+  | null;
+
 function text(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
 }
@@ -183,6 +191,7 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
   const router = useRouter();
   const { role } = usePortalRole();
   const [form, setForm] = useState<FormKind>(null);
+  const [editTarget, setEditTarget] = useState<EditTarget>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -290,24 +299,75 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
     }
   }
 
-  function promptValue(label: string, initial = "") {
-    const value = window.prompt(label, initial);
-    return value == null ? null : value.trim();
+  async function handleEdit(event: React.FormEvent<HTMLFormElement>) {
+    if (!editTarget) return;
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    const data = new FormData(event.currentTarget);
+    try {
+      if (editTarget.kind === "customer") {
+        await requestJson(`/api/vms-admin/customers/${editTarget.data.id}`, "PUT", {
+          name: text(data.get("name")),
+          slug: text(data.get("slug")),
+          contact: text(data.get("contact")),
+          email: text(data.get("email")),
+          phone: text(data.get("phone")),
+          planId: text(data.get("planId")) || undefined,
+        });
+        setNotice("VMS stranka je posodobljena.");
+      }
+      if (editTarget.kind === "site") {
+        await requestJson(`/api/vms-admin/sites/${editTarget.data.id}`, "PUT", {
+          name: text(data.get("name")),
+          address: text(data.get("address")),
+          nvrName: text(data.get("nvrName")),
+          nvrIp: text(data.get("nvrIp")),
+          nvrModel: text(data.get("nvrModel")),
+        });
+        setNotice("VMS objekt je posodobljen.");
+      }
+      if (editTarget.kind === "camera") {
+        await requestJson(`/api/vms-admin/cameras/${editTarget.data.id}`, "PUT", {
+          name: text(data.get("name")),
+          channel: Number(text(data.get("channel")) || "1"),
+          ip: text(data.get("ip")),
+          model: text(data.get("model")),
+          enabled: data.get("enabled") === "on",
+        });
+        setNotice("VMS kamera je posodobljena.");
+      }
+      if (editTarget.kind === "user") {
+        await requestJson(`/api/vms-admin/users/${editTarget.data.id}`, "PUT", {
+          email: text(data.get("email")),
+          name: text(data.get("name")),
+          role: text(data.get("role")),
+          isActive: data.get("isActive") === "on",
+        });
+        setNotice("VMS uporabnik je posodobljen.");
+      }
+      if (editTarget.kind === "password") {
+        const password = text(data.get("password"));
+        if (!password) throw new Error("Geslo je obvezno.");
+        await requestJson(`/api/vms-admin/users/${editTarget.data.id}/password`, "POST", { password });
+        setNotice("Geslo je resetirano.");
+      }
+      setEditTarget(null);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Napaka pri shranjevanju.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function editCustomer(customer: VmsAdminCustomerDto) {
-    const name = promptValue("Ime VMS stranke", customer.name);
-    if (name == null) return;
-    const contact = promptValue("Kontakt", customer.contact);
-    if (contact == null) return;
-    const email = promptValue("Email", customer.email);
-    if (email == null) return;
-    const phone = promptValue("Telefon", customer.phone);
-    if (phone == null) return;
-    void runMutation(
-      () => requestJson(`/api/vms-admin/customers/${customer.id}`, "PUT", { name, contact, email, phone }),
-      "VMS stranka je posodobljena.",
-    );
+  function openCreate(kind: FormKind) {
+    setEditTarget(null);
+    setForm(form === kind ? null : kind);
+  }
+  function openEdit(target: EditTarget) {
+    setForm(null);
+    setEditTarget(target);
   }
 
   function deleteCustomer(customer: VmsAdminCustomerDto) {
@@ -315,61 +375,14 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
     void runMutation(() => requestJson(`/api/vms-admin/customers/${customer.id}`, "DELETE"), "VMS stranka je izbrisana.");
   }
 
-  function editSite(site: VmsAdminCustomerDto["sites"][number]) {
-    const name = promptValue("Ime objekta", site.name);
-    if (name == null) return;
-    const address = promptValue("Naslov", site.address);
-    if (address == null) return;
-    const nvrName = promptValue("NVR ime", site.nvrName);
-    if (nvrName == null) return;
-    const nvrIp = promptValue("NVR IP", site.nvrIp);
-    if (nvrIp == null) return;
-    const nvrModel = promptValue("NVR model", site.nvrModel);
-    if (nvrModel == null) return;
-    void runMutation(
-      () => requestJson(`/api/vms-admin/sites/${site.id}`, "PUT", { name, address, nvrName, nvrIp, nvrModel }),
-      "VMS objekt je posodobljen.",
-    );
-  }
-
   function deleteSite(site: VmsAdminCustomerDto["sites"][number]) {
     if (!window.confirm(`Izbrišem objekt "${site.name}"?`)) return;
     void runMutation(() => requestJson(`/api/vms-admin/sites/${site.id}`, "DELETE"), "VMS objekt je izbrisan.");
   }
 
-  function editCamera(camera: VmsAdminCustomerDto["sites"][number]["cameras"][number]) {
-    const name = promptValue("Ime kamere", camera.name);
-    if (name == null) return;
-    const channelRaw = promptValue("Kanal", String(camera.channel));
-    if (channelRaw == null) return;
-    const ip = promptValue("IP", camera.ip);
-    if (ip == null) return;
-    const model = promptValue("Model", camera.model);
-    if (model == null) return;
-    void runMutation(
-      () => requestJson(`/api/vms-admin/cameras/${camera.id}`, "PUT", { name, channel: Number(channelRaw), ip, model, enabled: camera.enabled }),
-      "VMS kamera je posodobljena.",
-    );
-  }
-
   function deleteCamera(camera: VmsAdminCustomerDto["sites"][number]["cameras"][number]) {
     if (!window.confirm(`Izbrišem kamero "${camera.name}"?`)) return;
     void runMutation(() => requestJson(`/api/vms-admin/cameras/${camera.id}`, "DELETE"), "VMS kamera je izbrisana.");
-  }
-
-  function editUser(user: VmsAdminCustomerDto["users"][number]) {
-    const email = promptValue("Email", user.email);
-    if (email == null) return;
-    const name = promptValue("Ime", user.name);
-    if (name == null) return;
-    const role = promptValue("Vloga (owner/admin/viewer)", user.role);
-    if (role == null) return;
-    const activeRaw = promptValue("Aktiven? (da/ne)", user.isActive ? "da" : "ne");
-    if (activeRaw == null) return;
-    void runMutation(
-      () => requestJson(`/api/vms-admin/users/${user.id}`, "PUT", { email, name, role, isActive: activeRaw.toLowerCase() !== "ne" }),
-      "VMS uporabnik je posodobljen.",
-    );
   }
 
   function deleteUser(user: VmsAdminCustomerDto["users"][number]) {
@@ -378,9 +391,7 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
   }
 
   function resetUserPassword(user: VmsAdminCustomerDto["users"][number]) {
-    const password = promptValue(`Novo začasno geslo za ${user.email}`, "");
-    if (!password) return;
-    void runMutation(() => requestJson(`/api/vms-admin/users/${user.id}/password`, "POST", { password }), "Geslo je resetirano.");
+    openEdit({ kind: "password", data: user });
   }
 
   function deleteClaim(claim: VmsAdminCustomerDto["sites"][number]["claims"][number]) {
@@ -482,13 +493,19 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
           <button type="button" onClick={ensurePlans} disabled={submitting || !initial.dbConfigured} className="rounded-lg border border-[var(--vo-border)] px-3 py-2 text-sm hover:bg-[var(--vo-surface-2)] disabled:opacity-50">
             <ShieldCheck className="mr-1 inline h-4 w-4" /> Pripravi VMS pakete
           </button>
-          <ActionButton label="Nova VMS stranka" icon={Plus} onClick={() => setForm(form === "customer" ? null : "customer")} />
-          <ActionButton label="Dodaj objekt" icon={Monitor} onClick={() => setForm(form === "site" ? null : "site")} disabled={!firstCustomer} />
-          <ActionButton label="Dodaj kamero" icon={Camera} onClick={() => setForm(form === "camera" ? null : "camera")} disabled={!firstSite} />
-          <ActionButton label="Dodaj uporabnika" icon={UserPlus} onClick={() => setForm(form === "user" ? null : "user")} disabled={!firstCustomer} />
-          <ActionButton label="Gateway claim" icon={RadioTower} onClick={() => setForm(form === "claim" ? null : "claim")} disabled={!firstSite} />
+          <ActionButton label="Nova VMS stranka" icon={Plus} onClick={() => openCreate("customer")} />
+          <ActionButton label="Dodaj objekt" icon={Monitor} onClick={() => openCreate("site")} disabled={!firstCustomer} />
+          <ActionButton label="Dodaj kamero" icon={Camera} onClick={() => openCreate("camera")} disabled={!firstSite} />
+          <ActionButton label="Dodaj uporabnika" icon={UserPlus} onClick={() => openCreate("user")} disabled={!firstCustomer} />
+          <ActionButton label="Gateway claim" icon={RadioTower} onClick={() => openCreate("claim")} disabled={!firstSite} />
         </div>
       </section>
+
+      {editTarget ? (
+        <section className="rounded-xl border border-[var(--vo-accent)]/40 bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
+          <VmsEditForm target={editTarget} initial={initial} submitting={submitting} onSubmit={handleEdit} onCancel={() => setEditTarget(null)} />
+        </section>
+      ) : null}
 
       {form ? (
         <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
@@ -506,13 +523,13 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
           <CustomerCard
             key={customer.id}
             customer={customer}
-            onEditCustomer={editCustomer}
+            onEditCustomer={(customer) => openEdit({ kind: "customer", data: customer })}
             onDeleteCustomer={deleteCustomer}
-            onEditSite={editSite}
+            onEditSite={(site) => openEdit({ kind: "site", data: site })}
             onDeleteSite={deleteSite}
-            onEditCamera={editCamera}
+            onEditCamera={(camera) => openEdit({ kind: "camera", data: camera })}
             onDeleteCamera={deleteCamera}
-            onEditUser={editUser}
+            onEditUser={(user) => openEdit({ kind: "user", data: user })}
             onDeleteUser={deleteUser}
             onResetUserPassword={resetUserPassword}
             onDeleteClaim={deleteClaim}
@@ -618,6 +635,127 @@ function VmsForm({
   );
 }
 
+function VmsEditForm({
+  target,
+  initial,
+  submitting,
+  onSubmit,
+  onCancel,
+}: {
+  target: NonNullable<EditTarget>;
+  initial: VmsAdminOverviewDto;
+  submitting: boolean;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+}) {
+  const titles: Record<NonNullable<EditTarget>["kind"], string> = {
+    customer: "Uredi VMS stranko",
+    site: "Uredi objekt",
+    camera: "Uredi kamero",
+    user: "Uredi uporabnika",
+    password: "Reset gesla",
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-[var(--vo-fg)]">{titles[target.kind]}</p>
+        <button type="button" onClick={onCancel} className="text-xs font-semibold text-[var(--vo-muted)] hover:text-[var(--vo-fg)]">
+          Prekliči
+        </button>
+      </div>
+
+      {target.kind === "customer" ? (
+        <div className="grid gap-3 md:grid-cols-3">
+          <Input name="name" label="Ime stranke" defaultValue={target.data.name} required />
+          <Input name="slug" label="Slug" defaultValue={target.data.slug} />
+          <Select
+            name="planId"
+            label="Licenca"
+            defaultValue={target.data.planId}
+            options={initial.plans.map((plan) => ({ value: plan.id, label: `${plan.name} (${plan.cameraLimit} kamer)` }))}
+            required
+          />
+          <Input name="contact" label="Kontakt" defaultValue={target.data.contact} />
+          <Input name="email" label="Email" type="email" defaultValue={target.data.email} />
+          <Input name="phone" label="Telefon" defaultValue={target.data.phone} />
+        </div>
+      ) : null}
+
+      {target.kind === "site" ? (
+        <>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Input name="name" label="Ime objekta" defaultValue={target.data.name} required />
+            <Input name="address" label="Naslov" defaultValue={target.data.address} />
+            <Input name="nvrName" label="NVR ime" defaultValue={target.data.nvrName} />
+            <Input name="nvrIp" label="NVR IP" defaultValue={target.data.nvrIp} placeholder="192.168.1.27" />
+            <Input name="nvrModel" label="NVR model" defaultValue={target.data.nvrModel} />
+          </div>
+          <p className="text-xs text-[var(--vo-muted)]">
+            Po spremembi NVR IP ali kamer posodobi tudi <code>/opt/visionone-vms-gateway/.env</code> na Raspberry Pi in zaženi{" "}
+            <code>sudo systemctl restart visionone-vms-gateway</code>.
+          </p>
+        </>
+      ) : null}
+
+      {target.kind === "camera" ? (
+        <div className="grid gap-3 md:grid-cols-3">
+          <Input name="name" label="Ime kamere" defaultValue={target.data.name} required />
+          <Input name="channel" label="Kanal" type="number" defaultValue={String(target.data.channel)} required />
+          <Input name="ip" label="IP kamere" defaultValue={target.data.ip} placeholder="192.168.1.212" />
+          <Input name="model" label="Model" defaultValue={target.data.model} />
+          <Checkbox name="enabled" label="Kamera aktivna" defaultChecked={target.data.enabled} />
+        </div>
+      ) : null}
+
+      {target.kind === "user" ? (
+        <div className="grid gap-3 md:grid-cols-4">
+          <Input name="email" label="Email" type="email" defaultValue={target.data.email} required />
+          <Input name="name" label="Ime" defaultValue={target.data.name} />
+          <Select
+            name="role"
+            label="Vloga"
+            defaultValue={target.data.role}
+            options={[
+              { value: "owner", label: "owner" },
+              { value: "admin", label: "admin" },
+              { value: "viewer", label: "viewer" },
+            ]}
+          />
+          <Checkbox name="isActive" label="Uporabnik aktiven" defaultChecked={target.data.isActive} />
+        </div>
+      ) : null}
+
+      {target.kind === "password" ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <p className="text-sm text-[var(--vo-muted)] md:col-span-2">
+            Novo geslo za <strong className="text-[var(--vo-fg)]">{target.data.email}</strong>
+          </p>
+          <Input name="password" label="Novo začasno geslo" type="text" required />
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <button type="submit" disabled={submitting} className="rounded-lg bg-[var(--vo-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+          {submitting ? "Shranjujem…" : "Shrani spremembe"}
+        </button>
+        <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--vo-border)] px-4 py-2 text-sm hover:bg-[var(--vo-surface-2)]">
+          Prekliči
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function Checkbox({ label, name, defaultChecked }: { label: string; name: string; defaultChecked?: boolean }) {
+  return (
+    <label className="flex items-center gap-2 self-end pb-2 text-sm text-[var(--vo-fg)]">
+      <input type="checkbox" name={name} defaultChecked={defaultChecked} className="rounded border-[var(--vo-border)]" />
+      {label}
+    </label>
+  );
+}
+
 function Input({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
   return (
     <label className="grid gap-1 text-xs font-semibold text-[var(--vo-muted)]">
@@ -627,11 +765,20 @@ function Input({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> 
   );
 }
 
-function Select({ label, options, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; options: Array<{ value: string; label: string }> }) {
+function Select({
+  label,
+  options,
+  defaultValue,
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; options: Array<{ value: string; label: string }> }) {
   return (
     <label className="grid gap-1 text-xs font-semibold text-[var(--vo-muted)]">
       {label}
-      <select {...props} className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-3 py-2 text-sm text-[var(--vo-fg)]">
+      <select
+        {...props}
+        defaultValue={defaultValue}
+        className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-3 py-2 text-sm text-[var(--vo-fg)]"
+      >
         <option value="">Izberi…</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
