@@ -40,6 +40,7 @@ function CustomerCard({
   onDeleteUser,
   onResetUserPassword,
   onDeleteClaim,
+  onDownloadGatewayBundle,
 }: {
   customer: VmsAdminCustomerDto;
   onEditCustomer: (customer: VmsAdminCustomerDto) => void;
@@ -52,6 +53,7 @@ function CustomerCard({
   onDeleteUser: (user: VmsAdminCustomerDto["users"][number]) => void;
   onResetUserPassword: (user: VmsAdminCustomerDto["users"][number]) => void;
   onDeleteClaim: (claim: VmsAdminCustomerDto["sites"][number]["claims"][number]) => void;
+  onDownloadGatewayBundle: (site: VmsAdminCustomerDto["sites"][number]) => void;
 }) {
   const usageColor = customer.cameraCount > customer.cameraLimit ? "text-[var(--vo-danger)]" : "text-[var(--vo-accent)]";
   return (
@@ -112,6 +114,9 @@ function CustomerCard({
               </div>
             ) : null}
             <div className="mt-3 space-y-1 text-xs text-[var(--vo-muted)]">
+              <div className="mb-2">
+                <MutationButton label="Prenesi gateway paket (ZIP)" onClick={() => onDownloadGatewayBundle(site)} />
+              </div>
               {site.gateways.map((gateway) => (
                 <p key={gateway.id}>
                   Gateway {gateway.name}: <span className="font-semibold text-[var(--vo-fg)]">{gateway.status}</span>
@@ -181,6 +186,7 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [bundleMeta, setBundleMeta] = useState<{ siteName: string; claimCode: string; externalId: string } | null>(null);
 
   const firstCustomer = initial.customers[0];
   const firstSite = firstCustomer?.sites[0];
@@ -382,6 +388,41 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
     void runMutation(() => requestJson(`/api/vms-admin/claims/${claim.id}`, "DELETE"), "Gateway claim koda je izbrisana.");
   }
 
+  async function downloadGatewayBundle(site: VmsAdminCustomerDto["sites"][number]) {
+    setError(null);
+    setSubmitting(true);
+    setBundleMeta(null);
+    try {
+      const res = await fetch(`/api/vms-admin/sites/${encodeURIComponent(site.id)}/gateway-bundle`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? "Generiranje paketa ni uspelo.");
+      }
+      const claimCode = res.headers.get("X-VisionOne-Claim-Code") ?? "";
+      const externalId = res.headers.get("X-VisionOne-Gateway-Id") ?? "";
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition") ?? "";
+      const match = /filename="([^"]+)"/.exec(cd);
+      const filename = match?.[1] ?? `visionone-vms-gateway-${site.id}.zip`;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setBundleMeta({ siteName: site.name, claimCode, externalId });
+      setNotice(`Gateway paket za ${site.name} je prenesen.`);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Prenos paketa ni uspel.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   if (role !== "admin") {
     return (
       <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 text-sm text-[var(--vo-muted)]">
@@ -415,6 +456,18 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
         </div>
       ) : null}
       {notice ? <div className="rounded-xl border border-[var(--vo-ok-muted)] bg-[var(--vo-ok-muted)] px-4 py-3 text-sm text-[var(--vo-ok)]">{notice}</div> : null}
+      {bundleMeta ? (
+        <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-3 text-sm">
+          <p className="font-semibold text-[var(--vo-fg)]">Gateway paket: {bundleMeta.siteName}</p>
+          <p className="mt-1 text-[var(--vo-muted)]">
+            Claim koda: <code className="text-[var(--vo-accent)]">{bundleMeta.claimCode}</code> · Gateway ID:{" "}
+            <code className="text-[var(--vo-fg)]">{bundleMeta.externalId}</code>
+          </p>
+          <p className="mt-1 text-xs text-[var(--vo-muted)]">
+            Claim je že v bazi. Kopiraj ZIP na Raspberry Pi in zaženi <code>install.sh</code> ali ročno <code>python3 visionone_vms_gateway.py</code>.
+          </p>
+        </div>
+      ) : null}
       {error ? <div className="rounded-xl border border-[var(--vo-danger-muted)] bg-[var(--vo-danger-muted)] px-4 py-3 text-sm text-[var(--vo-danger)]">{error}</div> : null}
 
       <section className="grid gap-3 md:grid-cols-4">
@@ -463,6 +516,7 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
             onDeleteUser={deleteUser}
             onResetUserPassword={resetUserPassword}
             onDeleteClaim={deleteClaim}
+            onDownloadGatewayBundle={(site) => void downloadGatewayBundle(site)}
           />
         ))}
       </section>
