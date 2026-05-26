@@ -57,6 +57,8 @@ function buildEnvFile(vars: {
     "# NVR_IP and CAMERA_TARGETS sta opcijska ročna override polja",
     "NVR_IP=",
     "CAMERA_TARGETS=",
+    "# Cloudflare Tunnel token (Zero Trust) — opcijsko, za live view",
+    "CLOUDFLARE_TUNNEL_TOKEN=",
   ];
   return `${lines.join("\n")}\n`;
 }
@@ -101,14 +103,18 @@ export async function createVmsGatewayBundleForSite(siteId: string, vmsBaseUrl: 
     }),
   );
 
-  const binaryEntries = ["visionone_vms_gateway.py"] as const;
+  const binaryEntries = ["visionone_vms_gateway.py", "sync-go2rtc-config.py"] as const;
   for (const rel of binaryEntries) {
     files[rel] = strToU8(await readTemplate(rel));
   }
 
   const textEntries = [
     ["README-SLO.txt", "README-SLO.txt"],
+    ["NAVODILA-Pi-SLO.txt", "NAVODILA-Pi-SLO.txt"],
+    ["NAVODILA-CLOUDFLARE-SLO.txt", "NAVODILA-CLOUDFLARE-SLO.txt"],
     ["install.sh", "install.sh"],
+    ["install-go2rtc.sh", "install-go2rtc.sh"],
+    ["install-cloudflared.sh", "install-cloudflared.sh"],
   ] as const;
 
   for (const [zipPath, diskPath] of textEntries) {

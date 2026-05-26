@@ -1,0 +1,86 @@
+VisionOne VMS — Cloudflare Tunnel za Live view
+==============================================
+
+Live video potrebuje javni URL do go2rtc na Pi-ju (port 1984).
+Cloudflare Tunnel je brezplačen (Free plan) in ne zahteva odpiranja portov na routerju.
+
+KORAK 1 — Domena v Cloudflare (enkrat)
+--------------------------------------
+1. Prijava: https://dash.cloudflare.com
+2. Add a site → visionone.si
+3. Izberi plan: **Free — $0** (Pro ni potreben)
+4. Cloudflare pokaže 2 nameserverja, npr.:
+     ada.ns.cloudflare.com
+     bob.ns.cloudflare.com
+5. V **Neoserv** panelu (kjer imaš domeno) zamenjaj nameserverje na Cloudflare.
+6. Počakaj, da zona postane Active (običajno 15 min – 24 h).
+
+Opomba: vms.visionone.si lahko ostane na Vercel — v Cloudflare DNS dodaš zapise
+za Vercel ločeno (CNAME), tunel pa na novo poddomeno npr. stream-test.visionone.si.
+
+KORAK 2 — Zero Trust tunel (brezplačno)
+---------------------------------------
+1. Odpri: https://one.dash.cloudflare.com
+2. Če še nimaš Zero Trust: ustvari Free organizacijo (brezplačno).
+3. Networks → **Tunnels** → Create a tunnel
+4. Ime: npr. visionone-vms-test
+5. Izberi connector: **Cloudflared**
+6. Cloudflare pokaže ukaz z **tokenom** — kopiraj token (dolga vrstica).
+
+KORAK 3 — Javni hostname (povezava na go2rtc)
+---------------------------------------------
+V istem tunelu → tab **Public Hostname** → Add a public hostname:
+
+  Subdomain:  stream-test          (ali stream-ime-objekta)
+  Domain:     visionone.si
+  Service:    HTTP
+  URL:        localhost:1984
+
+Shrani. Javni URL bo: https://stream-test.visionone.si
+
+KORAK 4 — Pi namestitev tunela
+------------------------------
+Na Pi-ju v /opt/visionone-vms-gateway/.env dodaj:
+
+  CLOUDFLARE_TUNNEL_TOKEN=eyJhIjoi...   (cel token iz koraka 2)
+
+Nato:
+
+  cd ~/visionone-gateway
+  sudo bash install-cloudflared.sh
+
+Preveri:
+
+  sudo systemctl status cloudflared
+  sudo systemctl status visionone-go2rtc
+  curl http://127.0.0.1:1984/api/streams
+
+Od doma (telefon brez WiFi-ja objekta) odpri v brskalniku:
+  https://stream-test.visionone.si
+
+KORAK 5 — Portal admin
+----------------------
+Portal → VisionOne VMS → uredi objekt (site):
+
+  Live stream URL:  https://stream-test.visionone.si
+
+RTSP URL kamere je opcijski (privzeto iz NVR kanala).
+
+KORAK 6 — Test v VMS app
+------------------------
+https://vms.visionone.si → Kamere → gumb **Live**
+
+Pogoste težave
+--------------
+- Authorize tunnel / ni domen → visionone.si še ni Active v Cloudflare
+- 502 / tunnel error → go2rtc ne teče: systemctl restart visionone-go2rtc
+- Prazen stream → sync-go2rtc: sudo python3 /opt/visionone-vms-gateway/sync-go2rtc-config.py
+- Token ne dela → nov token iz Zero Trust → posodobi .env → install-cloudflared.sh
+
+Več objektov (strank)
+--------------------
+Za vsak Pi lahko:
+- ločen tunel + poddomena (stream-objekt1.visionone.si), ali
+- en tunel z več hostname-i (vsak na localhost:1984 — samo če je en Pi na lokaciji)
+
+Na vsakem objektu v Portalu nastavi pravilen Live stream URL za ta Pi.

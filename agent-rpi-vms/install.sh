@@ -36,4 +36,10 @@ EOF
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
 systemctl restart "$SERVICE_NAME"
+if [[ -f "$SCRIPT_DIR/install-go2rtc.sh" ]]; then
+  bash "$SCRIPT_DIR/install-go2rtc.sh"
+fi
+if [[ -f "$SCRIPT_DIR/install-cloudflared.sh" ]]; then
+  bash "$SCRIPT_DIR/install-cloudflared.sh" || echo "Opozorilo: Cloudflare Tunnel ni nameščen (opcijsko)."
+fi
 echo "VisionOne VMS gateway nameščen v ${INSTALL_DIR}. Status: systemctl status ${SERVICE_NAME}"

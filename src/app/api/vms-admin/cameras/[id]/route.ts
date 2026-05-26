@@ -13,6 +13,7 @@ export async function PUT(request: Request, ctx: Ctx) {
       name?: string;
       channel?: number | string;
       ip?: string;
+      rtspUrl?: string;
       model?: string;
       enabled?: boolean;
     };
@@ -24,6 +25,7 @@ export async function PUT(request: Request, ctx: Ctx) {
       name: body.name,
       channel,
       ip: body.ip,
+      rtspUrl: body.rtspUrl,
       model: body.model,
       enabled: body.enabled,
     });

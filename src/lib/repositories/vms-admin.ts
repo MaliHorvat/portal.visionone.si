@@ -40,7 +40,8 @@ export type VmsAdminCustomerDto = {
     nvrName: string;
     nvrIp: string;
     nvrModel: string;
-    cameras: Array<{ id: string; siteId: string; name: string; channel: number; ip: string; model: string; status: string; enabled: boolean }>;
+    streamBaseUrl: string;
+    cameras: Array<{ id: string; siteId: string; name: string; channel: number; ip: string; rtspUrl: string; model: string; status: string; enabled: boolean }>;
     gateways: Array<{ id: string; name: string; externalId: string; status: string; lastSeenAt: Date | null; version: string }>;
     claims: Array<{ id: string; code: string; externalId: string; name: string; expiresAt: Date; consumedAt: Date | null }>;
   }>;
@@ -122,12 +123,14 @@ function mapCustomer(customer: VmsCustomerWithAdminData): VmsAdminCustomerDto {
       nvrName: site.nvrName,
       nvrIp: site.nvrIp,
       nvrModel: site.nvrModel,
+      streamBaseUrl: site.streamBaseUrl,
       cameras: site.cameras.map((camera) => ({
         id: camera.id,
         siteId: camera.siteId,
         name: camera.name,
         channel: camera.channel,
         ip: camera.ip,
+        rtspUrl: camera.rtspUrl,
         model: camera.model,
         status: camera.status,
         enabled: camera.enabled,
@@ -284,7 +287,7 @@ export async function createVmsSite(customerId: string, data: { name: string; ad
   });
 }
 
-export async function updateVmsSite(id: string, data: { name?: string; address?: string; nvrName?: string; nvrIp?: string; nvrModel?: string }) {
+export async function updateVmsSite(id: string, data: { name?: string; address?: string; nvrName?: string; nvrIp?: string; nvrModel?: string; streamBaseUrl?: string }) {
   const db = assertVmsDb();
   return db.vmsSite.update({
     where: { id },
@@ -294,6 +297,7 @@ export async function updateVmsSite(id: string, data: { name?: string; address?:
       nvrName: data.nvrName,
       nvrIp: data.nvrIp,
       nvrModel: data.nvrModel,
+      streamBaseUrl: data.streamBaseUrl,
     },
   });
 }
@@ -318,7 +322,7 @@ export async function createVmsCamera(siteId: string, data: { name: string; chan
   });
 }
 
-export async function updateVmsCamera(id: string, data: { name?: string; channel?: number; ip?: string; model?: string; enabled?: boolean }) {
+export async function updateVmsCamera(id: string, data: { name?: string; channel?: number; ip?: string; rtspUrl?: string; model?: string; enabled?: boolean }) {
   const db = assertVmsDb();
   return db.vmsCamera.update({
     where: { id },
@@ -326,6 +330,7 @@ export async function updateVmsCamera(id: string, data: { name?: string; channel
       name: data.name,
       channel: data.channel,
       ip: data.ip,
+      rtspUrl: data.rtspUrl,
       model: data.model,
       enabled: data.enabled,
     },

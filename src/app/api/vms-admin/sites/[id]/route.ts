@@ -15,6 +15,7 @@ export async function PUT(request: Request, ctx: Ctx) {
       nvrName?: string;
       nvrIp?: string;
       nvrModel?: string;
+      streamBaseUrl?: string;
     };
     const site = await updateVmsSite(id, body);
     return NextResponse.json({ site });

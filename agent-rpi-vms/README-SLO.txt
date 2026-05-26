@@ -11,32 +11,18 @@ Velja do:  {{CLAIM_EXPIRES}}
 
 VMS API:   {{VMS_API_BASE}}
 
-Kako deluje
------------
-Gateway sam preskenira lokalno omrežje (/24) in poišče NVR-je ter kamere (porti 554, 80, 8000, 37777).
-IP-jev kamer ni treba ročno vnašati v portal ali v .env.
+HITRO (3 koraki)
+----------------
+1. Razpakiraj ZIP na Pi (npr. ~/visionone-gateway)
+2. cd ~/visionone-gateway && sudo bash install.sh
+3. sudo journalctl -u visionone-vms-gateway -f
 
-Namestitev (systemd)
---------------------
-Na Pi-ju kot root:
-  sudo bash install.sh
+Podrobna navodila: odpri NAVODILA-Pi-SLO.txt v tej mapi.
 
-Po namestitvi:
-  sudo systemctl status visionone-vms-gateway
-  sudo journalctl -u visionone-vms-gateway -f
+Kaj agent dela
+--------------
+- Sam preskenira lokalno omrežje in poišče NVR + kamere
+- Pošilja status na {{VMS_API_BASE}}
+- Ob vklopu Pi-ja se sam zažene (systemd)
 
-V logu pričakuj:
-  scanning local network…
-  discovered X devices
-  status sent online discovered=X cameras=Y nvr=192.168.x.x
-
-Preverjanje
------------
-- V portalu (VisionOne VMS admin) se NVR IP in kamere posodobijo samodejno.
-- Stranka vidi status na vms.visionone.si.
-
-Opcijsko (.env)
----------------
-- AUTO_DISCOVER=1
-- SCAN_SUBNET=192.168.1.0/24  (samo če avtomatska detekcija subnet-a ne ustreza)
-- NVR_IP=...  (ročni override, običajno ni potreben)
+Podpora: VisionOne
