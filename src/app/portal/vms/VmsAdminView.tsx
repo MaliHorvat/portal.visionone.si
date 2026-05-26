@@ -598,7 +598,7 @@ function VmsForm({
           <Input name="name" label="Ime objekta" required />
           <Input name="address" label="Naslov" />
           <Input name="nvrName" label="NVR ime" />
-          <Input name="nvrIp" label="NVR IP" />
+          <Input name="nvrIp" label="NVR IP (opcijsko)" />
           <Input name="nvrModel" label="NVR model" />
         </div>
       ) : null}
@@ -607,7 +607,7 @@ function VmsForm({
           <Select name="siteId" label="Objekt" options={sites.map((site) => ({ value: site.id, label: `${site.customerName} / ${site.name}` }))} required />
           <Input name="name" label="Ime kamere" required />
           <Input name="channel" label="Kanal" type="number" defaultValue="1" required />
-          <Input name="ip" label="IP" />
+          <Input name="ip" label="IP (opcijsko, Pi najde sam)" />
           <Input name="model" label="Model" />
         </div>
       ) : null}
@@ -688,12 +688,11 @@ function VmsEditForm({
             <Input name="name" label="Ime objekta" defaultValue={target.data.name} required />
             <Input name="address" label="Naslov" defaultValue={target.data.address} />
             <Input name="nvrName" label="NVR ime" defaultValue={target.data.nvrName} />
-            <Input name="nvrIp" label="NVR IP" defaultValue={target.data.nvrIp} placeholder="192.168.1.27" />
+            <Input name="nvrIp" label="NVR IP" defaultValue={target.data.nvrIp} placeholder="Samodejno iz mreže" />
             <Input name="nvrModel" label="NVR model" defaultValue={target.data.nvrModel} />
           </div>
-          <p className="text-xs text-[var(--vo-muted)]">
-            Po spremembi NVR IP ali kamer posodobi tudi <code>/opt/visionone-vms-gateway/.env</code> na Raspberry Pi in zaženi{" "}
-            <code>sudo systemctl restart visionone-vms-gateway</code>.
+          <p className="text-xs text-[var(--vo-muted)] md:col-span-3">
+            NVR IP in IP-ji kamer se po namestitvi gatewaya na Pi-ju posodobijo samodejno. Polja spodaj so opcijska ročna override vrednost.
           </p>
         </>
       ) : null}
@@ -702,7 +701,7 @@ function VmsEditForm({
         <div className="grid gap-3 md:grid-cols-3">
           <Input name="name" label="Ime kamere" defaultValue={target.data.name} required />
           <Input name="channel" label="Kanal" type="number" defaultValue={String(target.data.channel)} required />
-          <Input name="ip" label="IP kamere" defaultValue={target.data.ip} placeholder="192.168.1.212" />
+          <Input name="ip" label="IP kamere" defaultValue={target.data.ip} placeholder="Samodejno iz mreže" />
           <Input name="model" label="Model" defaultValue={target.data.model} />
           <Checkbox name="enabled" label="Kamera aktivna" defaultChecked={target.data.enabled} />
         </div>

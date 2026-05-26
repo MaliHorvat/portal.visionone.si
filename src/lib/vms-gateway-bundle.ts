@@ -42,26 +42,21 @@ async function readTemplate(rel: string) {
   return fs.readFile(path.join(AGENT_ROOT, rel), "utf8");
 }
 
-function buildCameraTargets(cameras: Array<{ channel: number; ip: string }>) {
-  const withIp = cameras.filter((camera) => camera.ip.trim());
-  if (withIp.length === 0) return "";
-  return withIp.map((camera) => `${camera.channel}=${camera.ip.trim()}`).join(",");
-}
-
 function buildEnvFile(vars: {
   vmsBaseUrl: string;
   claimCode: string;
   gatewayName: string;
-  nvrIp: string;
-  cameraTargets: string;
 }) {
   const lines = [
     `VMS_API_BASE=${vars.vmsBaseUrl}`,
     `VMS_CLAIM_CODE=${vars.claimCode}`,
     `GATEWAY_NAME=${vars.gatewayName}`,
-    `NVR_IP=${vars.nvrIp}`,
-    `CAMERA_TARGETS=${vars.cameraTargets}`,
+    "AUTO_DISCOVER=1",
+    "SCAN_INTERVAL_SECONDS=300",
     "CHECK_INTERVAL_SECONDS=30",
+    "# NVR_IP and CAMERA_TARGETS sta opcijska ročna override polja",
+    "NVR_IP=",
+    "CAMERA_TARGETS=",
   ];
   return `${lines.join("\n")}\n`;
 }
@@ -86,7 +81,6 @@ export async function createVmsGatewayBundleForSite(siteId: string, vmsBaseUrl: 
 
   const generatedAt = new Date().toISOString();
   const vmsUrl = vmsBaseUrl.replace(/\/$/, "");
-  const cameraTargets = buildCameraTargets(site.cameras.map((camera) => ({ channel: camera.channel, ip: camera.ip })));
 
   const vars: Record<string, string> = {
     CUSTOMER_NAME: site.customer.name,
@@ -104,8 +98,6 @@ export async function createVmsGatewayBundleForSite(siteId: string, vmsBaseUrl: 
       vmsBaseUrl: vmsUrl,
       claimCode: claim.code,
       gatewayName,
-      nvrIp: site.nvrIp,
-      cameraTargets,
     }),
   );
 

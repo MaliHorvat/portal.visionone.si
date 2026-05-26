@@ -11,13 +11,10 @@ Velja do:  {{CLAIM_EXPIRES}}
 
 VMS API:   {{VMS_API_BASE}}
 
-Namestitev (ročno)
-------------------
-1. Kopiraj vse datoteke iz tega ZIP-a na Raspberry Pi, npr. v /opt/visionone-vms-gateway
-2. Preveri datoteko .env (NVR IP in IP-ji kamer)
-3. Zaženi enkratno claim registracijo:
-     python3 visionone_vms_gateway.py
-4. Po uspešnem claimu agent ustvari gateway-state.json in nadaljuje s status heartbeat-i.
+Kako deluje
+-----------
+Gateway sam preskenira lokalno omrežje (/24) in poišče NVR-je ter kamere (porti 554, 80, 8000, 37777).
+IP-jev kamer ni treba ročno vnašati v portal ali v .env.
 
 Namestitev (systemd)
 --------------------
@@ -28,13 +25,18 @@ Po namestitvi:
   sudo systemctl status visionone-vms-gateway
   sudo journalctl -u visionone-vms-gateway -f
 
+V logu pričakuj:
+  scanning local network…
+  discovered X devices
+  status sent online discovered=X cameras=Y nvr=192.168.x.x
+
 Preverjanje
 -----------
-- V portalu (VisionOne VMS admin) preveri, da je gateway online.
-- Stranka vidi status na vms.visionone.si → Gateway.
+- V portalu (VisionOne VMS admin) se NVR IP in kamere posodobijo samodejno.
+- Stranka vidi status na vms.visionone.si.
 
-Opombe
-------
-- Claim koda je enkratna. Če je že porabljena, v portalu ustvari novo in ponovno prenesi paket.
-- V tej fazi gateway pošilja status NVR-ja in kamer, ne streama videa.
-- Live view in playback sta načrtovana v naslednjih fazah.
+Opcijsko (.env)
+---------------
+- AUTO_DISCOVER=1
+- SCAN_SUBNET=192.168.1.0/24  (samo če avtomatska detekcija subnet-a ne ustreza)
+- NVR_IP=...  (ročni override, običajno ni potreben)
