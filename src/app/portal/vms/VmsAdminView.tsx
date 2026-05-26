@@ -14,17 +14,45 @@ function text(value: FormDataEntryValue | null) {
 }
 
 async function postJson(url: string, payload: Record<string, unknown>) {
+  return requestJson(url, "POST", payload);
+}
+
+async function requestJson(url: string, method: "POST" | "PUT" | "DELETE", payload?: Record<string, unknown>) {
   const res = await fetch(url, {
-    method: "POST",
+    method,
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
+    body: payload ? JSON.stringify(payload) : undefined,
   });
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) throw new Error(data.error ?? "Napaka pri shranjevanju.");
   return data;
 }
 
-function CustomerCard({ customer }: { customer: VmsAdminCustomerDto }) {
+function CustomerCard({
+  customer,
+  onEditCustomer,
+  onDeleteCustomer,
+  onEditSite,
+  onDeleteSite,
+  onEditCamera,
+  onDeleteCamera,
+  onEditUser,
+  onDeleteUser,
+  onResetUserPassword,
+  onDeleteClaim,
+}: {
+  customer: VmsAdminCustomerDto;
+  onEditCustomer: (customer: VmsAdminCustomerDto) => void;
+  onDeleteCustomer: (customer: VmsAdminCustomerDto) => void;
+  onEditSite: (site: VmsAdminCustomerDto["sites"][number]) => void;
+  onDeleteSite: (site: VmsAdminCustomerDto["sites"][number]) => void;
+  onEditCamera: (camera: VmsAdminCustomerDto["sites"][number]["cameras"][number]) => void;
+  onDeleteCamera: (camera: VmsAdminCustomerDto["sites"][number]["cameras"][number]) => void;
+  onEditUser: (user: VmsAdminCustomerDto["users"][number]) => void;
+  onDeleteUser: (user: VmsAdminCustomerDto["users"][number]) => void;
+  onResetUserPassword: (user: VmsAdminCustomerDto["users"][number]) => void;
+  onDeleteClaim: (claim: VmsAdminCustomerDto["sites"][number]["claims"][number]) => void;
+}) {
   const usageColor = customer.cameraCount > customer.cameraLimit ? "text-[var(--vo-danger)]" : "text-[var(--vo-accent)]";
   return (
     <article className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
@@ -38,6 +66,10 @@ function CustomerCard({ customer }: { customer: VmsAdminCustomerDto }) {
         <span className={`rounded-full bg-[var(--vo-accent-muted)] px-2 py-1 text-xs font-semibold ${usageColor}`}>
           {customer.cameraCount}/{customer.cameraLimit} kamer
         </span>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <MutationButton label="Uredi stranko" onClick={() => onEditCustomer(customer)} />
+        <MutationButton label="Izbriši stranko" danger onClick={() => onDeleteCustomer(customer)} />
       </div>
       <div className="mt-4 grid gap-2 md:grid-cols-4">
         <MiniStat label="Objekti" value={customer.siteCount} />
@@ -55,8 +87,30 @@ function CustomerCard({ customer }: { customer: VmsAdminCustomerDto }) {
                   NVR: {site.nvrName || "ni vpisan"} · {site.nvrIp || "brez IP"}
                 </p>
               </div>
-              <span className="text-xs text-[var(--vo-muted)]">{site.cameras.length} kamer</span>
+              <div className="flex flex-col items-end gap-2">
+                <span className="text-xs text-[var(--vo-muted)]">{site.cameras.length} kamer</span>
+                <div className="flex gap-1">
+                  <MutationButton label="Uredi" onClick={() => onEditSite(site)} />
+                  <MutationButton label="Izbriši" danger onClick={() => onDeleteSite(site)} />
+                </div>
+              </div>
             </div>
+            {site.cameras.length > 0 ? (
+              <div className="mt-3 divide-y divide-[var(--vo-border)] rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)]">
+                {site.cameras.map((camera) => (
+                  <div key={camera.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs">
+                    <span className="text-[var(--vo-fg)]">
+                      CH{camera.channel} · {camera.name} {camera.ip ? `· ${camera.ip}` : ""}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-[var(--vo-muted)]">{camera.status}</span>
+                      <MutationButton label="Uredi" onClick={() => onEditCamera(camera)} />
+                      <MutationButton label="Izbriši" danger onClick={() => onDeleteCamera(camera)} />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <div className="mt-3 space-y-1 text-xs text-[var(--vo-muted)]">
               {site.gateways.map((gateway) => (
                 <p key={gateway.id}>
@@ -64,16 +118,50 @@ function CustomerCard({ customer }: { customer: VmsAdminCustomerDto }) {
                 </p>
               ))}
               {site.claims.map((claim) => (
-                <p key={claim.id}>
-                  Claim: <span className="font-mono text-[var(--vo-accent)]">{claim.code}</span>{" "}
-                  {claim.consumedAt ? "(uporabljena)" : "(aktivna)"}
-                </p>
+                <div key={claim.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <p>
+                    Claim: <span className="font-mono text-[var(--vo-accent)]">{claim.code}</span>{" "}
+                    {claim.consumedAt ? "(uporabljena)" : "(aktivna)"}
+                  </p>
+                  <MutationButton label="Izbriši claim" danger onClick={() => onDeleteClaim(claim)} />
+                </div>
               ))}
             </div>
           </div>
         ))}
       </div>
+      {customer.users.length > 0 ? (
+        <div className="mt-4 rounded-lg border border-[var(--vo-border)]">
+          {customer.users.map((user) => (
+            <div key={user.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--vo-border)] px-3 py-2 text-xs last:border-0">
+              <span>
+                <span className="font-semibold text-[var(--vo-fg)]">{user.email}</span>{" "}
+                <span className="text-[var(--vo-muted)]">· {user.role} · {user.isActive ? "aktiven" : "neaktiven"}</span>
+              </span>
+              <span className="flex flex-wrap gap-1">
+                <MutationButton label="Uredi" onClick={() => onEditUser(user)} />
+                <MutationButton label="Reset gesla" onClick={() => onResetUserPassword(user)} />
+                <MutationButton label="Izbriši" danger onClick={() => onDeleteUser(user)} />
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </article>
+  );
+}
+
+function MutationButton({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded border border-[var(--vo-border)] px-2 py-1 text-[11px] font-semibold hover:bg-[var(--vo-surface-2)] ${
+        danger ? "text-[var(--vo-danger)]" : "text-[var(--vo-muted)]"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -182,6 +270,118 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
     }
   }
 
+  async function runMutation(action: () => Promise<unknown>, success: string) {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await action();
+      setNotice(success);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Napaka pri shranjevanju.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function promptValue(label: string, initial = "") {
+    const value = window.prompt(label, initial);
+    return value == null ? null : value.trim();
+  }
+
+  function editCustomer(customer: VmsAdminCustomerDto) {
+    const name = promptValue("Ime VMS stranke", customer.name);
+    if (name == null) return;
+    const contact = promptValue("Kontakt", customer.contact);
+    if (contact == null) return;
+    const email = promptValue("Email", customer.email);
+    if (email == null) return;
+    const phone = promptValue("Telefon", customer.phone);
+    if (phone == null) return;
+    void runMutation(
+      () => requestJson(`/api/vms-admin/customers/${customer.id}`, "PUT", { name, contact, email, phone }),
+      "VMS stranka je posodobljena.",
+    );
+  }
+
+  function deleteCustomer(customer: VmsAdminCustomerDto) {
+    if (!window.confirm(`Izbrišem VMS stranko "${customer.name}"? Izbrisani bodo tudi objekti, kamere in uporabniki.`)) return;
+    void runMutation(() => requestJson(`/api/vms-admin/customers/${customer.id}`, "DELETE"), "VMS stranka je izbrisana.");
+  }
+
+  function editSite(site: VmsAdminCustomerDto["sites"][number]) {
+    const name = promptValue("Ime objekta", site.name);
+    if (name == null) return;
+    const address = promptValue("Naslov", site.address);
+    if (address == null) return;
+    const nvrName = promptValue("NVR ime", site.nvrName);
+    if (nvrName == null) return;
+    const nvrIp = promptValue("NVR IP", site.nvrIp);
+    if (nvrIp == null) return;
+    const nvrModel = promptValue("NVR model", site.nvrModel);
+    if (nvrModel == null) return;
+    void runMutation(
+      () => requestJson(`/api/vms-admin/sites/${site.id}`, "PUT", { name, address, nvrName, nvrIp, nvrModel }),
+      "VMS objekt je posodobljen.",
+    );
+  }
+
+  function deleteSite(site: VmsAdminCustomerDto["sites"][number]) {
+    if (!window.confirm(`Izbrišem objekt "${site.name}"?`)) return;
+    void runMutation(() => requestJson(`/api/vms-admin/sites/${site.id}`, "DELETE"), "VMS objekt je izbrisan.");
+  }
+
+  function editCamera(camera: VmsAdminCustomerDto["sites"][number]["cameras"][number]) {
+    const name = promptValue("Ime kamere", camera.name);
+    if (name == null) return;
+    const channelRaw = promptValue("Kanal", String(camera.channel));
+    if (channelRaw == null) return;
+    const ip = promptValue("IP", camera.ip);
+    if (ip == null) return;
+    const model = promptValue("Model", camera.model);
+    if (model == null) return;
+    void runMutation(
+      () => requestJson(`/api/vms-admin/cameras/${camera.id}`, "PUT", { name, channel: Number(channelRaw), ip, model, enabled: camera.enabled }),
+      "VMS kamera je posodobljena.",
+    );
+  }
+
+  function deleteCamera(camera: VmsAdminCustomerDto["sites"][number]["cameras"][number]) {
+    if (!window.confirm(`Izbrišem kamero "${camera.name}"?`)) return;
+    void runMutation(() => requestJson(`/api/vms-admin/cameras/${camera.id}`, "DELETE"), "VMS kamera je izbrisana.");
+  }
+
+  function editUser(user: VmsAdminCustomerDto["users"][number]) {
+    const email = promptValue("Email", user.email);
+    if (email == null) return;
+    const name = promptValue("Ime", user.name);
+    if (name == null) return;
+    const role = promptValue("Vloga (owner/admin/viewer)", user.role);
+    if (role == null) return;
+    const activeRaw = promptValue("Aktiven? (da/ne)", user.isActive ? "da" : "ne");
+    if (activeRaw == null) return;
+    void runMutation(
+      () => requestJson(`/api/vms-admin/users/${user.id}`, "PUT", { email, name, role, isActive: activeRaw.toLowerCase() !== "ne" }),
+      "VMS uporabnik je posodobljen.",
+    );
+  }
+
+  function deleteUser(user: VmsAdminCustomerDto["users"][number]) {
+    if (!window.confirm(`Izbrišem uporabnika "${user.email}"?`)) return;
+    void runMutation(() => requestJson(`/api/vms-admin/users/${user.id}`, "DELETE"), "VMS uporabnik je izbrisan.");
+  }
+
+  function resetUserPassword(user: VmsAdminCustomerDto["users"][number]) {
+    const password = promptValue(`Novo začasno geslo za ${user.email}`, "");
+    if (!password) return;
+    void runMutation(() => requestJson(`/api/vms-admin/users/${user.id}/password`, "POST", { password }), "Geslo je resetirano.");
+  }
+
+  function deleteClaim(claim: VmsAdminCustomerDto["sites"][number]["claims"][number]) {
+    if (!window.confirm(`Izbrišem claim kodo "${claim.code}"?`)) return;
+    void runMutation(() => requestJson(`/api/vms-admin/claims/${claim.id}`, "DELETE"), "Gateway claim koda je izbrisana.");
+  }
+
   if (role !== "admin") {
     return (
       <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 text-sm text-[var(--vo-muted)]">
@@ -250,7 +450,20 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
           </div>
         ) : null}
         {initial.customers.map((customer) => (
-          <CustomerCard key={customer.id} customer={customer} />
+          <CustomerCard
+            key={customer.id}
+            customer={customer}
+            onEditCustomer={editCustomer}
+            onDeleteCustomer={deleteCustomer}
+            onEditSite={editSite}
+            onDeleteSite={deleteSite}
+            onEditCamera={editCamera}
+            onDeleteCamera={deleteCamera}
+            onEditUser={editUser}
+            onDeleteUser={deleteUser}
+            onResetUserPassword={resetUserPassword}
+            onDeleteClaim={deleteClaim}
+          />
         ))}
       </section>
     </div>

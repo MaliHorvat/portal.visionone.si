@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { jsonError, requirePortalRole } from "@/lib/api-guard";
-import { deleteVmsCustomer, updateVmsCustomer } from "@/lib/repositories/vms-admin";
+import { deleteVmsSite, updateVmsSite } from "@/lib/repositories/vms-admin";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -11,17 +11,16 @@ export async function PUT(request: Request, ctx: Ctx) {
     const { id } = await ctx.params;
     const body = (await request.json().catch(() => ({}))) as {
       name?: string;
-      slug?: string;
-      contact?: string;
-      email?: string;
-      phone?: string;
-      planId?: string;
+      address?: string;
+      nvrName?: string;
+      nvrIp?: string;
+      nvrModel?: string;
     };
-    const customer = await updateVmsCustomer(id, body);
-    return NextResponse.json({ customer });
+    const site = await updateVmsSite(id, body);
+    return NextResponse.json({ site });
   } catch (err) {
-    console.error("[vms-admin] update customer failed:", err);
-    return jsonError(err instanceof Error ? err.message : "Napaka pri urejanju VMS stranke.", 500);
+    console.error("[vms-admin] update site failed:", err);
+    return jsonError(err instanceof Error ? err.message : "Napaka pri urejanju VMS objekta.", 500);
   }
 }
 
@@ -30,10 +29,10 @@ export async function DELETE(_request: Request, ctx: Ctx) {
   if (guard) return guard;
   try {
     const { id } = await ctx.params;
-    await deleteVmsCustomer(id);
+    await deleteVmsSite(id);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("[vms-admin] delete customer failed:", err);
-    return jsonError(err instanceof Error ? err.message : "Napaka pri brisanju VMS stranke.", 500);
+    console.error("[vms-admin] delete site failed:", err);
+    return jsonError(err instanceof Error ? err.message : "Napaka pri brisanju VMS objekta.", 500);
   }
 }

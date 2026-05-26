@@ -40,7 +40,7 @@ export type VmsAdminCustomerDto = {
     nvrName: string;
     nvrIp: string;
     nvrModel: string;
-    cameras: Array<{ id: string; name: string; channel: number; ip: string; model: string; status: string; enabled: boolean }>;
+    cameras: Array<{ id: string; siteId: string; name: string; channel: number; ip: string; model: string; status: string; enabled: boolean }>;
     gateways: Array<{ id: string; name: string; externalId: string; status: string; lastSeenAt: Date | null; version: string }>;
     claims: Array<{ id: string; code: string; externalId: string; name: string; expiresAt: Date; consumedAt: Date | null }>;
   }>;
@@ -124,6 +124,7 @@ function mapCustomer(customer: VmsCustomerWithAdminData): VmsAdminCustomerDto {
       nvrModel: site.nvrModel,
       cameras: site.cameras.map((camera) => ({
         id: camera.id,
+        siteId: camera.siteId,
         name: camera.name,
         channel: camera.channel,
         ip: camera.ip,
@@ -271,11 +272,35 @@ export async function updateVmsCustomer(
   return mapCustomer(updated);
 }
 
+export async function deleteVmsCustomer(id: string) {
+  const db = assertVmsDb();
+  await db.vmsCustomer.delete({ where: { id } });
+}
+
 export async function createVmsSite(customerId: string, data: { name: string; address?: string; nvrName?: string; nvrIp?: string; nvrModel?: string }) {
   const db = assertVmsDb();
   return db.vmsSite.create({
     data: { customerId, name: data.name, address: data.address ?? "", nvrName: data.nvrName ?? "", nvrIp: data.nvrIp ?? "", nvrModel: data.nvrModel ?? "" },
   });
+}
+
+export async function updateVmsSite(id: string, data: { name?: string; address?: string; nvrName?: string; nvrIp?: string; nvrModel?: string }) {
+  const db = assertVmsDb();
+  return db.vmsSite.update({
+    where: { id },
+    data: {
+      name: data.name,
+      address: data.address,
+      nvrName: data.nvrName,
+      nvrIp: data.nvrIp,
+      nvrModel: data.nvrModel,
+    },
+  });
+}
+
+export async function deleteVmsSite(id: string) {
+  const db = assertVmsDb();
+  await db.vmsSite.delete({ where: { id } });
 }
 
 export async function createVmsCamera(siteId: string, data: { name: string; channel: number; ip?: string; model?: string }) {
@@ -293,6 +318,25 @@ export async function createVmsCamera(siteId: string, data: { name: string; chan
   });
 }
 
+export async function updateVmsCamera(id: string, data: { name?: string; channel?: number; ip?: string; model?: string; enabled?: boolean }) {
+  const db = assertVmsDb();
+  return db.vmsCamera.update({
+    where: { id },
+    data: {
+      name: data.name,
+      channel: data.channel,
+      ip: data.ip,
+      model: data.model,
+      enabled: data.enabled,
+    },
+  });
+}
+
+export async function deleteVmsCamera(id: string) {
+  const db = assertVmsDb();
+  await db.vmsCamera.delete({ where: { id } });
+}
+
 export async function createVmsUser(customerId: string, data: { email: string; name?: string; password: string; role?: VmsUserRole }) {
   const db = assertVmsDb();
   return db.vmsUser.create({
@@ -304,6 +348,24 @@ export async function createVmsUser(customerId: string, data: { email: string; n
       role: data.role ?? "viewer",
     },
   });
+}
+
+export async function updateVmsUser(id: string, data: { email?: string; name?: string; role?: VmsUserRole; isActive?: boolean }) {
+  const db = assertVmsDb();
+  return db.vmsUser.update({
+    where: { id },
+    data: {
+      email: data.email?.trim().toLowerCase(),
+      name: data.name,
+      role: data.role,
+      isActive: data.isActive,
+    },
+  });
+}
+
+export async function deleteVmsUser(id: string) {
+  const db = assertVmsDb();
+  await db.vmsUser.delete({ where: { id } });
 }
 
 export async function resetVmsUserPassword(userId: string, password: string) {
@@ -324,4 +386,9 @@ export async function createVmsGatewayClaim(siteId: string, data: { name?: strin
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * (data.daysValid ?? 30)),
     },
   });
+}
+
+export async function deleteVmsGatewayClaim(id: string) {
+  const db = assertVmsDb();
+  await db.vmsGatewayClaim.delete({ where: { id } });
 }
