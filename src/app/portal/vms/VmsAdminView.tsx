@@ -12,7 +12,6 @@ type FormKind = "customer" | "site" | "camera" | "user" | "claim" | null;
 type EditTarget =
   | { kind: "customer"; data: VmsAdminCustomerDto }
   | { kind: "site"; data: VmsAdminCustomerDto["sites"][number] }
-  | { kind: "site-live"; data: VmsAdminCustomerDto["sites"][number] }
   | { kind: "camera"; data: VmsAdminCustomerDto["sites"][number]["cameras"][number] }
   | { kind: "user"; data: VmsAdminCustomerDto["users"][number] }
   | { kind: "password"; data: VmsAdminCustomerDto["users"][number] }
@@ -42,7 +41,6 @@ function CustomerCard({
   onEditCustomer,
   onDeleteCustomer,
   onEditSite,
-  onEditSiteLive,
   onDeleteSite,
   onEditCamera,
   onDeleteCamera,
@@ -56,7 +54,6 @@ function CustomerCard({
   onEditCustomer: (customer: VmsAdminCustomerDto) => void;
   onDeleteCustomer: (customer: VmsAdminCustomerDto) => void;
   onEditSite: (site: VmsAdminCustomerDto["sites"][number]) => void;
-  onEditSiteLive: (site: VmsAdminCustomerDto["sites"][number]) => void;
   onDeleteSite: (site: VmsAdminCustomerDto["sites"][number]) => void;
   onEditCamera: (camera: VmsAdminCustomerDto["sites"][number]["cameras"][number]) => void;
   onDeleteCamera: (camera: VmsAdminCustomerDto["sites"][number]["cameras"][number]) => void;
@@ -103,7 +100,6 @@ function CustomerCard({
               <div className="flex flex-col items-end gap-2">
                 <span className="text-xs text-[var(--vo-muted)]">{site.cameras.length} kamer</span>
                 <div className="flex gap-1">
-                  <MutationButton label="Live" onClick={() => onEditSiteLive(site)} />
                   <MutationButton label="Uredi" onClick={() => onEditSite(site)} />
                   <MutationButton label="Izbriši" danger onClick={() => onDeleteSite(site)} />
                 </div>
@@ -332,23 +328,11 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
         });
         setNotice("VMS objekt je posodobljen.");
       }
-      if (editTarget.kind === "site-live") {
-        const cameras = editTarget.data.cameras.map((camera) => ({
-          id: camera.id,
-          rtspUrl: text(data.get(`rtspUrl_${camera.id}`)),
-        }));
-        await requestJson(`/api/vms-admin/sites/${editTarget.data.id}/live-config`, "PUT", {
-          streamBaseUrl: text(data.get("streamBaseUrl")),
-          cameras,
-        });
-        setNotice("Live nastavitve shranjene. Pi gateway osveži go2rtc v ~1 min.");
-      }
       if (editTarget.kind === "camera") {
         await requestJson(`/api/vms-admin/cameras/${editTarget.data.id}`, "PUT", {
           name: text(data.get("name")),
           channel: Number(text(data.get("channel")) || "1"),
           ip: text(data.get("ip")),
-          rtspUrl: text(data.get("rtspUrl")),
           model: text(data.get("model")),
           enabled: data.get("enabled") === "on",
         });
@@ -543,7 +527,6 @@ export function VmsAdminView({ initial }: { initial: VmsAdminOverviewDto }) {
             onEditCustomer={(customer) => openEdit({ kind: "customer", data: customer })}
             onDeleteCustomer={deleteCustomer}
             onEditSite={(site) => openEdit({ kind: "site", data: site })}
-            onEditSiteLive={(site) => openEdit({ kind: "site-live", data: site })}
             onDeleteSite={deleteSite}
             onEditCamera={(camera) => openEdit({ kind: "camera", data: camera })}
             onDeleteCamera={deleteCamera}
@@ -627,7 +610,6 @@ function VmsForm({
           <Input name="name" label="Ime kamere" required />
           <Input name="channel" label="Kanal" type="number" defaultValue="1" required />
           <Input name="ip" label="IP (opcijsko, Pi najde sam)" />
-          <Input name="rtspUrl" label="RTSP URL (opcijsko, privzeto iz NVR kanala)" />
           <Input name="model" label="Model" />
         </div>
       ) : null}
@@ -671,7 +653,6 @@ function VmsEditForm({
   const titles: Record<NonNullable<EditTarget>["kind"], string> = {
     customer: "Uredi VMS stranko",
     site: "Uredi objekt",
-    "site-live": "Live nastavitve objekta",
     camera: "Uredi kamero",
     user: "Uredi uporabnika",
     password: "Reset gesla",
@@ -703,36 +684,6 @@ function VmsEditForm({
         </div>
       ) : null}
 
-      {target.kind === "site-live" ? (
-        <>
-          <Input
-            name="streamBaseUrl"
-            label="Live stream URL (go2rtc tunel)"
-            defaultValue={target.data.streamBaseUrl}
-            placeholder="https://stream-test.visionone.si"
-          />
-          <p className="text-xs text-[var(--vo-muted)]">
-            Vse nastavitve shraniš tukaj — Pi gateway jih sam prebere in posodobi go2rtc (sync ~1 min). Ročno urejanje na stream URL ni potrebno.
-          </p>
-          {target.data.cameras.length > 0 ? (
-            <div className="space-y-3 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] p-3">
-              <p className="text-sm font-semibold text-[var(--vo-fg)]">RTSP URL po kamerah</p>
-              {target.data.cameras.map((camera) => (
-                <Input
-                  key={camera.id}
-                  name={`rtspUrl_${camera.id}`}
-                  label={`CH${camera.channel} · ${camera.name}`}
-                  defaultValue={camera.rtspUrl}
-                  placeholder={`rtsp://user:pass@${target.data.nvrIp || "192.168.x.x"}:554/Streaming/Channels/${camera.channel * 100 + 1}`}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-[var(--vo-muted)]">Ta objekt nima kamer. Najprej dodaj kamere.</p>
-          )}
-        </>
-      ) : null}
-
       {target.kind === "site" ? (
         <>
           <div className="grid gap-3 md:grid-cols-3">
@@ -741,9 +692,16 @@ function VmsEditForm({
             <Input name="nvrName" label="NVR ime" defaultValue={target.data.nvrName} />
             <Input name="nvrIp" label="NVR IP" defaultValue={target.data.nvrIp} placeholder="Samodejno iz mreže" />
             <Input name="nvrModel" label="NVR model" defaultValue={target.data.nvrModel} />
+            <Input
+              name="streamBaseUrl"
+              label="Live stream URL (go2rtc tunel)"
+              defaultValue={target.data.streamBaseUrl}
+              placeholder="https://stream-test.visionone.si"
+            />
           </div>
           <p className="text-xs text-[var(--vo-muted)] md:col-span-3">
-            NVR IP in IP-ji kamer se po scanu posodobijo samodejno. Live stream URL in RTSP URL-je uredi prek gumba <strong>Live</strong> pri objektu.
+            NVR IP in IP-ji kamer se po scanu posodobijo samodejno. RTSP vire za go2rtc uredi ročno na Pi-ju v{" "}
+            <code>/opt/visionone-vms-gateway/go2rtc.yaml</code>.
           </p>
         </>
       ) : null}
@@ -753,12 +711,6 @@ function VmsEditForm({
           <Input name="name" label="Ime kamere" defaultValue={target.data.name} required />
           <Input name="channel" label="Kanal" type="number" defaultValue={String(target.data.channel)} required />
           <Input name="ip" label="IP kamere" defaultValue={target.data.ip} placeholder="Samodejno iz mreže" />
-          <Input
-            name="rtspUrl"
-            label="RTSP URL (opcijsko)"
-            defaultValue={target.data.rtspUrl}
-            placeholder="rtsp://user:pass@192.168.1.27:554/Streaming/Channels/101"
-          />
           <Input name="model" label="Model" defaultValue={target.data.model} />
           <Checkbox name="enabled" label="Kamera aktivna" defaultChecked={target.data.enabled} />
         </div>

@@ -302,39 +302,6 @@ export async function updateVmsSite(id: string, data: { name?: string; address?:
   });
 }
 
-export async function updateVmsSiteLiveConfig(
-  id: string,
-  data: { streamBaseUrl?: string; cameras?: Array<{ id: string; rtspUrl?: string }> },
-) {
-  const db = assertVmsDb();
-  const site = await db.vmsSite.findUniqueOrThrow({
-    where: { id },
-    include: { cameras: true },
-  });
-
-  await db.$transaction(async (tx) => {
-    if (data.streamBaseUrl !== undefined) {
-      await tx.vmsSite.update({
-        where: { id },
-        data: { streamBaseUrl: data.streamBaseUrl },
-      });
-    }
-    for (const row of data.cameras ?? []) {
-      const camera = site.cameras.find((item) => item.id === row.id);
-      if (!camera) throw new Error(`Kamera ${row.id} ne pripada temu objektu.`);
-      await tx.vmsCamera.update({
-        where: { id: row.id },
-        data: { rtspUrl: row.rtspUrl ?? "" },
-      });
-    }
-  });
-
-  return db.vmsSite.findUniqueOrThrow({
-    where: { id },
-    include: { cameras: true },
-  });
-}
-
 export async function deleteVmsSite(id: string) {
   const db = assertVmsDb();
   await db.vmsSite.delete({ where: { id } });

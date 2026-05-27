@@ -24,6 +24,18 @@ fi
 
 cp "$(dirname "$0")/sync-go2rtc-config.py" "$INSTALL_DIR/"
 
+GO2RTC_MANUAL="1"
+if [[ -f "$INSTALL_DIR/.env" ]]; then
+  # shellcheck disable=SC1090
+  set -a && source "$INSTALL_DIR/.env" && set +a
+  GO2RTC_MANUAL="${GO2RTC_MANUAL:-1}"
+fi
+
+EXEC_START_PRE=""
+if [[ "$GO2RTC_MANUAL" != "1" ]]; then
+  EXEC_START_PRE="ExecStartPre=/usr/bin/python3 ${INSTALL_DIR}/sync-go2rtc-config.py"
+fi
+
 cat > /etc/systemd/system/visionone-go2rtc.service <<EOF
 [Unit]
 Description=VisionOne go2rtc live stream
@@ -34,7 +46,7 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=${INSTALL_DIR}
 EnvironmentFile=${INSTALL_DIR}/.env
-ExecStartPre=/usr/bin/python3 ${INSTALL_DIR}/sync-go2rtc-config.py
+${EXEC_START_PRE}
 ExecStart=${INSTALL_DIR}/go2rtc -config ${INSTALL_DIR}/go2rtc.yaml
 Restart=always
 RestartSec=10
@@ -66,7 +78,14 @@ ExecStart=/usr/bin/python3 ${INSTALL_DIR}/sync-go2rtc-config.py
 EOF
 
 systemctl daemon-reload
-systemctl enable visionone-go2rtc.service visionone-go2rtc-sync.timer
+systemctl enable visionone-go2rtc.service
+if [[ "$GO2RTC_MANUAL" == "1" ]]; then
+  systemctl disable visionone-go2rtc-sync.timer 2>/dev/null || true
+  systemctl stop visionone-go2rtc-sync.timer 2>/dev/null || true
+  echo "GO2RTC_MANUAL=1 — go2rtc.yaml urejaj ročno, sync timer izklopljen."
+else
+  systemctl enable visionone-go2rtc-sync.timer
+  systemctl start visionone-go2rtc-sync.timer
+fi
 systemctl restart visionone-go2rtc.service || true
-systemctl start visionone-go2rtc-sync.timer
 echo "go2rtc nameščen. Lokalno: http://$(hostname -I | awk '{print $1}'):1984"

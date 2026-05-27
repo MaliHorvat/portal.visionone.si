@@ -59,6 +59,8 @@ function buildEnvFile(vars: {
     "CAMERA_TARGETS=",
     "# Cloudflare Tunnel token (Zero Trust) — opcijsko, za live view",
     "CLOUDFLARE_TUNNEL_TOKEN=",
+    "# 1 = ročni go2rtc.yaml (privzeto), 0 = avtomatski sync iz VMS API",
+    "GO2RTC_MANUAL=1",
   ];
   return `${lines.join("\n")}\n`;
 }

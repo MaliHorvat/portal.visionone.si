@@ -46,6 +46,9 @@ def build_yaml(config):
 
 
 def main():
+    if env("GO2RTC_MANUAL", "1") == "1":
+        print("GO2RTC_MANUAL=1, skip go2rtc sync (ročni go2rtc.yaml)")
+        return
     api_base = env("VMS_API_BASE", "https://vms.visionone.si")
     state = load_state()
     token = state.get("token")

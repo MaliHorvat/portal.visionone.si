@@ -120,11 +120,11 @@ Podpora: VisionOne
 11) Live view (faza 1)
 ----------------------
 - install.sh avtomatsko namesti tudi go2rtc (port 1984 lokalno)
-- Za javni dostop uporabi Cloudflare Tunnel (brezplačen Free plan)
-- Podrobna navodila: NAVODILA-CLOUDFLARE-SLO.txt v ZIP-u
-- V .env dodaš CLOUDFLARE_TUNNEL_TOKEN, nato install-cloudflared.sh
-- Admin v portalu nastavi Stream URL = https://stream-....visionone.si
-- RTSP URL kamere je opcijski (privzeto iz NVR kanala)
+- RTSP vire uredi ročno: /opt/visionone-vms-gateway/go2rtc.yaml
+- Imena streamov: ch1, ch2, … (ujemajo se s kanalom kamere v portalu)
+- V .env: GO2RTC_MANUAL=1 (privzeto) — sync iz portala ne prepiše yaml
+- Admin v portalu nastavi samo Live stream URL (tunel), npr. https://stream-test.visionone.si
+- Po spremembi yaml: sudo systemctl restart visionone-go2rtc
 - Stranka na vms.visionone.si → Kamere → Live
 
 Lokalni test go2rtc:
