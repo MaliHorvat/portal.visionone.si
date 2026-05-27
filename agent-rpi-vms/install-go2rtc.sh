@@ -49,7 +49,7 @@ Description=Refresh go2rtc config from VisionOne VMS
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=5min
+OnUnitActiveSec=1min
 
 [Install]
 WantedBy=timers.target
