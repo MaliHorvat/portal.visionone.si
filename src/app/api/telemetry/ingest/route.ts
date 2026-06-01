@@ -65,7 +65,10 @@ export async function POST(request: Request) {
       const name = String(rawDevice?.name ?? "").trim();
       const ip = String(rawDevice?.ip ?? "").trim();
       const kind: ProbeKind = VALID_KINDS.includes(rawDevice?.kind) ? rawDevice.kind : "other";
-      const reachable = Boolean(rawDevice?.reachable);
+      const reachable =
+        rawDevice?.reachable !== undefined
+          ? Boolean(rawDevice.reachable)
+          : String(rawDevice?.status ?? "").toLowerCase() === "online";
       const latencyMs = Number.isFinite(rawDevice?.latencyMs) ? Number(rawDevice.latencyMs) : null;
       const errorText = String(rawDevice?.error ?? "").trim();
 

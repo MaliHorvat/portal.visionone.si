@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Calendar, HardDrive, Package, Phone, Shield, Wrench } from "lucide-react";
+import { Activity, ArrowRight, Calendar, HardDrive, Package, Phone, Shield, Wrench } from "lucide-react";
+import type { MojSystemStatus } from "@/lib/repositories/moj-status";
 import type { MojOverview } from "@/lib/repositories/moj-overview";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -14,17 +15,22 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function MojDashboardView() {
   const [data, setData] = useState<MojOverview | null>(null);
+  const [sysStatus, setSysStatus] = useState<MojSystemStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch("/api/moj/overview", { credentials: "include" })
-      .then((r) => r.json())
-      .then((j: MojOverview & { error?: string }) => {
+    void Promise.all([
+      fetch("/api/moj/overview", { credentials: "include" }).then((r) => r.json()),
+      fetch("/api/moj/status", { credentials: "include" }).then((r) => r.json()),
+    ])
+      .then(([ov, st]) => {
+        const j = ov as MojOverview & { error?: string };
         if (j.error) {
           setError(j.error);
           return;
         }
         setData(j);
+        setSysStatus(st as MojSystemStatus);
       })
       .catch(() => setError("Podatkov ni bilo mogoče naložiti."));
   }, []);
@@ -72,6 +78,28 @@ export function MojDashboardView() {
         <strong>24/7 skrb v ozadju.</strong> Tehnično stanje (kamere, omrežje, diski) spremljamo mi. Če je potreben
         poseg, vas kontaktiramo — vi ničesar ne nastavljate.
       </div>
+
+      {sysStatus?.active ? (
+        <Link
+          href="/moj/stanje"
+          className={`block rounded-2xl border px-5 py-4 transition hover:opacity-95 ${
+            sysStatus.summary.offline > 0 || !sysStatus.agentOnline
+              ? "border-amber-400/50 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-950/30"
+              : "border-[var(--vo-ok)]/40 bg-[var(--vo-ok-muted)]"
+          }`}
+        >
+          <p className="flex items-center gap-2 font-bold text-[var(--vo-fg)]">
+            <Activity className="h-5 w-5" aria-hidden />
+            {sysStatus.summary.offline > 0 || !sysStatus.agentOnline
+              ? "Stanje sistema — potrebna pozornost"
+              : "Stanje sistema — vse v redu"}
+          </p>
+          <p className="mt-1 text-sm text-[var(--vo-muted)]">{sysStatus.message}</p>
+          <span className="mt-2 inline-flex text-xs font-semibold text-[var(--vo-accent)]">
+            Podrobnosti po napravah →
+          </span>
+        </Link>
+      ) : null}
 
       {urgentPreventive.length > 0 ? (
         <div className="rounded-2xl border border-amber-300/50 bg-amber-50 px-5 py-4 dark:border-amber-500/30 dark:bg-amber-950/40">

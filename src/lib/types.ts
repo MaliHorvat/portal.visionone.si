@@ -350,7 +350,9 @@ export interface TelemetryIngestDevice {
   name: string;
   ip: string;
   kind: ProbeKind;
-  reachable: boolean;
+  reachable?: boolean;
+  /** Alternativa za reachable (agent pošilja status: online | offline). */
+  status?: ProbeStatus;
   latencyMs?: number;
   error?: string;
 }

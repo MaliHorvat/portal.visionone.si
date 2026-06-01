@@ -384,7 +384,7 @@ export function PortalDashboardView() {
             adminOnly={role === "admin"}
           />
           <QuickCard href="/portal/zahtevki" title="Zahtevki" desc="Operativni inbox in statusi." icon={Activity} />
-          <QuickCard href="/portal/ponudbe" title="Ponudbe" desc="Postavke in izračuni." icon={Boxes} adminOnly />
+          <QuickCard href="/portal/care-box" title="Care Box" desc="Monitoring preko Raspberry Pi." icon={Activity} adminOnly />
           <QuickCard href="/portal/orodja" title="Omrežna orodja" desc="Diagnostika in orodja." icon={Router} />
           <QuickCard href="/portal/nastavitve" title="Nastavitve sistema" desc="Uporabniki in okolje." icon={Settings} adminOnly />
         </div>

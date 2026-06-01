@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   CalendarClock,
-  FileText,
   HelpCircle,
   LayoutDashboard,
   LogOut,
@@ -15,6 +15,7 @@ import {
 
 const nav = [
   { href: "/moj", label: "Pregled", icon: LayoutDashboard, exact: true },
+  { href: "/moj/stanje", label: "Stanje sistema", icon: Activity },
   { href: "/moj/zahtevki", label: "Zahtevki", icon: Wrench },
   { href: "/moj/vzdrzevanje", label: "Vzdrževanje", icon: CalendarClock },
   { href: "/moj/kontakt", label: "Kontakt", icon: Phone },

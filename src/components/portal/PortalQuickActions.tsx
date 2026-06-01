@@ -3,31 +3,16 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Settings2 } from "lucide-react";
-import {
-  Boxes,
-  Clock,
-  FileText,
-  LayoutGrid,
-  Network,
-  StickyNote,
-  Users,
-  Wrench,
-  Bell,
-  Radio,
-} from "lucide-react";
+import { Boxes, Network, Radio, Users, Wrench, Bell } from "lucide-react";
 import { getHiddenQuickActions, toggleQuickActionHidden } from "@/lib/portal-prefs";
 
 const actions = [
   { href: "/portal/stranke", label: "Objekti & stranke", icon: Users },
   { href: "/portal/zahtevki", label: "Zahtevki", icon: Wrench },
-  { href: "/portal/ponudbe", label: "Ponudbe", icon: FileText },
-  { href: "/portal/cas", label: "Sledenje času", icon: Clock },
   { href: "/portal/opomniki", label: "Opomniki", icon: Bell },
+  { href: "/portal/care-box", label: "Care Box", icon: Radio },
   { href: "/portal/inventar", label: "Skladišče", icon: Boxes },
   { href: "/portal/orodja", label: "Orodja / kalkulatorji", icon: Network },
-  { href: "/portal/rack-dizajner", label: "Rack dizajner", icon: LayoutGrid },
-  { href: "/portal/belezke", label: "Beležke", icon: StickyNote },
-  { href: "/portal/agents", label: "Agenti", icon: Radio },
 ] as const;
 
 export function PortalQuickActions() {
