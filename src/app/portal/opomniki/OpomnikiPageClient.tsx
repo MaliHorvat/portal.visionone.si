@@ -47,5 +47,12 @@ export function OpomnikiPageClient() {
     return <PortalListSkeleton />;
   }
 
-  return <OpomnikiView reminders={reminders} clients={clients} dbConfigured={dbConfigured} />;
+  return (
+    <OpomnikiView
+      reminders={reminders}
+      clients={clients}
+      dbConfigured={dbConfigured}
+      onRemindersChange={(fn) => setReminders((prev) => (prev == null ? prev : typeof fn === "function" ? fn(prev) : fn))}
+    />
+  );
 }

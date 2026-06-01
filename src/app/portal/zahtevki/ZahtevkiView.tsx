@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Download } from "lucide-react";
+import { removeFromList, replaceInList } from "@/lib/portal-list-mutate";
+import { usePortalToast } from "@/context/PortalToastContext";
 import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
 import { exportServiceRequestsCsv } from "@/lib/portal-export";
 import type { ClientSummary, ServiceRequest, ServiceRequestPriority, ServiceRequestStatus } from "@/lib/types";
@@ -11,6 +12,7 @@ type Props = {
   requests: ServiceRequest[];
   clients: ClientSummary[];
   dbConfigured: boolean;
+  onRequestsChange: React.Dispatch<React.SetStateAction<ServiceRequest[]>>;
 };
 
 const STATUS_LABEL: Record<ServiceRequestStatus, string> = {
@@ -27,8 +29,8 @@ const PRIORITY_LABEL: Record<ServiceRequestPriority, string> = {
   urgent: "Nujna",
 };
 
-export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
-  const router = useRouter();
+export function ZahtevkiView({ requests, clients, dbConfigured, onRequestsChange }: Props) {
+  const { showToast } = usePortalToast();
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -85,8 +87,9 @@ export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
       return;
     }
     setShowForm(false);
-    setMessage("Zahtevek je dodan.");
-    router.refresh();
+    const j = (await res.json()) as { request?: ServiceRequest };
+    if (j.request) onRequestsChange((prev) => [j.request!, ...prev]);
+    showToast("Zahtevek je dodan.");
   }
 
   async function patchRequest(id: string, patch: Record<string, unknown>) {
@@ -100,7 +103,20 @@ export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
       setMessage(j.error ?? "Posodobitev ni uspela.");
       return;
     }
-    router.refresh();
+    const j = (await res.json()) as { request?: ServiceRequest };
+    if (j.request) onRequestsChange((prev) => replaceInList(prev, j.request!));
+    showToast("Zahtevek posodobljen.");
+  }
+
+  async function deleteRequest(id: string) {
+    const res = await fetch(`/api/service-requests/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setMessage(j.error ?? "Brisanje ni uspelo.");
+      return;
+    }
+    onRequestsChange((prev) => removeFromList(prev, id));
+    showToast("Zahtevek izbrisan.");
   }
 
   return (
@@ -273,7 +289,7 @@ export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
               ) : null}
               <button
                 type="button"
-                onClick={() => void fetch(`/api/service-requests/${r.id}`, { method: "DELETE" }).then(() => router.refresh())}
+                onClick={() => void deleteRequest(r.id)}
                 className="text-xs font-medium text-red-600 hover:underline"
               >
                 Izbriši

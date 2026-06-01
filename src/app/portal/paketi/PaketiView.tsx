@@ -1,19 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { usePortalRole } from "@/context/PortalRoleContext";
+import { usePortalToast } from "@/context/PortalToastContext";
+import { removeFromList, replaceInList } from "@/lib/portal-list-mutate";
 import { decimalFromFormData, decimalTextInputProps } from "@/lib/decimal-number-input";
 import type { SubscriptionPackageDto } from "@/lib/types";
 
 type Props = {
   packages: SubscriptionPackageDto[];
   dbConfigured: boolean;
+  onPackagesChange: React.Dispatch<React.SetStateAction<SubscriptionPackageDto[]>>;
 };
 
-export function PaketiView({ packages, dbConfigured }: Props) {
+export function PaketiView({ packages, dbConfigured, onPackagesChange }: Props) {
   const { role } = usePortalRole();
-  const router = useRouter();
+  const { showToast } = usePortalToast();
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,9 +45,10 @@ export function PaketiView({ packages, dbConfigured }: Props) {
       setError(data?.error ?? "Napaka pri ustvarjanju paketa.");
       return;
     }
-    setNotice("Paket je uspešno ustvarjen.");
+    const j = (await res.json()) as { package?: SubscriptionPackageDto };
+    if (j.package) onPackagesChange((prev) => [...prev, j.package!]);
+    showToast("Paket shranjen.");
     setShowForm(false);
-    router.refresh();
   }
 
   async function handleSaveEdit(event: React.FormEvent<HTMLFormElement>, id: string) {
@@ -66,9 +69,10 @@ export function PaketiView({ packages, dbConfigured }: Props) {
       setNotice(data?.error ?? "Napaka pri urejanju.");
       return;
     }
-    setNotice("Paket je uspešno posodobljen.");
+    const j = (await res.json()) as { package?: SubscriptionPackageDto };
+    if (j.package) onPackagesChange((prev) => replaceInList(prev, j.package!));
+    showToast("Paket posodobljen.");
     setEditingId(null);
-    router.refresh();
   }
 
   async function handleDelete(id: string) {
@@ -79,8 +83,8 @@ export function PaketiView({ packages, dbConfigured }: Props) {
       setNotice(data?.error ?? "Napaka pri brisanju.");
       return;
     }
-    setNotice("Paket je uspešno izbrisan.");
-    router.refresh();
+    onPackagesChange((prev) => removeFromList(prev, id));
+    showToast("Paket izbrisan.");
   }
 
   const isAdmin = role === "admin";

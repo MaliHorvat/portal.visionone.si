@@ -82,6 +82,7 @@ export function StrankePageClient() {
       packages={packages}
       dbConfigured={dbConfigured && envDbConfigured}
       loadError={loadError}
+      onClientsChange={(fn) => setClients((prev) => (prev == null ? prev : typeof fn === "function" ? fn(prev) : fn))}
     />
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
+import { removeFromList, replaceInList } from "@/lib/portal-list-mutate";
+import { usePortalToast } from "@/context/PortalToastContext";
 import { exportRemindersCsv } from "@/lib/portal-export";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { mockClientPortalClientId } from "@/lib/mock-data";
@@ -19,11 +20,12 @@ type Props = {
   reminders: MaintenanceReminder[];
   clients: ClientSummary[];
   dbConfigured: boolean;
+  onRemindersChange: React.Dispatch<React.SetStateAction<MaintenanceReminder[]>>;
 };
 
-export function OpomnikiView({ reminders, clients, dbConfigured }: Props) {
+export function OpomnikiView({ reminders, clients, dbConfigured, onRemindersChange }: Props) {
   const { role } = usePortalRole();
-  const router = useRouter();
+  const { showToast } = usePortalToast();
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,9 +75,10 @@ export function OpomnikiView({ reminders, clients, dbConfigured }: Props) {
       setError(data?.error ?? "Napaka pri ustvarjanju opomnika.");
       return;
     }
-    setNotice("Opomnik je uspešno shranjen.");
+    const j = (await res.json()) as { reminder?: MaintenanceReminder };
+    if (j.reminder) onRemindersChange((prev) => [j.reminder!, ...prev]);
+    showToast("Opomnik je shranjen.");
     setShowForm(false);
-    router.refresh();
   }
 
   async function toggleCompleted(r: MaintenanceReminder) {
@@ -89,8 +92,9 @@ export function OpomnikiView({ reminders, clients, dbConfigured }: Props) {
       setNotice(data?.error ?? "Napaka pri posodobitvi.");
       return;
     }
-    setNotice("Status opomnika je posodobljen.");
-    router.refresh();
+    const j = (await res.json()) as { reminder?: MaintenanceReminder };
+    if (j.reminder) onRemindersChange((prev) => replaceInList(prev, j.reminder!));
+    showToast("Status opomnika posodobljen.");
   }
 
   async function handleDelete(id: string) {
@@ -101,8 +105,8 @@ export function OpomnikiView({ reminders, clients, dbConfigured }: Props) {
       setNotice(data?.error ?? "Napaka pri brisanju.");
       return;
     }
-    setNotice("Opomnik je uspešno izbrisan.");
-    router.refresh();
+    onRemindersChange((prev) => removeFromList(prev, id));
+    showToast("Opomnik izbrisan.");
   }
 
   return (

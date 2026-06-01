@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { removeFromList, replaceInList } from "@/lib/portal-list-mutate";
+import { usePortalToast } from "@/context/PortalToastContext";
+import type { ClientDetail } from "@/lib/types";
 import { Star } from "lucide-react";
 import { exportClientsCsv } from "@/lib/portal-export";
 import { getFavoriteClientIds, getRecentClients, toggleFavoriteClient } from "@/lib/portal-prefs";
@@ -18,11 +21,13 @@ type Props = {
   dbConfigured: boolean;
   /** Napaka pri branju iz baze (npr. shema ni posodobljena); stran prikaže demo podatke. */
   loadError?: string | null;
+  onClientsChange: React.Dispatch<React.SetStateAction<ClientSummary[]>>;
 };
 
-export function StrankeView({ clients, packages, dbConfigured, loadError = null }: Props) {
+export function StrankeView({ clients, packages, dbConfigured, loadError = null, onClientsChange }: Props) {
   const { role } = usePortalRole();
   const router = useRouter();
+  const { showToast } = usePortalToast();
   const [showForm, setShowForm] = useState(false);
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -110,10 +115,19 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
       setError(data?.error ?? (editClientId ? "Napaka pri urejanju stranke." : "Napaka pri ustvarjanju stranke."));
       return;
     }
-    setNotice(editClientId ? "Stranka je uspešno posodobljena." : "Stranka je uspešno shranjena.");
+    const j = (await res.json()) as { client?: ClientDetail };
+    if (j.client) {
+      if (editClientId) {
+        onClientsChange((prev) => replaceInList(prev, j.client!));
+        setOrderedClients((prev) => replaceInList(prev, j.client!));
+      } else {
+        onClientsChange((prev) => [j.client!, ...prev]);
+        setOrderedClients((prev) => [j.client!, ...prev]);
+      }
+    }
+    showToast(editClientId ? "Stranka posodobljena." : "Stranka shranjena.");
     setShowForm(false);
     setEditClientId(null);
-    router.refresh();
   }
 
   async function handleImportCsv(file: File) {
@@ -140,7 +154,11 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
         `Uvoženo ${data.created ?? 0} strank${errCount ? ` (${errCount} napak — glej konzolo)` : ""}.`,
       );
       if (errCount) console.warn("CSV uvoz:", data.errors);
-      router.refresh();
+      const refreshed = await fetch("/api/clients", { credentials: "include" }).then((r) => r.json());
+      if (refreshed.clients) {
+        onClientsChange(refreshed.clients);
+        setOrderedClients(refreshed.clients);
+      }
     } catch {
       setError("Branje datoteke ni uspelo.");
     } finally {
@@ -156,8 +174,9 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
       setNotice(data?.error ?? "Napaka pri brisanju.");
       return;
     }
-    setNotice("Stranka je uspešno izbrisana.");
-    router.refresh();
+    onClientsChange((prev) => removeFromList(prev, id));
+    setOrderedClients((prev) => removeFromList(prev, id));
+    showToast("Stranka izbrisana.");
   }
 
   function prefetchProfile(client: ClientSummary) {
@@ -179,8 +198,8 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
     });
     setReordering(false);
     if (!res.ok) {
-      setNotice("Napaka pri shranjevanju vrstnega reda.");
-      router.refresh();
+      showToast("Napaka pri shranjevanju vrstnega reda.", "err");
+      setOrderedClients(clients);
       return;
     }
   }

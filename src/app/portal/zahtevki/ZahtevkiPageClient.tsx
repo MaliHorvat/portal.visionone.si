@@ -47,5 +47,12 @@ export function ZahtevkiPageClient() {
     return <PortalListSkeleton />;
   }
 
-  return <ZahtevkiView requests={requests} clients={clients} dbConfigured={dbConfigured} />;
+  return (
+    <ZahtevkiView
+      requests={requests}
+      clients={clients}
+      dbConfigured={dbConfigured}
+      onRequestsChange={(fn) => setRequests((prev) => (prev == null ? prev : typeof fn === "function" ? fn(prev) : fn))}
+    />
+  );
 }
