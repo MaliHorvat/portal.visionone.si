@@ -229,9 +229,10 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
                       type="checkbox"
                       name="stay_logged_in"
                       value="1"
+                      defaultChecked
                       className="h-4 w-4 rounded border-[var(--vo-border)] accent-[var(--vo-accent)]"
                     />
-                    Ostani prijavljen
+                    Ostani prijavljen (priporočeno)
                   </label>
                   <a
                     href="mailto:info@visionone.si?subject=Pozabljeno%20portalno%20geslo"

@@ -269,17 +269,13 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         }`}
         style={{ background: "var(--vo-sidebar-bg)" }}
       >
-        <div className="flex items-center justify-between border-b border-[var(--vo-border)] px-3 py-3">
+        <div className="flex min-h-[3.25rem] items-center justify-between gap-1 border-b border-[var(--vo-border)] px-2.5 py-2">
           <Link
             href="/portal"
-            className={`vo-brand-link flex min-w-0 items-center ${sidebarCollapsed ? "mx-auto justify-center" : ""}`}
+            className={`vo-brand-link flex min-w-0 flex-1 items-center overflow-hidden py-0.5 ${sidebarCollapsed ? "mx-auto flex-none justify-center" : ""}`}
             aria-label="VisionOne — nadzorna plošča"
           >
-            <VisionOneLogo
-              variant={sidebarCollapsed ? "mark" : "both"}
-              markClassName="h-9 w-9 shrink-0"
-              wordmarkClassName="h-[1.35rem] w-auto max-w-[132px]"
-            />
+            <VisionOneLogo variant={sidebarCollapsed ? "mark" : "both"} size="sm" />
           </Link>
           {!sidebarCollapsed ? (
             <button
@@ -388,11 +384,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         >
           <div className="flex min-w-0 items-center gap-3">
             <div className="md:hidden">
-              <VisionOneLogo
-                variant="both"
-                markClassName="h-7 w-7 shrink-0"
-                wordmarkClassName="h-4 w-auto max-w-[100px] shrink-0"
-              />
+              <VisionOneLogo variant="both" size="sm" />
             </div>
             <div className="min-w-0">
               <p className="hidden truncate text-sm font-bold tracking-tight text-[var(--vo-fg)] md:block">

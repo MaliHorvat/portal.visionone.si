@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
 import { getPortalSessionSecret } from "@/lib/portal-session-secret";
+import { PORTAL_SESSION_REMEMBER_SEC, PORTAL_SESSION_SHORT_SEC } from "@/lib/portal-session-config";
 import { signPortalSessionToken } from "@/lib/portal-session-sign";
 import { normalizeNavPermissions } from "@/lib/nav-permissions";
 import { appendAuditLog } from "@/lib/repositories/audit-log";
@@ -83,15 +84,21 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL("/portal-login?error=1", request.url), { status: 303 });
   }
 
+  const stayLoggedIn = String(formData.get("stay_logged_in") ?? "") === "1";
+
   let token: string;
   try {
-    token = signPortalSessionToken(granted, getPortalSessionSecret());
+    token = signPortalSessionToken(
+      {
+        ...granted,
+        maxAgeSec: stayLoggedIn ? PORTAL_SESSION_REMEMBER_SEC : PORTAL_SESSION_SHORT_SEC,
+      },
+      getPortalSessionSecret(),
+    );
   } catch (err) {
     logger.error("portal_login_session_sign_failed", { error: String(err) });
     return NextResponse.redirect(new URL("/portal-login?error=config", request.url), { status: 303 });
   }
-
-  const stayLoggedIn = String(formData.get("stay_logged_in") ?? "") === "1";
 
   const appTarget = String(formData.get("app") ?? "");
   const url = new URL(request.url);
@@ -103,8 +110,8 @@ export async function POST(request: Request) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    /** Brez maxAge = sejni piškotek — ob zaprtju brskalnika seja poteče. Če je »Ostani prijavljen«, 30 dni. */
-    ...(stayLoggedIn ? { maxAge: 60 * 60 * 24 * 30 } : {}),
+    /** Brez maxAge = sejni piškotek. Z »Ostani prijavljen« ~400 dni (skladno z žetonom). */
+    ...(stayLoggedIn ? { maxAge: PORTAL_SESSION_REMEMBER_SEC } : { maxAge: PORTAL_SESSION_SHORT_SEC }),
   });
   return response;
 }

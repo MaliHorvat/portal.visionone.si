@@ -1,5 +1,6 @@
 import nodeCrypto from "crypto";
 import type { PortalSessionPayload } from "@/lib/portal-session-verify";
+import { PORTAL_SESSION_SHORT_SEC } from "@/lib/portal-session-config";
 import { getPortalSessionSecret } from "@/lib/portal-session-secret";
 
 /** Podpis žeton za httpOnly piškotek — samo v Node route handlerjih. */
@@ -7,7 +8,7 @@ export function signPortalSessionToken(
   payload: Omit<PortalSessionPayload, "exp"> & { maxAgeSec?: number },
   secret = getPortalSessionSecret(),
 ): string {
-  const maxAgeSec = payload.maxAgeSec ?? 60 * 60 * 8;
+  const maxAgeSec = payload.maxAgeSec ?? PORTAL_SESSION_SHORT_SEC;
   const bodyObj: PortalSessionPayload = {
     username: payload.username,
     role: payload.role,
