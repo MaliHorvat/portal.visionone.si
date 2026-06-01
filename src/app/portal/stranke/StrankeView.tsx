@@ -234,6 +234,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
       <PortalPageHeader
         kicker="Vodenje"
         title="Objekti & stranke"
+        gradientTitle
         description="Seznam lokacij, paketov in hitri dostop do profila, Care Box-a in sheme."
         actions={
           <button

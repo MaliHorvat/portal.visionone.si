@@ -278,13 +278,14 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         }`}
         style={{ background: "var(--vo-sidebar-bg)" }}
       >
-        <div className="flex items-center justify-between border-b border-[var(--vo-border)]/80 px-3 py-3.5">
-          <Link href="/portal" className={`flex items-center gap-2.5 ${sidebarCollapsed ? "mx-auto" : ""}`}>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--vo-accent-muted)] ring-1 ring-[var(--vo-accent)]/15">
-              <img src="/visionone-mark.png" alt="VisionOne" className="h-7 w-7 object-contain" />
-            </div>
+        <div className="flex items-center justify-between border-b border-[var(--vo-border)] px-3 py-3">
+          <Link
+            href="/portal"
+            className={`flex min-w-0 items-center gap-2 font-semibold tracking-tight ${sidebarCollapsed ? "mx-auto" : ""}`}
+          >
+            <img src="/visionone-mark.png" alt="VisionOne" className="h-9 w-9 shrink-0 rounded object-contain" />
             {!sidebarCollapsed ? (
-              <img src="/visionone-wordmark.png" alt="VisionOne" className="h-6 w-auto object-contain" />
+              <img src="/visionone-wordmark.png" alt="VisionOne" className="h-6 w-auto max-w-[140px] object-contain object-left" />
             ) : null}
           </Link>
           {!sidebarCollapsed ? (
@@ -369,17 +370,27 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </nav>
-        <div className="border-t border-[var(--vo-border)]/80 p-3">
+        <div className="space-y-2 border-t border-[var(--vo-border)] p-3">
+          {!sidebarCollapsed ? (
+            <a
+              href="https://visionone.si"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-3 py-2 text-center text-xs font-semibold text-[var(--vo-muted)] transition hover:border-[var(--vo-accent)]/40 hover:text-[var(--vo-accent)]"
+            >
+              ← visionone.si
+            </a>
+          ) : null}
           <div className="flex items-center justify-center gap-2 rounded-lg border border-[var(--vo-ok-muted)] bg-[var(--vo-ok-muted)] px-3 py-2 text-center text-[11px] font-semibold text-[var(--vo-ok)]">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--vo-ok)] shadow-[0_0_6px_var(--vo-ok)]" />
-            {sidebarCollapsed ? null : <span>System online</span>}
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--vo-ok)]" />
+            {sidebarCollapsed ? null : <span>Sistem online</span>}
           </div>
         </div>
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header
-          className="flex items-center justify-between gap-3 border-b border-[var(--vo-border)]/80 px-4 py-2.5 backdrop-blur-xl"
+          className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--vo-border)]/80 px-4 py-2.5 backdrop-blur-lg"
           style={{ background: "var(--vo-header-bg)" }}
         >
           <div className="flex min-w-0 items-center gap-3">
@@ -478,7 +489,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               </Link>
             ) : null}
             <form action="/api/portal-logout" method="post">
-              <button type="submit" className="vo-btn-primary px-3 py-1.5 text-xs">
+              <button type="submit" className="vo-btn-primary hidden px-4 py-2 text-sm sm:inline-flex">
                 Odjava
               </button>
             </form>

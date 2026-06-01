@@ -138,6 +138,7 @@ export function PortalDashboardView() {
       <PortalPageHeader
         kicker="Nadzorna plošča"
         title="Pregled sistema"
+        gradientTitle
         description={
           <>
             Dobrodošli nazaj{role === "admin" ? ", administrator" : ""}.

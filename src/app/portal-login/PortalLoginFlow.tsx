@@ -13,7 +13,7 @@ type Props = {
 
 const clerkAppearance = {
   variables: {
-    colorPrimary: "#0b6e6e",
+    colorPrimary: "#0a8f8f",
     colorBackground: "transparent",
     colorInputBackground: "var(--vo-surface-2)",
     colorInputText: "var(--vo-fg)",
@@ -110,11 +110,13 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
             <img src="/visionone-mark.png" alt="" className="h-9 w-9 object-contain" />
           </div>
           <div>
-            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--vo-accent)]">
-              <Sparkles className="h-3 w-3" aria-hidden />
-              VisionOne
+            <p className="vo-eyebrow flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              VisionOne portal
             </p>
-            <h1 className="vo-page-title text-xl">Portal</h1>
+            <h1 className="mt-2 text-xl font-bold tracking-tight text-[var(--vo-fg)]">
+              Vstop v <span className="vo-page-title-gradient">operativni portal</span>
+            </h1>
           </div>
         </div>
 

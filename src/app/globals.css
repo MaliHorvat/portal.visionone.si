@@ -1,54 +1,57 @@
 @import "tailwindcss";
 @import "maplibre-gl/dist/maplibre-gl.css";
 
+/* —— Skupna paleta z visionone.si —— */
 :root {
-  --vo-bg: #e8eef6;
+  --vo-bg: #eef2f8;
   --vo-surface: #ffffff;
-  --vo-surface-2: #f4f7fb;
+  --vo-surface-2: #e4eaf3;
   --vo-surface-elevated: #ffffff;
-  --vo-fg: #0a0f1a;
-  --vo-muted: #5a6478;
-  --vo-border: #d0dae8;
-  --vo-accent: #0b6e6e;
-  --vo-accent-2: #0e8fad;
-  --vo-accent-hover: #085858;
-  --vo-accent-muted: rgba(11, 110, 110, 0.12);
-  --vo-accent-gradient: linear-gradient(135deg, #0b6e6e 0%, #085858 48%, #0a7a94 100%);
-  --vo-danger: #b91c1c;
-  --vo-danger-muted: rgba(185, 28, 28, 0.1);
+  --vo-fg: #071018;
+  --vo-muted: #4a5568;
+  --vo-border: #cdd6e4;
+  --vo-accent: #0a8f8f;
+  --vo-accent-2: #06b6d4;
+  --vo-accent-hover: #087272;
+  --vo-accent-muted: rgba(10, 143, 143, 0.14);
+  --vo-accent-gradient: linear-gradient(135deg, #0a8f8f 0%, #0891b2 50%, #0e7490 100%);
+  --vo-danger: #c02626;
+  --vo-danger-muted: rgba(192, 38, 38, 0.12);
   --vo-ok: #15803d;
   --vo-ok-muted: rgba(21, 128, 61, 0.12);
   --vo-warn: #b45309;
   --vo-radius-lg: 1rem;
   --vo-radius-md: 0.75rem;
-  --vo-card-shadow: 0 1px 2px rgba(10, 15, 26, 0.04), 0 12px 32px rgba(10, 15, 26, 0.08);
-  --vo-glow-sm: 0 0 0 1px rgba(11, 110, 110, 0.12), 0 10px 28px rgba(11, 110, 110, 0.14);
-  --vo-sidebar-bg: linear-gradient(175deg, #ffffff 0%, #f6f9fc 55%, #eef4fa 100%);
-  --vo-header-bg: rgba(255, 255, 255, 0.82);
+  --vo-card-shadow: 0 2px 8px rgba(7, 16, 24, 0.06), 0 12px 32px rgba(7, 16, 24, 0.08);
+  --vo-glow-sm: 0 0 0 1px rgba(10, 143, 143, 0.12), 0 8px 24px rgba(10, 143, 143, 0.18);
+  --vo-glow-md: 0 0 0 1px rgba(10, 143, 143, 0.15), 0 16px 48px rgba(10, 143, 143, 0.22);
+  --vo-sidebar-bg: var(--vo-surface);
+  --vo-header-bg: rgba(255, 255, 255, 0.85);
 }
 
 .dark {
-  --vo-bg: #05080e;
-  --vo-surface: #0b0f16;
-  --vo-surface-2: #111820;
-  --vo-surface-elevated: #141c28;
-  --vo-fg: #eef2f8;
-  --vo-muted: #8b97ad;
-  --vo-border: #1c2636;
+  --vo-bg: #060a10;
+  --vo-surface: #0f141c;
+  --vo-surface-2: #151c27;
+  --vo-surface-elevated: #151c27;
+  --vo-fg: #e8edf5;
+  --vo-muted: #94a3b8;
+  --vo-border: #243044;
   --vo-accent: #2dd4bf;
-  --vo-accent-2: #38bdf8;
+  --vo-accent-2: #22d3ee;
   --vo-accent-hover: #5eead4;
-  --vo-accent-muted: rgba(45, 212, 191, 0.14);
-  --vo-accent-gradient: linear-gradient(135deg, #0f766e 0%, #2dd4bf 45%, #38bdf8 100%);
+  --vo-accent-muted: rgba(45, 212, 191, 0.12);
+  --vo-accent-gradient: linear-gradient(135deg, #2dd4bf 0%, #22d3ee 100%);
   --vo-danger: #f87171;
-  --vo-danger-muted: rgba(248, 113, 113, 0.14);
+  --vo-danger-muted: rgba(248, 113, 113, 0.12);
   --vo-ok: #4ade80;
-  --vo-ok-muted: rgba(74, 222, 128, 0.14);
+  --vo-ok-muted: rgba(74, 222, 128, 0.12);
   --vo-warn: #fbbf24;
-  --vo-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 48px rgba(0, 0, 0, 0.45);
-  --vo-glow-sm: 0 0 0 1px rgba(45, 212, 191, 0.18), 0 12px 32px rgba(0, 0, 0, 0.4);
-  --vo-sidebar-bg: linear-gradient(175deg, #0c1018 0%, #080c14 100%);
-  --vo-header-bg: rgba(11, 15, 22, 0.88);
+  --vo-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 40px rgba(0, 0, 0, 0.45);
+  --vo-glow-sm: 0 0 24px rgba(45, 212, 191, 0.15);
+  --vo-glow-md: 0 0 48px rgba(45, 212, 191, 0.2);
+  --vo-sidebar-bg: var(--vo-surface);
+  --vo-header-bg: rgba(15, 20, 28, 0.9);
 }
 
 @theme inline {
@@ -64,6 +67,9 @@ body {
   background: var(--vo-bg);
   color: var(--vo-fg);
   font-family: var(--font-sans);
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 h1,
@@ -73,18 +79,35 @@ h3 {
   letter-spacing: -0.02em;
 }
 
-/* —— Portal (aplikacija) —— */
+/* —— Ozadja (kot spletna stran) —— */
+.vo-mesh-bg,
 .vo-portal-mesh {
   background-color: var(--vo-bg);
   background-image:
-    radial-gradient(ellipse 80% 55% at 100% -10%, rgba(11, 110, 110, 0.09), transparent 52%),
-    radial-gradient(ellipse 60% 45% at -5% 105%, rgba(14, 143, 173, 0.07), transparent 48%),
-    radial-gradient(circle at 50% 50%, transparent 0%, color-mix(in srgb, var(--vo-bg) 92%, transparent) 100%);
+    radial-gradient(ellipse 80% 60% at 10% -10%, rgba(10, 143, 143, 0.18), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 90% 20%, rgba(6, 182, 212, 0.12), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(10, 143, 143, 0.08), transparent 45%);
+}
+
+.vo-page-hero {
+  background: linear-gradient(180deg, var(--vo-surface) 0%, var(--vo-bg) 100%);
+}
+
+.vo-visual-band {
+  background: linear-gradient(135deg, var(--vo-surface) 0%, rgba(10, 143, 143, 0.06) 100%);
+}
+
+.vo-hero-glow {
+  background: radial-gradient(ellipse at 70% 30%, rgba(10, 143, 143, 0.2), transparent 55%);
+}
+
+.vo-section-alt {
+  background: linear-gradient(180deg, var(--vo-surface-2) 0%, var(--vo-bg) 100%);
 }
 
 .vo-page-content {
   width: 100%;
-  max-width: 88rem;
+  max-width: 80rem;
   margin-inline: auto;
 }
 
@@ -103,97 +126,145 @@ h3 {
   }
 }
 
+.vo-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--vo-accent);
+}
+
 .vo-page-title {
-  font-size: clamp(1.5rem, 2.5vw, 1.875rem);
+  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
   font-weight: 700;
   letter-spacing: -0.03em;
-  line-height: 1.15;
+  line-height: 1.12;
   color: var(--vo-fg);
 }
 
+.vo-page-title-gradient {
+  background: linear-gradient(to right, var(--vo-accent), var(--vo-accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 .vo-page-desc {
-  font-size: 0.9375rem;
-  line-height: 1.55;
+  font-size: 1rem;
+  line-height: 1.6;
   color: var(--vo-muted);
 }
 
 .vo-page-header {
-  padding-bottom: 0.25rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--vo-border) 65%, transparent);
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--vo-border);
 }
 
+.vo-trust-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--vo-border);
+  background: color-mix(in srgb, var(--vo-surface) 88%, transparent);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--vo-fg);
+  backdrop-filter: blur(4px);
+}
+
+/* —— Kartice & gumbi (kot spletna stran) —— */
 .vo-card {
   border-radius: var(--vo-radius-lg);
-  border: 1px solid color-mix(in srgb, var(--vo-border) 90%, transparent);
+  border: 1px solid var(--vo-border);
   background: var(--vo-surface);
   box-shadow: var(--vo-card-shadow);
 }
 
 .vo-card-glass {
-  background: color-mix(in srgb, var(--vo-surface) 88%, transparent);
+  background: color-mix(in srgb, var(--vo-surface) 92%, transparent);
   backdrop-filter: blur(12px);
 }
 
 .vo-card-hover {
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .vo-card-hover:hover {
-  border-color: color-mix(in srgb, var(--vo-accent) 35%, var(--vo-border));
+  transform: translateY(-3px);
   box-shadow: var(--vo-glow-sm);
+  border-color: rgba(10, 143, 143, 0.35);
 }
 
-.vo-stat-tile {
-  border-radius: 0.75rem;
+.vo-stat-tile,
+.vo-stat-card {
+  border-radius: var(--vo-radius-md);
   border: 1px solid var(--vo-border);
-  background: color-mix(in srgb, var(--vo-bg) 60%, var(--vo-surface));
+  background: linear-gradient(145deg, var(--vo-surface) 0%, rgba(10, 143, 143, 0.04) 100%);
 }
 
 .vo-btn-primary {
-  border-radius: 0.625rem;
+  border-radius: 0.75rem;
   background: var(--vo-accent-gradient);
   color: white;
-  font-weight: 600;
-  box-shadow: 0 4px 14px rgba(13, 122, 122, 0.25);
-  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  font-weight: 700;
+  box-shadow: var(--vo-glow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 
 .vo-btn-primary:hover {
-  opacity: 0.95;
-  box-shadow: 0 6px 20px rgba(13, 122, 122, 0.32);
+  filter: brightness(1.05);
+  box-shadow: var(--vo-glow-md);
+  transform: translateY(-1px);
 }
 
 .vo-btn-primary:active {
-  transform: scale(0.98);
+  transform: translateY(0) scale(0.99);
+}
+
+.vo-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--vo-border);
+  background: color-mix(in srgb, var(--vo-surface) 92%, transparent);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--vo-fg);
+  backdrop-filter: blur(4px);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.vo-btn-secondary:hover {
+  border-color: rgba(10, 143, 143, 0.4);
+  background: var(--vo-surface);
 }
 
 .vo-btn-ghost {
-  border-radius: 0.625rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--vo-border);
   background: var(--vo-surface);
   color: var(--vo-muted);
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .vo-btn-ghost:hover {
   background: var(--vo-surface-2);
   color: var(--vo-fg);
-  border-color: color-mix(in srgb, var(--vo-accent) 30%, var(--vo-border));
+  border-color: rgba(10, 143, 143, 0.35);
 }
 
 .vo-input {
-  border-radius: 0.625rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--vo-border);
   background: var(--vo-surface);
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .vo-input:focus {
@@ -202,21 +273,21 @@ h3 {
   box-shadow: 0 0 0 3px var(--vo-accent-muted);
 }
 
-.vo-section-label {
+.vo-section-label,
+.vo-eyebrow-sm {
   font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--vo-muted);
+  color: var(--vo-accent);
 }
 
+/* —— Portal navigacija (kot PublicNav) —— */
 .vo-nav-link {
-  position: relative;
-  border-radius: 0.625rem;
+  border-radius: 0.5rem;
   color: var(--vo-muted);
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .vo-nav-link:hover {
@@ -225,14 +296,9 @@ h3 {
 }
 
 .vo-nav-link-active {
-  background: linear-gradient(
-    90deg,
-    var(--vo-accent-muted) 0%,
-    color-mix(in srgb, var(--vo-accent-muted) 40%, transparent) 100%
-  );
+  background: var(--vo-accent-muted);
   color: var(--vo-accent);
   font-weight: 600;
-  box-shadow: inset 3px 0 0 0 var(--vo-accent);
 }
 
 .vo-tab-nav {
@@ -242,7 +308,7 @@ h3 {
   padding: 0.35rem;
   border-radius: var(--vo-radius-md);
   border: 1px solid var(--vo-border);
-  background: color-mix(in srgb, var(--vo-surface) 90%, var(--vo-surface-2));
+  background: var(--vo-surface);
 }
 
 .vo-tab-btn {
@@ -254,10 +320,7 @@ h3 {
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--vo-muted);
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .vo-tab-btn:hover {
@@ -266,10 +329,9 @@ h3 {
 }
 
 .vo-tab-btn-active {
-  color: var(--vo-fg);
-  background: var(--vo-surface);
-  box-shadow: 0 1px 3px rgba(10, 15, 26, 0.08);
-  border: 1px solid color-mix(in srgb, var(--vo-border) 80%, transparent);
+  color: var(--vo-accent);
+  background: var(--vo-accent-muted);
+  font-weight: 600;
 }
 
 .vo-badge {
@@ -303,6 +365,8 @@ h3 {
   overflow-x: auto;
   border-radius: var(--vo-radius-md);
   border: 1px solid var(--vo-border);
+  background: var(--vo-surface);
+  box-shadow: var(--vo-card-shadow);
 }
 
 .vo-table {
@@ -314,7 +378,7 @@ h3 {
 .vo-table thead {
   background: var(--vo-surface-2);
   font-size: 0.6875rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--vo-muted);
@@ -326,12 +390,12 @@ h3 {
 }
 
 .vo-table tbody tr {
-  border-top: 1px solid color-mix(in srgb, var(--vo-border) 70%, transparent);
+  border-top: 1px solid var(--vo-border);
   transition: background 0.12s ease;
 }
 
 .vo-table tbody tr:hover {
-  background: color-mix(in srgb, var(--vo-accent-muted) 35%, transparent);
+  background: rgba(10, 143, 143, 0.06);
 }
 
 .vo-kbd {
@@ -347,7 +411,6 @@ h3 {
   font-size: 0.625rem;
   font-weight: 600;
   color: var(--vo-muted);
-  box-shadow: 0 1px 0 var(--vo-border);
 }
 
 .vo-empty-state {
@@ -404,29 +467,24 @@ h3 {
   }
 }
 
-/* Clerk modal on dark background */
 .dark .cl-card,
 .dark .cl-rootBox {
   color-scheme: dark;
 }
 
-/* —— Prijavna stran —— */
+/* —— Prijava (kot marketing) —— */
 .vo-login-page {
   background-color: var(--vo-bg);
-  background-image:
-    radial-gradient(ellipse 90% 70% at 0% 0%, rgba(11, 110, 110, 0.12), transparent 50%),
-    radial-gradient(ellipse 70% 60% at 100% 100%, rgba(14, 143, 173, 0.08), transparent 45%);
 }
 
-.dark .vo-login-page {
-  background-image:
-    radial-gradient(ellipse 80% 60% at 0% 0%, rgba(45, 212, 191, 0.08), transparent 50%),
-    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(56, 189, 248, 0.06), transparent 45%);
+.vo-login-page .vo-mesh-bg {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
 }
 
 .vo-login-hero {
-  background:
-    linear-gradient(155deg, #042f2f 0%, #0a4d4d 35%, #0d6363 65%, #0a3d4a 100%);
+  background: linear-gradient(155deg, #042f2f 0%, #0a4d4d 35%, #0d6363 65%, #0a3d4a 100%);
 }
 
 .vo-login-hero-grid {
@@ -438,8 +496,8 @@ h3 {
 }
 
 .vo-login-card {
-  background: color-mix(in srgb, var(--vo-surface) 94%, transparent);
-  backdrop-filter: blur(16px);
+  background: color-mix(in srgb, var(--vo-surface) 96%, transparent);
+  backdrop-filter: blur(12px);
   box-shadow: var(--vo-card-shadow), var(--vo-glow-sm);
 }
 
@@ -456,13 +514,13 @@ h3 {
 .vo-login-footer {
   margin-top: 1.5rem;
   text-align: center;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--vo-muted);
 }
 
 .vo-login-footer a {
   color: var(--vo-accent);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .vo-login-alert-error {
@@ -483,14 +541,10 @@ h3 {
   color: var(--vo-warn);
 }
 
-.dark .vo-login-alert-warn {
-  color: #fcd34d;
-}
-
 .vo-login-step-active {
   background: var(--vo-accent-gradient);
   color: white;
-  box-shadow: 0 4px 14px rgba(11, 110, 110, 0.35);
+  box-shadow: var(--vo-glow-sm);
 }
 
 .vo-login-step-done {

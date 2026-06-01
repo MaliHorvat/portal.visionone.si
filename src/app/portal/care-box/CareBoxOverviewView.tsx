@@ -49,6 +49,7 @@ export function CareBoxOverviewView() {
       <PortalPageHeader
         kicker="VisionOne Care Box"
         title="Monitoring & 24/7 podpora"
+        gradientTitle
         description="Pregled vseh strank z Care Box-om. Stranka ne upravlja naprave — vi spremljate status in oddaljeno podporo."
         actions={
           <button

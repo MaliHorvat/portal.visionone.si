@@ -28,7 +28,7 @@ export function PortalCareBoxAlert() {
   return (
     <Link
       href="/portal/care-box"
-      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm transition hover:bg-amber-500/15"
+      className="vo-card vo-card-hover flex flex-wrap items-center justify-between gap-3 border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm"
     >
       <span className="flex items-center gap-2 font-medium text-amber-100">
         <RadioTower className="h-4 w-4 shrink-0" aria-hidden />
