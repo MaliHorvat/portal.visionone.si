@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import {
   DEFAULT_PORTAL_USERNAME,
@@ -8,8 +9,8 @@ import { getDefaultNavPermissions } from "@/lib/nav-permissions";
 import { getPortalSessionSecret } from "@/lib/portal-session-secret";
 import { verifyPortalSessionToken, type PortalSessionPayload } from "@/lib/portal-session-verify";
 
-/** Beri sejo iz piškotka (strežniške komponente in route handlerji). */
-export async function getPortalSession(): Promise<PortalSessionPayload | null> {
+/** Beri sejo iz piškotka (enkrat na zahtevo — React cache). */
+export const getPortalSession = cache(async function getPortalSession(): Promise<PortalSessionPayload | null> {
   const raw = (await cookies()).get(PORTAL_SESSION_COOKIE)?.value;
   if (!raw) return null;
   if (raw === LEGACY_PORTAL_SESSION_VALUE) {
@@ -26,4 +27,4 @@ export async function getPortalSession(): Promise<PortalSessionPayload | null> {
   } catch {
     return null;
   }
-}
+});

@@ -2,47 +2,53 @@
 @import "maplibre-gl/dist/maplibre-gl.css";
 
 :root {
-  --vo-bg: #eef3f8;
+  --vo-bg: #e8eef6;
   --vo-surface: #ffffff;
-  --vo-surface-2: #f3f6fa;
-  --vo-fg: #0c1222;
-  --vo-muted: #5c6578;
-  --vo-border: #d4dce8;
-  --vo-accent: #0d7a7a;
-  --vo-accent-2: #0891b2;
-  --vo-accent-hover: #0a6363;
-  --vo-accent-muted: rgba(13, 122, 122, 0.11);
-  --vo-accent-gradient: linear-gradient(135deg, #0d7a7a 0%, #0a6363 55%, #087a8c 100%);
-  --vo-danger: #c02626;
-  --vo-danger-muted: rgba(192, 38, 38, 0.1);
+  --vo-surface-2: #f4f7fb;
+  --vo-surface-elevated: #ffffff;
+  --vo-fg: #0a0f1a;
+  --vo-muted: #5a6478;
+  --vo-border: #d0dae8;
+  --vo-accent: #0b6e6e;
+  --vo-accent-2: #0e8fad;
+  --vo-accent-hover: #085858;
+  --vo-accent-muted: rgba(11, 110, 110, 0.12);
+  --vo-accent-gradient: linear-gradient(135deg, #0b6e6e 0%, #085858 48%, #0a7a94 100%);
+  --vo-danger: #b91c1c;
+  --vo-danger-muted: rgba(185, 28, 28, 0.1);
   --vo-ok: #15803d;
   --vo-ok-muted: rgba(21, 128, 61, 0.12);
   --vo-warn: #b45309;
-  --vo-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 28px rgba(15, 23, 42, 0.07);
-  --vo-glow-sm: 0 0 0 1px rgba(13, 122, 122, 0.1), 0 8px 24px rgba(13, 122, 122, 0.12);
-  --vo-sidebar-bg: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  --vo-radius-lg: 1rem;
+  --vo-radius-md: 0.75rem;
+  --vo-card-shadow: 0 1px 2px rgba(10, 15, 26, 0.04), 0 12px 32px rgba(10, 15, 26, 0.08);
+  --vo-glow-sm: 0 0 0 1px rgba(11, 110, 110, 0.12), 0 10px 28px rgba(11, 110, 110, 0.14);
+  --vo-sidebar-bg: linear-gradient(175deg, #ffffff 0%, #f6f9fc 55%, #eef4fa 100%);
+  --vo-header-bg: rgba(255, 255, 255, 0.82);
 }
 
 .dark {
-  --vo-bg: #06090f;
-  --vo-surface: #0c1018;
-  --vo-surface-2: #121820;
-  --vo-fg: #e8edf5;
-  --vo-muted: #8b97aa;
-  --vo-border: #1e2836;
+  --vo-bg: #05080e;
+  --vo-surface: #0b0f16;
+  --vo-surface-2: #111820;
+  --vo-surface-elevated: #141c28;
+  --vo-fg: #eef2f8;
+  --vo-muted: #8b97ad;
+  --vo-border: #1c2636;
   --vo-accent: #2dd4bf;
-  --vo-accent-2: #22d3ee;
+  --vo-accent-2: #38bdf8;
   --vo-accent-hover: #5eead4;
-  --vo-accent-muted: rgba(45, 212, 191, 0.12);
-  --vo-accent-gradient: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 50%, #22d3ee 100%);
+  --vo-accent-muted: rgba(45, 212, 191, 0.14);
+  --vo-accent-gradient: linear-gradient(135deg, #0f766e 0%, #2dd4bf 45%, #38bdf8 100%);
   --vo-danger: #f87171;
   --vo-danger-muted: rgba(248, 113, 113, 0.14);
   --vo-ok: #4ade80;
   --vo-ok-muted: rgba(74, 222, 128, 0.14);
   --vo-warn: #fbbf24;
-  --vo-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 40px rgba(0, 0, 0, 0.4);
-  --vo-glow-sm: 0 0 0 1px rgba(45, 212, 191, 0.15), 0 8px 28px rgba(0, 0, 0, 0.35);
-  --vo-sidebar-bg: linear-gradient(180deg, #0c1018 0%, #080c12 100%);
+  --vo-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 48px rgba(0, 0, 0, 0.45);
+  --vo-glow-sm: 0 0 0 1px rgba(45, 212, 191, 0.18), 0 12px 32px rgba(0, 0, 0, 0.4);
+  --vo-sidebar-bg: linear-gradient(175deg, #0c1018 0%, #080c14 100%);
+  --vo-header-bg: rgba(11, 15, 22, 0.88);
 }
 
 @theme inline {
@@ -71,15 +77,61 @@ h3 {
 .vo-portal-mesh {
   background-color: var(--vo-bg);
   background-image:
-    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(13, 122, 122, 0.07), transparent 50%),
-    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(8, 145, 178, 0.06), transparent 45%);
+    radial-gradient(ellipse 80% 55% at 100% -10%, rgba(11, 110, 110, 0.09), transparent 52%),
+    radial-gradient(ellipse 60% 45% at -5% 105%, rgba(14, 143, 173, 0.07), transparent 48%),
+    radial-gradient(circle at 50% 50%, transparent 0%, color-mix(in srgb, var(--vo-bg) 92%, transparent) 100%);
+}
+
+.vo-page-content {
+  width: 100%;
+  max-width: 88rem;
+  margin-inline: auto;
+}
+
+.vo-page-enter {
+  animation: vo-page-in 0.35s ease-out both;
+}
+
+@keyframes vo-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vo-page-title {
+  font-size: clamp(1.5rem, 2.5vw, 1.875rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--vo-fg);
+}
+
+.vo-page-desc {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--vo-muted);
+}
+
+.vo-page-header {
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--vo-border) 65%, transparent);
 }
 
 .vo-card {
-  border-radius: 0.875rem;
-  border: 1px solid var(--vo-border);
+  border-radius: var(--vo-radius-lg);
+  border: 1px solid color-mix(in srgb, var(--vo-border) 90%, transparent);
   background: var(--vo-surface);
   box-shadow: var(--vo-card-shadow);
+}
+
+.vo-card-glass {
+  background: color-mix(in srgb, var(--vo-surface) 88%, transparent);
+  backdrop-filter: blur(12px);
 }
 
 .vo-card-hover {
@@ -173,10 +225,154 @@ h3 {
 }
 
 .vo-nav-link-active {
-  background: var(--vo-accent-muted);
+  background: linear-gradient(
+    90deg,
+    var(--vo-accent-muted) 0%,
+    color-mix(in srgb, var(--vo-accent-muted) 40%, transparent) 100%
+  );
   color: var(--vo-accent);
   font-weight: 600;
   box-shadow: inset 3px 0 0 0 var(--vo-accent);
+}
+
+.vo-tab-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  border-radius: var(--vo-radius-md);
+  border: 1px solid var(--vo-border);
+  background: color-mix(in srgb, var(--vo-surface) 90%, var(--vo-surface-2));
+}
+
+.vo-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--vo-muted);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.vo-tab-btn:hover {
+  color: var(--vo-fg);
+  background: var(--vo-surface-2);
+}
+
+.vo-tab-btn-active {
+  color: var(--vo-fg);
+  background: var(--vo-surface);
+  box-shadow: 0 1px 3px rgba(10, 15, 26, 0.08);
+  border: 1px solid color-mix(in srgb, var(--vo-border) 80%, transparent);
+}
+
+.vo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vo-badge-ok {
+  background: var(--vo-ok-muted);
+  color: var(--vo-ok);
+}
+
+.vo-badge-danger {
+  background: var(--vo-danger-muted);
+  color: var(--vo-danger);
+}
+
+.vo-badge-accent {
+  background: var(--vo-accent-muted);
+  color: var(--vo-accent);
+}
+
+.vo-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--vo-radius-md);
+  border: 1px solid var(--vo-border);
+}
+
+.vo-table {
+  width: 100%;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.vo-table thead {
+  background: var(--vo-surface-2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vo-muted);
+}
+
+.vo-table th,
+.vo-table td {
+  padding: 0.75rem 1rem;
+}
+
+.vo-table tbody tr {
+  border-top: 1px solid color-mix(in srgb, var(--vo-border) 70%, transparent);
+  transition: background 0.12s ease;
+}
+
+.vo-table tbody tr:hover {
+  background: color-mix(in srgb, var(--vo-accent-muted) 35%, transparent);
+}
+
+.vo-kbd {
+  display: inline-flex;
+  min-width: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  border: 1px solid var(--vo-border);
+  background: var(--vo-surface-2);
+  padding: 0.125rem 0.375rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--vo-muted);
+  box-shadow: 0 1px 0 var(--vo-border);
+}
+
+.vo-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--vo-muted);
+}
+
+.vo-toast-enter {
+  animation: vo-toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes vo-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 }
 
 .vo-sidebar-nav::-webkit-scrollbar {
@@ -216,10 +412,16 @@ h3 {
 
 /* —— Prijavna stran —— */
 .vo-login-page {
-  background-color: #eef4f8;
+  background-color: var(--vo-bg);
   background-image:
-    radial-gradient(ellipse 90% 70% at 0% 0%, rgba(13, 122, 122, 0.14), transparent 50%),
-    radial-gradient(ellipse 70% 60% at 100% 100%, rgba(6, 182, 212, 0.1), transparent 45%);
+    radial-gradient(ellipse 90% 70% at 0% 0%, rgba(11, 110, 110, 0.12), transparent 50%),
+    radial-gradient(ellipse 70% 60% at 100% 100%, rgba(14, 143, 173, 0.08), transparent 45%);
+}
+
+.dark .vo-login-page {
+  background-image:
+    radial-gradient(ellipse 80% 60% at 0% 0%, rgba(45, 212, 191, 0.08), transparent 50%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(56, 189, 248, 0.06), transparent 45%);
 }
 
 .vo-login-hero {
@@ -236,23 +438,64 @@ h3 {
 }
 
 .vo-login-card {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  box-shadow:
-    0 0 0 1px rgba(13, 122, 122, 0.08),
-    0 4px 24px rgba(12, 18, 34, 0.06),
-    0 24px 64px rgba(13, 122, 122, 0.12);
+  background: color-mix(in srgb, var(--vo-surface) 94%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--vo-card-shadow), var(--vo-glow-sm);
+}
+
+.vo-login-topbar {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vo-login-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.6875rem;
+  color: var(--vo-muted);
+}
+
+.vo-login-footer a {
+  color: var(--vo-accent);
+  font-weight: 600;
+}
+
+.vo-login-alert-error {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--vo-danger) 40%, transparent);
+  background: var(--vo-danger-muted);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--vo-danger);
+}
+
+.vo-login-alert-warn {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--vo-warn) 35%, transparent);
+  background: color-mix(in srgb, var(--vo-warn) 12%, transparent);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--vo-warn);
+}
+
+.dark .vo-login-alert-warn {
+  color: #fcd34d;
 }
 
 .vo-login-step-active {
-  background: linear-gradient(135deg, #0d7a7a 0%, #0a6363 100%);
+  background: var(--vo-accent-gradient);
   color: white;
-  box-shadow: 0 4px 14px rgba(13, 122, 122, 0.35);
+  box-shadow: 0 4px 14px rgba(11, 110, 110, 0.35);
 }
 
 .vo-login-step-done {
-  background: rgba(13, 122, 122, 0.12);
-  color: #0d7a7a;
+  background: var(--vo-accent-muted);
+  color: var(--vo-accent);
 }
 
 .vo-login-step-pending {

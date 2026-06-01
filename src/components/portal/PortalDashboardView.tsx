@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { ElementType } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { PortalDashboardSkeleton } from "@/components/portal/PortalDashboardSkeleton";
 import {
   Activity,
   Boxes,
@@ -21,6 +21,8 @@ import {
   Wifi,
 } from "lucide-react";
 import { usePortalRole } from "@/context/PortalRoleContext";
+import { PortalCareBoxAlert } from "@/components/portal/PortalCareBoxAlert";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
 import { PortalQuickActions } from "@/components/portal/PortalQuickActions";
 import { clientProfilePath } from "@/lib/client-url";
 import { exportDashboardCsv, exportRemindersCsv } from "@/lib/portal-export";
@@ -36,13 +38,10 @@ import type {
   PortalDashboardPayload,
 } from "@/lib/repositories/dashboard";
 
-type Props = {
-  initial: PortalDashboardPayload;
-};
-
-export function PortalDashboardView({ initial }: Props) {
+export function PortalDashboardView() {
   const { role } = usePortalRole();
-  const router = useRouter();
+  const [initial, setInitial] = useState<PortalDashboardPayload | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [lastRefresh, setLastRefresh] = useState(() => new Date());
   const [refreshing, setRefreshing] = useState(false);
@@ -51,6 +50,15 @@ export function PortalDashboardView({ initial }: Props) {
   const [reminderFilter, setReminderFilter] = useState<"all" | "open">("open");
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
+  const loadDashboard = useCallback(async () => {
+    const res = await fetch("/api/portal/dashboard");
+    if (!res.ok) {
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(j.error ?? "Napaka pri nalaganju nadzorne plošče.");
+    }
+    return (await res.json()) as PortalDashboardPayload;
+  }, []);
+
   useEffect(() => {
     setFavOnly(getDashboardFavoritesOnly());
     setCompact(getDashboardCompact());
@@ -58,46 +66,90 @@ export function PortalDashboardView({ initial }: Props) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    void loadDashboard()
+      .then((payload) => {
+        if (!cancelled) {
+          setInitial(payload);
+          setLoadError(null);
+          setLastRefresh(new Date());
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setLoadError(e instanceof Error ? e.message : "Napaka pri nalaganju.");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadDashboard]);
+
+  useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(id);
   }, []);
 
   const clients = useMemo(() => {
+    if (!initial) return [];
     let list = initial.clients;
     if (favOnly) list = list.filter((c) => favoriteIds.includes(c.id));
     return list;
-  }, [initial.clients, favOnly, favoriteIds]);
+  }, [initial, favOnly, favoriteIds]);
 
   const reminders = useMemo(() => {
+    if (!initial) return [];
     if (reminderFilter === "all") return initial.reminders;
     return initial.reminders.filter((r) => !r.completed);
-  }, [initial.reminders, reminderFilter]);
+  }, [initial, reminderFilter]);
+
+  if (!initial) {
+    return (
+      <>
+        {loadError ? (
+          <p className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-950/30 dark:text-red-200">
+            {loadError}
+          </p>
+        ) : null}
+        <PortalDashboardSkeleton />
+      </>
+    );
+  }
 
   const totals = initial.totals;
 
   async function refreshDashboard() {
     setRefreshing(true);
-    router.refresh();
-    setLastRefresh(new Date());
-    window.setTimeout(() => setRefreshing(false), 600);
+    try {
+      const payload = await loadDashboard();
+      setInitial(payload);
+      setLoadError(null);
+      setLastRefresh(new Date());
+    } catch (e: unknown) {
+      setLoadError(e instanceof Error ? e.message : "Osvežitev ni uspela.");
+    } finally {
+      window.setTimeout(() => setRefreshing(false), 400);
+    }
   }
 
   return (
     <div className="space-y-8 pb-10">
-      <header className="vo-card flex flex-wrap items-start justify-between gap-4 p-5 md:p-6">
-        <div>
-          <p className="vo-section-label">Nadzorna plošča</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--vo-fg)] md:text-3xl">Pregled sistema</h1>
-          <p className="mt-2 text-sm text-[var(--vo-muted)]">
+      <PortalCareBoxAlert />
+      <PortalPageHeader
+        kicker="Nadzorna plošča"
+        title="Pregled sistema"
+        description={
+          <>
             Dobrodošli nazaj{role === "admin" ? ", administrator" : ""}.
             {!initial.dbConfigured ? (
               <span className="ml-2 text-amber-600 dark:text-amber-400">
                 (Demo podatki — nastavite DATABASE_URL za živo stanje.)
               </span>
             ) : null}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+          </>
+        }
+        actions={
+          <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => void refreshDashboard()}
@@ -143,8 +195,9 @@ export function PortalDashboardView({ initial }: Props) {
               Osveženo {lastRefresh.toLocaleTimeString("sl-SI", { hour: "2-digit", minute: "2-digit" })}
             </div>
           </div>
-        </div>
-      </header>
+          </div>
+        }
+      />
 
       <section>
         <h2 className="vo-section-label mb-3 flex items-center gap-2">

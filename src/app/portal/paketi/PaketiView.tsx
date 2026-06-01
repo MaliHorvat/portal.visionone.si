@@ -147,23 +147,29 @@ export function PaketiView({ packages, dbConfigured }: Props) {
 
       {isAdmin ? (
         <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4">
-          <p className="text-sm font-semibold text-[var(--vo-fg)]">Predlogi razširjenih paketov</p>
+          <p className="text-sm font-semibold text-[var(--vo-fg)]">Predlogi VisionOne Care (Box + monitoring)</p>
+          <p className="mt-1 text-xs text-[var(--vo-muted)]">
+            Stranka ne upravlja naprave — VisionOne Box na objektu, vi spremljate v meniju Care Box.
+          </p>
           <div className="mt-3 grid gap-2 md:grid-cols-3">
             {[
               {
                 name: "Basic Care",
                 price: 39,
-                description: "Mesečni health-check, 1x oddaljena diagnostika, poročilo stanja kamer in snemalnika.",
+                description:
+                  "VisionOne Care Box, mesečno poročilo, monitoring kamer/NVR, odziv naslednji delovni dan.",
               },
               {
                 name: "Pro Care",
                 price: 89,
-                description: "Vse iz Basic + 24/7 watchdog, 2x mesečni pregled, prednostni odziv in Telegram alarmi.",
+                description:
+                  "Care Box + 24/7 monitoring, Telegram alarmi vam, prednostni oddaljeni dostop (SLA 8 h).",
               },
               {
                 name: "Enterprise Care",
                 price: 149,
-                description: "Vse iz Pro + kvartalni onsite pregled, SLA, napredni backup konfiguracij in varnostni audit.",
+                description:
+                  "Care Box + kritični SLA 4 h, kvartalni onsite, backup konfiguracij NVR, varnostni pregled.",
               },
             ].map((p) => (
               <button

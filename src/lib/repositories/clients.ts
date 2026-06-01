@@ -94,6 +94,7 @@ function parseClientTags(raw: unknown): string[] {
 }
 
 function mapClientSummary(c: DbClient): ClientSummary {
+  const ext = c as DbClient & { careBoxEnabled?: boolean; careSlaTier?: string };
   return {
     id: c.id,
     slug: c.slug ?? null,
@@ -105,6 +106,8 @@ function mapClientSummary(c: DbClient): ClientSummary {
     package: mapPackage(c.package),
     health: mapHealth(c.health),
     tags: parseClientTags((c as { tags?: unknown }).tags),
+    careBoxEnabled: Boolean(ext.careBoxEnabled),
+    careSlaTier: ext.careSlaTier ?? "",
   };
 }
 

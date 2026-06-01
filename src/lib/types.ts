@@ -24,6 +24,8 @@ export interface ClientSummary {
   health: ClientHealth;
   /** Oznake stranke (npr. VIP, teren). */
   tags: string[];
+  careBoxEnabled?: boolean;
+  careSlaTier?: string;
 }
 
 export interface CameraDevice {

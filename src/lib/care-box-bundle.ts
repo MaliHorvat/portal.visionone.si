@@ -7,7 +7,7 @@ import { appendAuditLog } from "@/lib/repositories/audit-log";
 
 const AGENT_RPI_ROOT = path.join(process.cwd(), "agent-rpi");
 
-export type RpiBundleMeta = {
+export type CareBoxBundleMeta = {
   clientId: string;
   clientName: string;
   agentId: string;
@@ -16,13 +16,12 @@ export type RpiBundleMeta = {
   claimCode: string;
   claimExpiresAt: string;
   portalUrl: string;
-  osTarget: string;
   generatedAt: string;
 };
 
 function makeClaimCode() {
   const raw = crypto.randomBytes(5).toString("hex").toUpperCase();
-  return `VO-${raw.slice(0, 5)}-${raw.slice(5, 10)}`;
+  return `CARE-${raw.slice(0, 5)}-${raw.slice(5, 10)}`;
 }
 
 function slugPart(name: string) {
@@ -36,9 +35,9 @@ function slugPart(name: string) {
   return s || "stranka";
 }
 
-function makeAgentId(clientName: string, clientId: string) {
+function makeCareAgentId(clientName: string, clientId: string) {
   const tail = clientId.replace(/[^a-z0-9]/gi, "").slice(-6).toLowerCase() || crypto.randomBytes(3).toString("hex");
-  return `rpi-${slugPart(clientName)}-${tail}`;
+  return `care-${slugPart(clientName)}-${tail}`;
 }
 
 function applyTemplate(template: string, vars: Record<string, string>) {
@@ -53,11 +52,12 @@ async function readTemplate(rel: string) {
   return fs.readFile(path.join(AGENT_RPI_ROOT, rel), "utf8");
 }
 
-export async function createRpiAgentBundleForClient(
+/** Pripravi SD paket za VisionOne Care Box (monitoring + oddaljena podpora). */
+export async function createCareBoxBundleForClient(
   clientId: string,
   createdBy: string,
   portalBaseUrl: string,
-): Promise<{ zip: Uint8Array; meta: RpiBundleMeta; filename: string }> {
+): Promise<{ zip: Uint8Array; meta: CareBoxBundleMeta; filename: string }> {
   if (!isDbConfigured() || !prisma) throw new Error("DB ni nastavljena.");
 
   const client = await prisma.client.findUnique({
@@ -66,11 +66,11 @@ export async function createRpiAgentBundleForClient(
   });
   if (!client) throw new Error("Stranka ne obstaja.");
 
-  const agentId = makeAgentId(client.name, client.id);
-  const agentName = `RB — ${client.name}`;
+  const agentId = makeCareAgentId(client.name, client.id);
+  const agentName = `Care Box — ${client.name}`;
   const siteLabel = client.address?.trim() || client.name;
   const claimCode = makeClaimCode();
-  const ttlDays = 14;
+  const ttlDays = 30;
   const claimExpiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
   const generatedAt = new Date().toISOString();
   const portalUrl = portalBaseUrl.replace(/\/$/, "");
@@ -82,7 +82,7 @@ export async function createRpiAgentBundleForClient(
       name: agentName,
       siteLabel,
       clientId: client.id,
-      agentKind: "standard",
+      agentKind: "care_box",
       lastConfigAt: new Date(),
       configVersion: 1,
     },
@@ -90,7 +90,7 @@ export async function createRpiAgentBundleForClient(
       name: agentName,
       siteLabel,
       clientId: client.id,
-      agentKind: "standard",
+      agentKind: "care_box",
       lastConfigAt: new Date(),
     },
   });
@@ -107,7 +107,12 @@ export async function createRpiAgentBundleForClient(
     },
   });
 
-  await appendAuditLog(createdBy, "rpi_bundle_create", `${agentId} → ${client.id}`);
+  await prisma.client.update({
+    where: { id: client.id },
+    data: { careBoxEnabled: true },
+  });
+
+  await appendAuditLog(createdBy, "care_box_bundle_create", `${agentId} → ${client.id}`);
 
   const vars: Record<string, string> = {
     CLIENT_NAME: client.name,
@@ -123,6 +128,7 @@ export async function createRpiAgentBundleForClient(
   const files: Record<string, Uint8Array> = {};
   const entries = [
     ["README-SLO.txt", "README-SLO.txt"],
+    ["NAVODILA-CARE-BOX-SLO.txt", "NAVODILA-CARE-BOX-SLO.txt"],
     ["boot/visionone-claim.txt", "boot/visionone-claim.txt"],
     ["boot/firstrun.sh", "boot/firstrun.sh"],
     ["boot/visionone-agent-install.sh", "boot/visionone-agent-install.sh"],
@@ -141,7 +147,7 @@ export async function createRpiAgentBundleForClient(
   }
 
   const zip = zipSync(files, { level: 6 });
-  const meta: RpiBundleMeta = {
+  const meta: CareBoxBundleMeta = {
     clientId: client.id,
     clientName: client.name,
     agentId,
@@ -150,9 +156,8 @@ export async function createRpiAgentBundleForClient(
     claimCode,
     claimExpiresAt: claimExpiresAt.toISOString(),
     portalUrl,
-    osTarget: "Raspberry Pi OS 64-bit (aarch64)",
     generatedAt,
   };
-  const filename = `visionone-rpi-${slugPart(client.name)}.zip`;
+  const filename = `visionone-care-box-${slugPart(client.name)}.zip`;
   return { zip, meta, filename };
 }

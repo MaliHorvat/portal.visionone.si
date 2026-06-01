@@ -46,6 +46,11 @@ model Client {
   profileChanges ClientProfileChangeLog[]
   /** Oznake (niz nizov) — JSON polje, npr. ["VIP","teren"]. */
   tags      Json     @default("[]")
+  /** VisionOne Care Box — monitoring + 24/7 podpora (brez VMS za stranko). */
+  careBoxEnabled Boolean @default(false)
+  /** SLA: standard | priority | critical (prazno = ni nastavljeno). */
+  careSlaTier    String  @default("")
+  careRemoteNotes String @db.Text @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -350,6 +355,8 @@ model TelemetryAgent {
   configVersion Int        @default(1)
   lastConfigAt DateTime?
   lastError   String       @default("")
+  /** standard | care_box */
+  agentKind   String       @default("standard")
   devices    DeviceProbe[]
   checks     DeviceCheck[]
   jobs       AgentJob[]

@@ -23,6 +23,7 @@ const LABELS: Record<string, string> = {
   racun: "Moj račun",
   "rack-dizajner": "Rack dizajner",
   "kamera-definicije": "RTSP definicije",
+  "care-box": "Care Box",
 };
 
 export function PortalBreadcrumbs() {

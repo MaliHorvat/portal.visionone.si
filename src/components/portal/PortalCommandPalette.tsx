@@ -18,6 +18,8 @@ const NAV = [
   { href: "/portal/inventar", label: "Inventar" },
   { href: "/portal/rack-dizajner", label: "Rack dizajner" },
   { href: "/portal/agents", label: "Agenti" },
+  { href: "/portal/care-box", label: "Care Box" },
+  { href: "/portal/vms", label: "VisionOne VMS" },
   { href: "/portal/nastavitve", label: "Nastavitve" },
   { href: "/portal/racun", label: "Moj račun" },
 ];
@@ -141,10 +143,10 @@ export function PortalCommandPalette({ open, onClose }: Props) {
             </li>
           ))}
         </ul>
-        <p className="border-t border-[var(--vo-border)] px-3 py-2 text-[10px] text-[var(--vo-muted)]">
-          <kbd className="rounded border border-[var(--vo-border)] px-1">Esc</kbd> zapri ·{" "}
-          <kbd className="rounded border border-[var(--vo-border)] px-1">Ctrl</kbd>+
-          <kbd className="rounded border border-[var(--vo-border)] px-1">K</kbd> odpri
+        <p className="flex flex-wrap items-center gap-2 border-t border-[var(--vo-border)] px-3 py-2 text-[10px] text-[var(--vo-muted)]">
+          <span className="vo-kbd">Esc</span> zapri
+          <span className="vo-kbd">Ctrl</span>
+          <span className="vo-kbd">K</span> odpri
         </p>
       </div>
     </div>

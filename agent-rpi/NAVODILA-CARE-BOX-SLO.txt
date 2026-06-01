@@ -1,0 +1,19 @@
+VisionOne Care Box — navodila za monterja (INTERNO)
+====================================================
+
+Ta paket je pripravljen za stranko: {{CLIENT_NAME}}
+Namembnost: 24/7 monitoring in oddaljena podpora VisionOne — stranka ne nastavlja ničesar.
+
+KORAKI:
+1. Raspberry Pi Imager → uradni Raspberry Pi OS 64-bit na microSD.
+2. Pred prvim vklopom na boot particijo kopirajte vse iz ZIP (boot/ + opt/).
+3. Priklop ethernet na ISTO omrežje kot NVR/kamere, napajanje.
+4. Po 5–15 min preverite v portalu: Stranka → zavihek Care Box (zeleno = online).
+
+Podatki (že v bazi, ne posredujte stranki):
+  Care Box ID:  {{AGENT_ID}}
+  Claim:        {{CLAIM_CODE}} (velja do {{CLAIM_EXPIRES}})
+  Portal API:   {{PORTAL_URL}}
+
+Stranka dobi samo: “VisionOne Box” + kontakt za podporo.
+Za oddaljen dostop uporabite tunnel/VPN po vašem postopku — zapišite v portalu pod “Opombe za dostop”.

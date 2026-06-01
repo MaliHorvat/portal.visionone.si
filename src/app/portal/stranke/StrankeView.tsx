@@ -7,6 +7,7 @@ import { Star } from "lucide-react";
 import { exportClientsCsv } from "@/lib/portal-export";
 import { getFavoriteClientIds, getRecentClients, toggleFavoriteClient } from "@/lib/portal-prefs";
 import { PortalContextMenu, type ContextMenuItem } from "@/components/portal/PortalContextMenu";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { clientProfilePath } from "@/lib/client-url";
 import type { ClientSummary, SubscriptionPackageDto } from "@/lib/types";
@@ -230,25 +231,24 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--vo-fg)]">Stranke</h1>
-          <p className="mt-1 text-sm text-[var(--vo-muted)]">
-            Seznam strank in paketov.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setError(null);
-            setShowForm((s) => !s);
-            setEditClientId(null);
-          }}
-          className="rounded-lg bg-[var(--vo-accent)] px-3 py-2 text-sm font-semibold text-white"
-        >
-          {showForm ? "Prekliči" : "Nova stranka"}
-        </button>
-      </div>
+      <PortalPageHeader
+        kicker="Vodenje"
+        title="Objekti & stranke"
+        description="Seznam lokacij, paketov in hitri dostop do profila, Care Box-a in sheme."
+        actions={
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setShowForm((s) => !s);
+              setEditClientId(null);
+            }}
+            className="vo-btn-primary px-4 py-2 text-sm"
+          >
+            {showForm ? "Prekliči" : "Nova stranka"}
+          </button>
+        }
+      />
 
       {loadError ? (
         <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900">

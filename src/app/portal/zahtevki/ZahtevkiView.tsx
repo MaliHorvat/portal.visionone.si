@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download } from "lucide-react";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
 import { exportServiceRequestsCsv } from "@/lib/portal-export";
 import type { ClientSummary, ServiceRequest, ServiceRequestPriority, ServiceRequestStatus } from "@/lib/types";
 
@@ -104,21 +105,16 @@ export function ZahtevkiView({ requests, clients, dbConfigured }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--vo-fg)]">Zahtevki</h1>
-          <p className="mt-1 text-sm text-[var(--vo-muted)]">
-            Interni operativni zahtevki za vsakodnevno delo.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowForm((s) => !s)}
-          className="rounded-lg bg-[var(--vo-accent)] px-3 py-2 text-sm font-semibold text-white"
-        >
-          {showForm ? "Prekliči" : "Nov zahtevek"}
-        </button>
-      </div>
+      <PortalPageHeader
+        kicker="Operativa"
+        title="Zahtevki"
+        description="Interni inbox — statusi, prioritete in povezava s stranko."
+        actions={
+          <button type="button" onClick={() => setShowForm((s) => !s)} className="vo-btn-primary px-4 py-2 text-sm">
+            {showForm ? "Prekliči" : "Nov zahtevek"}
+          </button>
+        }
+      />
 
       {!dbConfigured ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">

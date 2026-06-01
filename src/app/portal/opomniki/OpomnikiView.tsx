@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
 import { exportRemindersCsv } from "@/lib/portal-export";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { mockClientPortalClientId } from "@/lib/mock-data";
@@ -106,23 +107,18 @@ export function OpomnikiView({ reminders, clients, dbConfigured }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--vo-fg)]">Opomniki za vzdrževanje</h1>
-          <p className="mt-1 text-sm text-[var(--vo-muted)]">
-            Redni servisi in čiščenja.
-          </p>
-        </div>
-        {role === "admin" ? (
-          <button
-            type="button"
-            onClick={() => setShowForm((s) => !s)}
-            className="rounded-lg bg-[var(--vo-accent)] px-3 py-2 text-sm font-semibold text-white"
-          >
-            {showForm ? "Prekliči" : "Nov opomnik"}
-          </button>
-        ) : null}
-      </div>
+      <PortalPageHeader
+        kicker="Vzdrževanje"
+        title="Opomniki"
+        description="Redni servisi, čiščenje kamer in roki po strankah."
+        actions={
+          role === "admin" ? (
+            <button type="button" onClick={() => setShowForm((s) => !s)} className="vo-btn-primary px-4 py-2 text-sm">
+              {showForm ? "Prekliči" : "Nov opomnik"}
+            </button>
+          ) : null
+        }
+      />
 
       {!dbConfigured ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">

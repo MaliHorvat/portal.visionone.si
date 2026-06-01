@@ -15,10 +15,12 @@ import {
   HelpCircle,
   LayoutDashboard,
   LayoutGrid,
+  Moon,
   Package,
   RadioTower,
   Search,
   Settings,
+  Sun,
   Shield,
   StickyNote,
   UserCircle,
@@ -34,6 +36,7 @@ import { usePortalRole } from "@/context/PortalRoleContext";
 import type { NavPermissionKey } from "@/lib/nav-permissions";
 import { getSidebarCollapsed, setSidebarCollapsed } from "@/lib/portal-prefs";
 import { roleLabel } from "@/lib/portal-roles";
+import { useTheme } from "@/components/theme/ThemeProvider";
 import { usePortalNavCounts } from "@/lib/use-portal-counts";
 
 type NavItem = { href: string; label: string; icon: React.ElementType; permission: NavPermissionKey; adminOnly?: boolean };
@@ -53,6 +56,7 @@ const navSections: NavSection[] = [
       { href: "/portal/zahtevki", label: "Zahtevki", icon: Wrench, permission: "service-requests" },
       { href: "/portal/ponudbe", label: "Ponudbe", icon: FileText, permission: "offers", adminOnly: true },
       { href: "/portal/opomniki", label: "Opomniki", icon: Bell, permission: "dashboard" },
+      { href: "/portal/care-box", label: "Care Box", icon: RadioTower, permission: "agents", adminOnly: true },
       { href: "/portal/cas", label: "Sledenje času", icon: Clock, permission: "time-tracking" },
       { href: "/portal/belezke", label: "Beležke", icon: StickyNote, permission: "dashboard" },
     ],
@@ -95,6 +99,8 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const navCounts = usePortalNavCounts(true);
+  const { resolved, toggle: toggleTheme } = useTheme();
+  const [careOffline, setCareOffline] = useState(0);
 
   const current = useMemo(() => {
     const qs = searchParams.toString();
@@ -153,8 +159,22 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   function navBadge(href: string): number | null {
     if (href === "/portal/zahtevki" && navCounts.openRequests > 0) return navCounts.openRequests;
     if (href === "/portal/opomniki" && navCounts.overdueReminders > 0) return navCounts.overdueReminders;
+    if (href === "/portal/care-box" && careOffline > 0) return careOffline;
     return null;
   }
+
+  useEffect(() => {
+    if (role !== "admin") return;
+    const load = () => {
+      void fetch("/api/portal/care-box", { credentials: "include" })
+        .then((r) => r.json())
+        .then((j: { counts?: { offline?: number } }) => setCareOffline(j.counts?.offline ?? 0))
+        .catch(() => setCareOffline(0));
+    };
+    load();
+    const id = window.setInterval(load, 60_000);
+    return () => window.clearInterval(id);
+  }, [role]);
 
   useEffect(() => {
     try {
@@ -358,18 +378,23 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex items-center justify-between gap-3 border-b border-[var(--vo-border)]/80 bg-[var(--vo-surface)]/90 px-4 py-2.5 backdrop-blur-md">
+        <header
+          className="flex items-center justify-between gap-3 border-b border-[var(--vo-border)]/80 px-4 py-2.5 backdrop-blur-xl"
+          style={{ background: "var(--vo-header-bg)" }}
+        >
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex min-w-0 items-center gap-2 md:hidden">
               <img src="/visionone-mark.png" alt="VisionOne" className="h-5 w-5 shrink-0 rounded object-contain" />
               <img src="/visionone-wordmark.png" alt="VisionOne" className="h-4 w-auto shrink-0 object-contain" />
             </div>
             <div className="min-w-0">
-              <p className="hidden truncate text-sm font-bold text-[var(--vo-fg)] md:block">VisionOne portal</p>
+              <p className="hidden truncate text-sm font-bold tracking-tight text-[var(--vo-fg)] md:block">
+                VisionOne Portal
+              </p>
               <p className="truncate text-xs text-[var(--vo-muted)]">
-                Vloga:{" "}
-                <span className="inline-flex rounded-md bg-[var(--vo-accent-muted)] px-1.5 py-0.5 font-semibold text-[var(--vo-accent)]">
-                  {roleLabel(role)}
+                <span className="vo-badge vo-badge-accent mr-1.5">{roleLabel(role)}</span>
+                <span className="hidden sm:inline">
+                  {new Date().toLocaleDateString("sl-SI", { weekday: "short", day: "numeric", month: "short" })}
                 </span>
               </p>
             </div>
@@ -377,11 +402,20 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           <div className="relative flex items-center gap-2">
             <button
               type="button"
+              onClick={toggleTheme}
+              className="vo-btn-ghost p-2"
+              title={resolved === "dark" ? "Svetla tema" : "Temna tema"}
+              aria-label="Preklopi temo"
+            >
+              {resolved === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
               onClick={() => setCommandOpen(true)}
               className="vo-btn-ghost hidden items-center gap-1.5 px-2.5 py-1.5 text-xs md:inline-flex"
               title="Ctrl+K"
             >
-              <Search className="h-3.5 w-3.5" /> Paleta
+              <Search className="h-3.5 w-3.5" /> Paleta <span className="vo-kbd ml-1 hidden lg:inline">⌘K</span>
             </button>
             <button
               type="button"
@@ -444,7 +478,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               </Link>
             ) : null}
             <form action="/api/portal-logout" method="post">
-              <button type="submit" className="vo-btn-ghost px-3 py-1.5 text-xs font-semibold">
+              <button type="submit" className="vo-btn-primary px-3 py-1.5 text-xs">
                 Odjava
               </button>
             </form>
@@ -486,8 +520,10 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="vo-portal-mesh min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
-          <PortalBreadcrumbs />
-          {children}
+          <div className="vo-page-content vo-page-enter">
+            <PortalBreadcrumbs />
+            {children}
+          </div>
         </div>
       </div>
       <PortalCommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />

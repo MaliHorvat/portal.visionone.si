@@ -1,7 +1,7 @@
 "use client";
 
 import { Show, SignIn, SignOutButton, useUser } from "@clerk/nextjs";
-import { ArrowRight, Check, Lock, ShieldCheck, User } from "lucide-react";
+import { ArrowRight, Check, Lock, ShieldCheck, Sparkles, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
@@ -13,12 +13,12 @@ type Props = {
 
 const clerkAppearance = {
   variables: {
-    colorPrimary: "#0d7a7a",
-    colorBackground: "#ffffff",
-    colorInputBackground: "#f8fafc",
-    colorInputText: "#0c1222",
-    colorText: "#0c1222",
-    colorTextSecondary: "#5c6578",
+    colorPrimary: "#0b6e6e",
+    colorBackground: "transparent",
+    colorInputBackground: "var(--vo-surface-2)",
+    colorInputText: "var(--vo-fg)",
+    colorText: "var(--vo-fg)",
+    colorTextSecondary: "var(--vo-muted)",
     borderRadius: "0.75rem",
     fontFamily: "var(--font-inter), ui-sans-serif, system-ui, sans-serif",
   },
@@ -29,19 +29,17 @@ const clerkAppearance = {
     headerTitle: "hidden",
     headerSubtitle: "hidden",
     socialButtonsBlockButton:
-      "border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50 transition",
-    socialButtonsBlockButtonText: "text-slate-800 font-medium",
-    dividerLine: "bg-slate-200",
-    dividerText: "text-slate-400 text-xs",
-    formFieldLabel: "text-slate-600 text-xs font-semibold uppercase tracking-wide",
-    formButtonPrimary:
-      "bg-[#0d7a7a] text-white font-bold hover:bg-[#0a6363] shadow-md shadow-teal-900/15 transition",
-    footerActionLink: "text-[#0d7a7a] font-semibold hover:text-[#0a6363]",
-    identityPreviewText: "text-slate-900",
-    identityPreviewEditButton: "text-[#0d7a7a]",
-    formFieldInput:
-      "border-slate-200 bg-slate-50 text-slate-900 focus:border-[#0d7a7a] focus:ring-2 focus:ring-[#0d7a7a]/20",
-    otpCodeFieldInput: "border-slate-200 bg-slate-50",
+      "border border-[var(--vo-border)] bg-[var(--vo-surface)] text-[var(--vo-fg)] shadow-sm hover:bg-[var(--vo-surface-2)] transition",
+    socialButtonsBlockButtonText: "text-[var(--vo-fg)] font-medium",
+    dividerLine: "bg-[var(--vo-border)]",
+    dividerText: "text-[var(--vo-muted)] text-xs",
+    formFieldLabel: "text-[var(--vo-muted)] text-xs font-semibold uppercase tracking-wide",
+    formButtonPrimary: "vo-btn-primary w-full py-2.5 text-sm",
+    footerActionLink: "text-[var(--vo-accent)] font-semibold hover:opacity-90",
+    identityPreviewText: "text-[var(--vo-fg)]",
+    identityPreviewEditButton: "text-[var(--vo-accent)]",
+    formFieldInput: "vo-input w-full py-2.5 text-sm",
+    otpCodeFieldInput: "vo-input",
     footer: "hidden",
   },
 } as const;
@@ -53,7 +51,7 @@ function StepBadge({ step, label, state }: { step: number; label: string; state:
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
       <span
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition ${stateClass}`}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold transition ${stateClass}`}
       >
         {state === "done" ? <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden /> : step}
       </span>
@@ -96,24 +94,27 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
   }, [showAccessToast]);
 
   return (
-    <div className="vo-login-card overflow-hidden rounded-2xl border border-[var(--vo-border)]/80">
-      <div className="h-1 bg-gradient-to-r from-[#0d7a7a] via-cyan-500 to-[#0a6363]" aria-hidden />
+    <div className="vo-login-card vo-page-enter overflow-hidden rounded-2xl border border-[var(--vo-border)]">
+      <div className="h-1.5 bg-[var(--vo-accent-gradient)]" aria-hidden />
 
       <div className="p-6 sm:p-8">
         {showAccessToast ? (
-          <div className="mb-5 flex items-start gap-3 rounded-xl border border-[var(--vo-ok-muted)] bg-[var(--vo-ok-muted)] px-4 py-3 text-sm text-[var(--vo-ok)]">
+          <div className="vo-toast-enter mb-5 flex items-start gap-3 rounded-xl border border-[var(--vo-ok)]/30 bg-[var(--vo-ok-muted)] px-4 py-3 text-sm text-[var(--vo-ok)]">
             <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <span>Prijava v Clerk uspešna. Zahteva poslana administratorju.</span>
           </div>
         ) : null}
 
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--vo-accent-muted)] ring-1 ring-[var(--vo-accent)]/20">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--vo-accent-muted)] ring-1 ring-[var(--vo-accent)]/25">
             <img src="/visionone-mark.png" alt="" className="h-9 w-9 object-contain" />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--vo-accent)]">VisionOne</p>
-            <h1 className="text-xl font-bold tracking-tight text-[var(--vo-fg)]">Portal</h1>
+            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--vo-accent)]">
+              <Sparkles className="h-3 w-3" aria-hidden />
+              VisionOne
+            </p>
+            <h1 className="vo-page-title text-xl">Portal</h1>
           </div>
         </div>
 
@@ -128,13 +129,11 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
         </div>
 
         {clerkError ? (
-          <p className="mt-5 rounded-xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Najprej dokončajte varnostno prijavo (Clerk). Brez nje portalni dostop ni na voljo.
-          </p>
+          <p className="vo-login-alert-warn mt-5">Najprej dokončajte varnostno prijavo (Clerk). Brez nje portalni dostop ni na voljo.</p>
         ) : null}
 
         <Show when="signed-out">
-          <div className="mt-6 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)]/80 p-4">
+          <div className="vo-card mt-6 border-[var(--vo-border)] bg-[var(--vo-surface-2)]/50 p-4">
             <div className="mb-4 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-[var(--vo-accent)]" aria-hidden />
               <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Korak 1 — Varnostna prijava</h2>
@@ -149,7 +148,7 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
 
         <Show when="signed-in">
           <div className="mt-6 space-y-4">
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--vo-ok-muted)] bg-[var(--vo-ok-muted)]/60 px-4 py-3">
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--vo-ok)]/25 bg-[var(--vo-ok-muted)] px-4 py-3">
               <div className="flex items-center gap-2 text-sm text-[var(--vo-ok)]">
                 <Check className="h-4 w-4 shrink-0" aria-hidden />
                 <span className="font-medium">Varnostna prijava OK</span>
@@ -170,7 +169,7 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
               </p>
             ) : null}
 
-            <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-sm">
+            <div className="vo-card p-5">
               <div className="mb-5 flex items-center gap-2">
                 <Lock className="h-4 w-4 text-[var(--vo-accent)]" aria-hidden />
                 <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Korak 2 — Portalna prijava</h2>
@@ -178,7 +177,7 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
 
               <form action="/api/portal-login" method="post" className="space-y-5">
                 <div className="space-y-2">
-                  <label htmlFor="username" className="text-xs font-semibold text-[var(--vo-muted)]">
+                  <label htmlFor="username" className="vo-section-label">
                     Uporabniško ime
                   </label>
                   <div className="relative">
@@ -193,13 +192,13 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
                       autoComplete="username"
                       required
                       placeholder="npr. uporabnik"
-                      className="w-full rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)]/50 py-3 pl-10 pr-4 text-sm text-[var(--vo-fg)] outline-none transition placeholder:text-[var(--vo-muted)]/70 focus:border-[var(--vo-accent)] focus:bg-[var(--vo-surface)] focus:ring-2 focus:ring-[var(--vo-accent)]/15"
+                      className="vo-input w-full py-3 pl-10 pr-4 text-sm"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="password" className="text-xs font-semibold text-[var(--vo-muted)]">
+                  <label htmlFor="password" className="vo-section-label">
                     Geslo
                   </label>
                   <div className="relative">
@@ -214,7 +213,7 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
                       autoComplete="current-password"
                       required
                       placeholder="••••••••"
-                      className="w-full rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)]/50 py-3 pl-10 pr-4 text-sm text-[var(--vo-fg)] outline-none transition placeholder:text-[var(--vo-muted)]/70 focus:border-[var(--vo-accent)] focus:bg-[var(--vo-surface)] focus:ring-2 focus:ring-[var(--vo-accent)]/15"
+                      className="vo-input w-full py-3 pl-10 pr-4 text-sm"
                     />
                   </div>
                 </div>
@@ -238,27 +237,26 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
                 </div>
 
                 {lockedError ? (
-                  <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    Račun je začasno zaklenjen. Poskusite ponovno čez približno 15 minut.
-                  </p>
+                  <p className="vo-login-alert-error">Račun je začasno zaklenjen. Poskusite ponovno čez približno 15 minut.</p>
                 ) : null}
 
                 {showError ? (
-                  <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <p className="vo-login-alert-error">
                     Napačno uporabniško ime ali geslo — ali račun še ni ustvarjen.
                   </p>
                 ) : null}
 
                 {configError ? (
-                  <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <p className="vo-login-alert-error">
                     Strežnik ne more podpisati seje. Na Vercelu nastavite{" "}
-                    <code className="rounded bg-red-100 px-1 text-xs">PORTAL_SESSION_SECRET</code> (vsaj 16 znakov).
+                    <code className="rounded bg-[var(--vo-danger-muted)] px-1 text-xs">PORTAL_SESSION_SECRET</code> (vsaj
+                    16 znakov).
                   </p>
                 ) : null}
 
                 <button
                   type="submit"
-                  className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0d7a7a] to-[#0a6363] py-3.5 text-sm font-bold tracking-wide text-white shadow-lg shadow-teal-900/20 transition hover:shadow-xl hover:shadow-teal-900/25 active:scale-[0.99]"
+                  className="vo-btn-primary group flex w-full items-center justify-center gap-2 py-3.5 text-sm tracking-wide"
                 >
                   Vstopi v portal
                   <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden />
