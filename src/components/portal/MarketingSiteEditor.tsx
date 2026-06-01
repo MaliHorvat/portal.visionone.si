@@ -100,9 +100,13 @@ export function MarketingSiteEditor() {
       showToast((j as { error?: string }).error ?? "Shranjevanje ni uspelo.", "err");
       return;
     }
-    const j = (await res.json()) as { content?: MarketingSiteContent };
+    const j = (await res.json()) as { content?: MarketingSiteContent; revalidated?: boolean };
     if (j.content) setContent(j.content);
-    showToast("Spletna stran shranjena.");
+    showToast(
+      j.revalidated
+        ? "Shranjeno. visionone.si se osvežuje (nekaj sekund)."
+        : "Shranjeno v bazo. Če se stran ne posodobi, preverite MARKETING_CONTENT_URL na visionone.si.",
+    );
   }, [content, showToast]);
 
   async function uploadImage(key: string, file: File) {
@@ -187,7 +191,7 @@ export function MarketingSiteEditor() {
       <PortalPageHeader
         kicker="Marketing"
         title="Urejanje visionone.si"
-        description="Strani, podstrani, bloki vsebine, gumbi in slike. Po shranitvi se javna stran osveži v ~1 minuti."
+        description="Strani, podstrani, bloki vsebine, gumbi in slike. Po Shrani se visionone.si osveži v ~15 s (če je nastavljen webhook)."
       />
 
       <div className="flex flex-wrap gap-2 border-b border-[var(--vo-border)] pb-3">

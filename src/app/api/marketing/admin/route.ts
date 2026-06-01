@@ -26,7 +26,23 @@ export async function PUT(request: Request) {
     if (!body.content) return jsonError("Manjka vsebina (content).", 400);
     const merged = mergeMarketingContent(body.content);
     const saved = await saveMarketingSiteContent(merged, session?.username ?? "admin");
-    return NextResponse.json({ content: saved, ok: true });
+
+    const revalidateUrl = process.env.MARKETING_REVALIDATE_URL?.trim();
+    const revalidateSecret = process.env.MARKETING_REVALIDATE_SECRET?.trim();
+    let revalidated = false;
+    if (revalidateUrl && revalidateSecret) {
+      try {
+        const rev = await fetch(revalidateUrl, {
+          method: "POST",
+          headers: { "x-revalidate-secret": revalidateSecret },
+        });
+        revalidated = rev.ok;
+      } catch (err) {
+        console.warn("[marketing] Osvežitev spletne strani ni uspela:", err);
+      }
+    }
+
+    return NextResponse.json({ content: saved, ok: true, revalidated });
   } catch (e) {
     console.error(e);
     const msg = e instanceof Error ? e.message : "";
