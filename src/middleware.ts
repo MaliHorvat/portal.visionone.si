@@ -13,6 +13,24 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
   const isPortalLogin = pathname === "/portal-login" || pathname.startsWith("/portal-login/");
   const isPortalApp = pathname === "/portal" || pathname.startsWith("/portal/");
+  const isMojApp = pathname === "/moj" || pathname.startsWith("/moj/");
+
+  const host = req.headers.get("host") ?? "";
+  const isMojHost = host.startsWith("moj.");
+
+  if (isMojHost && pathname === "/") {
+    return NextResponse.redirect(new URL("/moj", req.url));
+  }
+
+  if (isMojApp || (isMojHost && !pathname.startsWith("/api"))) {
+    if (!userId) {
+      return NextResponse.redirect(new URL("/portal-login?app=moj", req.url));
+    }
+    if (!portalOk) {
+      return NextResponse.redirect(new URL("/portal-login?app=moj", req.url));
+    }
+    return NextResponse.next();
+  }
 
   if (isPortalApp) {
     if (!userId) {
@@ -26,7 +44,8 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
   if (isPortalLogin) {
     if (portalOk) {
-      return NextResponse.redirect(new URL("/portal", req.url));
+      const dest = isMojHost || req.nextUrl.searchParams.get("app") === "moj" ? "/moj" : "/portal";
+      return NextResponse.redirect(new URL(dest, req.url));
     }
     return NextResponse.next();
   }

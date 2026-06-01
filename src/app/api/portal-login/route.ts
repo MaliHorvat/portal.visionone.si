@@ -93,7 +93,11 @@ export async function POST(request: Request) {
 
   const stayLoggedIn = String(formData.get("stay_logged_in") ?? "") === "1";
 
-  const response = NextResponse.redirect(new URL("/portal", request.url), { status: 303 });
+  const appTarget = String(formData.get("app") ?? "");
+  const url = new URL(request.url);
+  const wantsMoj = appTarget === "moj" || url.searchParams.get("app") === "moj" || granted.role === "viewer";
+  const dest = wantsMoj ? "/moj" : "/portal";
+  const response = NextResponse.redirect(new URL(dest, request.url), { status: 303 });
   response.cookies.set(PORTAL_SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

@@ -3,11 +3,12 @@ import { PortalLoginHero } from "../PortalLoginHero";
 import { LoginThemeToggle } from "../LoginThemeToggle";
 
 type PortalLoginPageProps = {
-  searchParams?: Promise<{ error?: string }>;
+  searchParams?: Promise<{ error?: string; app?: string }>;
 };
 
 export default async function PortalLoginPage({ searchParams }: PortalLoginPageProps) {
   const params = await searchParams;
+  const appMoj = params?.app === "moj";
   const showError = params?.error === "1";
   const configError = params?.error === "config";
   const clerkError = params?.error === "clerk";
@@ -31,6 +32,7 @@ export default async function PortalLoginPage({ searchParams }: PortalLoginPageP
             configError={configError}
             clerkError={clerkError}
             lockedError={lockedError}
+            appMoj={appMoj}
           />
           <p className="vo-login-footer">
             <a href="https://visionone.si" target="_blank" rel="noopener noreferrer">

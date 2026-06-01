@@ -9,6 +9,7 @@ type Props = {
   configError: boolean;
   clerkError: boolean;
   lockedError: boolean;
+  appMoj?: boolean;
 };
 
 const clerkAppearance = {
@@ -64,7 +65,7 @@ function StepBadge({ step, label, state }: { step: number; label: string; state:
   );
 }
 
-export function PortalLoginFlow({ showError, configError, clerkError, lockedError }: Props) {
+export function PortalLoginFlow({ showError, configError, clerkError, lockedError, appMoj }: Props) {
   const { user, isLoaded } = useUser();
   const accessSentRef = useRef(false);
   const [showNewUserNotice, setShowNewUserNotice] = useState(false);
@@ -178,6 +179,7 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
               </div>
 
               <form action="/api/portal-login" method="post" className="space-y-5">
+                {appMoj ? <input type="hidden" name="app" value="moj" /> : null}
                 <div className="space-y-2">
                   <label htmlFor="username" className="vo-section-label">
                     Uporabniško ime
@@ -260,7 +262,7 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
                   type="submit"
                   className="vo-btn-primary group flex w-full items-center justify-center gap-2 py-3.5 text-sm tracking-wide"
                 >
-                  Vstopi v portal
+                  {appMoj ? "Vstopi — Moj VisionOne" : "Vstopi v portal"}
                   <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden />
                 </button>
               </form>
