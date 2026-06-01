@@ -51,6 +51,14 @@ model Client {
   /** SLA: standard | priority | critical (prazno = ni nastavljeno). */
   careSlaTier    String  @default("")
   careRemoteNotes String @db.Text @default("")
+  /** Priporočen rok menjave diska (varnost / kapaciteta) — prikaz na moj.visionone.si. */
+  diskReplaceDueDate String @default("")
+  diskReplaceNote    String @db.Text @default("")
+  /** Preventivni pregled (zlasti brez vzdrževalnega paketa). */
+  preventiveInspectionDueDate String @default("")
+  preventiveInspectionNote    String @db.Text @default("")
+  /** Dodatne preventivne točke za stranko — JSON [{ id, title, dueDate, kind, note }]. */
+  clientPreventiveExtra Json @default("[]")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -263,6 +271,8 @@ model MaintenanceReminder {
   dueDate   String
   kind      String   @default("drugo")
   completed Boolean  @default(false)
+  /** Če false, opomnik ni viden na moj.visionone.si. */
+  clientVisible Boolean @default(true)
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

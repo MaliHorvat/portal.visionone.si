@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Calendar, Package, Phone, Wrench } from "lucide-react";
+import { ArrowRight, Calendar, HardDrive, Package, Phone, Shield, Wrench } from "lucide-react";
 import type { MojOverview } from "@/lib/repositories/moj-overview";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -56,6 +56,8 @@ export function MojDashboardView() {
   }
 
   const nextReminder = data.upcomingReminders[0];
+  const nextPreventive = data.preventiveItems[0];
+  const urgentPreventive = data.preventiveItems.filter((p) => p.urgent);
 
   return (
     <div className="space-y-6">
@@ -71,20 +73,60 @@ export function MojDashboardView() {
         poseg, vas kontaktiramo — vi ničesar ne nastavljate.
       </div>
 
+      {urgentPreventive.length > 0 ? (
+        <div className="rounded-2xl border border-amber-300/50 bg-amber-50 px-5 py-4 dark:border-amber-500/30 dark:bg-amber-950/40">
+          <p className="flex items-center gap-2 text-sm font-bold text-amber-900 dark:text-amber-100">
+            <Shield className="h-4 w-4" aria-hidden />
+            Priporočeni preventivni roki
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-amber-950/90 dark:text-amber-100/90">
+            {urgentPreventive.slice(0, 3).map((p) => (
+              <li key={p.id}>
+                <strong>{p.title}</strong> — {p.dueDate}
+              </li>
+            ))}
+          </ul>
+          <Link href="/moj/vzdrzevanje" className="mt-2 inline-flex text-xs font-semibold text-[var(--vo-accent)]">
+            Celoten načrt vzdrževanja
+          </Link>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="vo-card-hover rounded-2xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5">
           <Calendar className="h-6 w-6 text-[var(--vo-accent)]" aria-hidden />
           <p className="mt-3 text-xs font-bold uppercase tracking-wide text-[var(--vo-muted)]">Naslednji dogodek</p>
-          {nextReminder ? (
+          {nextPreventive || nextReminder ? (
             <>
-              <p className="mt-1 text-lg font-bold text-[var(--vo-fg)]">{nextReminder.title}</p>
-              <p className="text-sm text-[var(--vo-muted)]">Rok: {nextReminder.dueDate}</p>
+              <p className="mt-1 text-lg font-bold text-[var(--vo-fg)]">
+                {(nextPreventive ?? nextReminder)!.title}
+              </p>
+              <p className="text-sm text-[var(--vo-muted)]">
+                Rok: {(nextPreventive ?? nextReminder)!.dueDate}
+                {nextPreventive ? ` · ${nextPreventive.kindLabel}` : ""}
+              </p>
             </>
           ) : (
             <p className="mt-1 text-sm text-[var(--vo-muted)]">Trenutno ni razpisanih terminov.</p>
           )}
           <Link href="/moj/vzdrzevanje" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[var(--vo-accent)]">
             Vsi termini <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="vo-card-hover rounded-2xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5">
+          <HardDrive className="h-6 w-6 text-[var(--vo-accent)]" aria-hidden />
+          <p className="mt-3 text-xs font-bold uppercase tracking-wide text-[var(--vo-muted)]">Varnost arhiva</p>
+          {data.client.preventive.diskReplaceDueDate ? (
+            <>
+              <p className="mt-1 text-sm font-semibold text-[var(--vo-fg)]">Menjava diska priporočena</p>
+              <p className="text-sm text-[var(--vo-muted)]">Rok: {data.client.preventive.diskReplaceDueDate}</p>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-[var(--vo-muted)]">Trenutno brez načrtovane menjave diska.</p>
+          )}
+          <Link href="/moj/vzdrzevanje" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[var(--vo-accent)]">
+            Podrobnosti <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 

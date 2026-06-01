@@ -6,7 +6,18 @@ import { deleteReminder, reminderBelongsToSession, updateReminder } from "@/lib/
 import { sendTelegramNotification } from "@/lib/telegram-notify";
 import type { ReminderKind } from "@/lib/types";
 
-const VALID_KINDS: ReminderKind[] = ["ciscenje_kamer", "diski", "servis", "drugo"];
+const VALID_KINDS: ReminderKind[] = [
+  "ciscenje_kamer",
+  "diski",
+  "servis",
+  "menjava_diska",
+  "preventivni_pregled",
+  "fw_posodobitev",
+  "baterije_ups",
+  "pregled_sistema",
+  "certifikati",
+  "drugo",
+];
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -32,6 +43,7 @@ export async function PUT(request: Request, ctx: Ctx) {
       dueDate: body?.dueDate,
       kind,
       completed: body?.completed === undefined ? undefined : Boolean(body.completed),
+      clientVisible: body?.clientVisible === undefined ? undefined : Boolean(body.clientVisible),
     });
     void sendTelegramNotification(
       `🔁 Opomnik posodobljen\nNaslov: ${updated.title}\nStranka: ${updated.clientName || "-"}\nRok: ${updated.dueDate}\nStatus: ${updated.completed ? "opravljeno" : "odprto"}`,

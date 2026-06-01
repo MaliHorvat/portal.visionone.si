@@ -7,14 +7,10 @@ import { usePortalToast } from "@/context/PortalToastContext";
 import { exportRemindersCsv } from "@/lib/portal-export";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { mockClientPortalClientId } from "@/lib/mock-data";
+import { REMINDER_KIND_LABELS } from "@/lib/client-preventive";
 import type { ClientSummary, MaintenanceReminder, ReminderKind } from "@/lib/types";
 
-const KIND_LABELS: Record<ReminderKind, string> = {
-  ciscenje_kamer: "čiščenje kamer",
-  diski: "diski",
-  servis: "servis",
-  drugo: "drugo",
-};
+const KIND_LABELS = REMINDER_KIND_LABELS;
 
 type Props = {
   reminders: MaintenanceReminder[];
@@ -63,6 +59,7 @@ export function OpomnikiView({ reminders, clients, dbConfigured, onRemindersChan
       title: String(form.get("title") ?? ""),
       dueDate: String(form.get("dueDate") ?? ""),
       kind: String(form.get("kind") ?? "drugo"),
+      clientVisible: form.get("clientVisible") === "on",
     };
     const res = await fetch("/api/reminders", {
       method: "POST",
@@ -194,10 +191,11 @@ export function OpomnikiView({ reminders, clients, dbConfigured, onRemindersChan
               ))}
             </select>
             <select name="kind" defaultValue="drugo" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm">
-              <option value="ciscenje_kamer">Čiščenje kamer</option>
-              <option value="diski">Diski</option>
-              <option value="servis">Servis</option>
-              <option value="drugo">Drugo</option>
+              {(Object.keys(KIND_LABELS) as ReminderKind[]).map((k) => (
+                <option key={k} value={k}>
+                  {KIND_LABELS[k]}
+                </option>
+              ))}
             </select>
             <input
               name="title"
@@ -211,6 +209,10 @@ export function OpomnikiView({ reminders, clients, dbConfigured, onRemindersChan
               required
               className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
             />
+            <label className="inline-flex items-center gap-2 text-xs text-[var(--vo-muted)] md:col-span-2">
+              <input type="checkbox" name="clientVisible" defaultChecked />
+              Prikaži na moj.visionone.si
+            </label>
           </div>
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
           <button
@@ -242,6 +244,7 @@ export function OpomnikiView({ reminders, clients, dbConfigured, onRemindersChan
               </p>
               <p className="text-xs text-[var(--vo-muted)]">
                 {r.clientName} · {KIND_LABELS[r.kind]}
+                {!r.clientVisible ? " · samo interno" : " · moj portal"}
               </p>
             </div>
             <div className="flex items-center gap-3">

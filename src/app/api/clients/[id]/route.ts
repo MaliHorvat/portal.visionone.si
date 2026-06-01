@@ -33,6 +33,30 @@ export async function PUT(request: Request, ctx: Ctx) {
     const tags = Array.isArray(tagsRaw)
       ? tagsRaw.filter((x: unknown): x is string => typeof x === "string").map((t) => t.trim()).filter(Boolean)
       : undefined;
+    const preventiveRaw = body?.preventive;
+    const preventive =
+      preventiveRaw && typeof preventiveRaw === "object"
+        ? {
+            diskReplaceDueDate:
+              preventiveRaw.diskReplaceDueDate !== undefined
+                ? String(preventiveRaw.diskReplaceDueDate ?? "")
+                : undefined,
+            diskReplaceNote:
+              preventiveRaw.diskReplaceNote !== undefined
+                ? String(preventiveRaw.diskReplaceNote ?? "")
+                : undefined,
+            preventiveInspectionDueDate:
+              preventiveRaw.preventiveInspectionDueDate !== undefined
+                ? String(preventiveRaw.preventiveInspectionDueDate ?? "")
+                : undefined,
+            preventiveInspectionNote:
+              preventiveRaw.preventiveInspectionNote !== undefined
+                ? String(preventiveRaw.preventiveInspectionNote ?? "")
+                : undefined,
+            extraItems: Array.isArray(preventiveRaw.extraItems) ? preventiveRaw.extraItems : undefined,
+          }
+        : undefined;
+
     const updated = await updateClient(
       id,
       {
@@ -46,6 +70,7 @@ export async function PUT(request: Request, ctx: Ctx) {
         topologyData: body?.topologyData,
         rackData: body?.rackData,
         tags,
+        preventive,
       },
       session?.username ?? "",
     );

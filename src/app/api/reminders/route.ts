@@ -7,7 +7,18 @@ import { createReminder, listRemindersForSession } from "@/lib/repositories/remi
 import { sendTelegramNotification } from "@/lib/telegram-notify";
 import type { ReminderKind } from "@/lib/types";
 
-const VALID_KINDS: ReminderKind[] = ["ciscenje_kamer", "diski", "servis", "drugo"];
+const VALID_KINDS: ReminderKind[] = [
+  "ciscenje_kamer",
+  "diski",
+  "servis",
+  "menjava_diska",
+  "preventivni_pregled",
+  "fw_posodobitev",
+  "baterije_ups",
+  "pregled_sistema",
+  "certifikati",
+  "drugo",
+];
 
 export async function GET(request: NextRequest) {
   const guard = await requirePortalSession();
@@ -15,7 +26,10 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getPortalSession();
     const clientId = request.nextUrl.searchParams.get("clientId") ?? undefined;
-    const reminders = await listRemindersForSession(session ?? undefined, clientId ?? undefined);
+    const clientVisibleOnly = session?.role === "viewer";
+    const reminders = await listRemindersForSession(session ?? undefined, clientId ?? undefined, {
+      clientVisibleOnly,
+    });
     return NextResponse.json({ reminders });
   } catch (e) {
     console.error(e);
@@ -46,6 +60,7 @@ export async function POST(request: Request) {
       dueDate,
       kind,
       completed: Boolean(body?.completed),
+      clientVisible: body?.clientVisible !== false,
     });
     void sendTelegramNotification(
       `🗓️ Nov opomnik\nNaslov: ${created.title}\nStranka: ${created.clientName || "-"}\nRok: ${created.dueDate}\nTip: ${created.kind}`,

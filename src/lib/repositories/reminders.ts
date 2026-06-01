@@ -3,9 +3,43 @@ import { mockReminders } from "@/lib/mock-data";
 import type { PortalSessionPayload } from "@/lib/portal-session-verify";
 import type { MaintenanceReminder, ReminderKind } from "@/lib/types";
 
+const VALID_KINDS: ReminderKind[] = [
+  "ciscenje_kamer",
+  "diski",
+  "servis",
+  "menjava_diska",
+  "preventivni_pregled",
+  "fw_posodobitev",
+  "baterije_ups",
+  "pregled_sistema",
+  "certifikati",
+  "drugo",
+];
+
 function mapKind(k: string): ReminderKind {
-  if (k === "ciscenje_kamer" || k === "diski" || k === "servis" || k === "drugo") return k;
-  return "drugo";
+  return VALID_KINDS.includes(k as ReminderKind) ? (k as ReminderKind) : "drugo";
+}
+
+function mapRow(r: {
+  id: string;
+  clientId: string;
+  title: string;
+  dueDate: string;
+  kind: string;
+  completed: boolean;
+  clientVisible?: boolean;
+  client?: { name: string } | null;
+}): MaintenanceReminder {
+  return {
+    id: r.id,
+    clientId: r.clientId,
+    clientName: r.client?.name ?? "",
+    title: r.title,
+    dueDate: r.dueDate,
+    kind: mapKind(r.kind),
+    completed: r.completed,
+    clientVisible: r.clientVisible !== false,
+  };
 }
 
 export async function listReminders(clientId?: string): Promise<MaintenanceReminder[]> {
@@ -18,41 +52,30 @@ export async function listReminders(clientId?: string): Promise<MaintenanceRemin
     include: { client: { select: { name: true } } },
     orderBy: { dueDate: "asc" },
   });
-  return rows.map((r) => ({
-    id: r.id,
-    clientId: r.clientId,
-    clientName: r.client?.name ?? "",
-    title: r.title,
-    dueDate: r.dueDate,
-    kind: mapKind(r.kind),
-    completed: r.completed,
-  }));
+  return rows.map(mapRow);
 }
 
 export async function listRemindersForSession(
   session?: Pick<PortalSessionPayload, "role" | "username">,
   clientId?: string,
+  opts?: { clientVisibleOnly?: boolean },
 ): Promise<MaintenanceReminder[]> {
-  if (!isDbConfigured() || !prisma) return listReminders(clientId);
+  if (!isDbConfigured() || !prisma) {
+    const all = await listReminders(clientId);
+    return opts?.clientVisibleOnly ? all.filter((r) => r.clientVisible) : all;
+  }
   const owner = session?.username?.trim();
   const where = {
     ...(clientId ? { clientId } : {}),
     client: { ownerUsername: owner ?? "__portal_no_owner__" },
+    ...(opts?.clientVisibleOnly ? { clientVisible: true } : {}),
   };
   const rows = await prisma.maintenanceReminder.findMany({
     where,
     include: { client: { select: { name: true } } },
     orderBy: { dueDate: "asc" },
   });
-  return rows.map((r) => ({
-    id: r.id,
-    clientId: r.clientId,
-    clientName: r.client?.name ?? "",
-    title: r.title,
-    dueDate: r.dueDate,
-    kind: mapKind(r.kind),
-    completed: r.completed,
-  }));
+  return rows.map(mapRow);
 }
 
 export interface UpsertReminderInput {
@@ -61,6 +84,7 @@ export interface UpsertReminderInput {
   dueDate: string;
   kind?: ReminderKind;
   completed?: boolean;
+  clientVisible?: boolean;
 }
 
 export async function createReminder(data: UpsertReminderInput): Promise<MaintenanceReminder> {
@@ -74,18 +98,11 @@ export async function createReminder(data: UpsertReminderInput): Promise<Mainten
       dueDate: data.dueDate,
       kind: data.kind ?? "drugo",
       completed: data.completed ?? false,
+      clientVisible: data.clientVisible !== false,
     },
     include: { client: { select: { name: true } } },
   });
-  return {
-    id: row.id,
-    clientId: row.clientId,
-    clientName: row.client?.name ?? "",
-    title: row.title,
-    dueDate: row.dueDate,
-    kind: mapKind(row.kind),
-    completed: row.completed,
-  };
+  return mapRow(row);
 }
 
 export async function updateReminder(
@@ -103,18 +120,11 @@ export async function updateReminder(
       dueDate: data.dueDate,
       kind: data.kind,
       completed: data.completed,
+      clientVisible: data.clientVisible,
     },
     include: { client: { select: { name: true } } },
   });
-  return {
-    id: row.id,
-    clientId: row.clientId,
-    clientName: row.client?.name ?? "",
-    title: row.title,
-    dueDate: row.dueDate,
-    kind: mapKind(row.kind),
-    completed: row.completed,
-  };
+  return mapRow(row);
 }
 
 export async function deleteReminder(id: string): Promise<void> {

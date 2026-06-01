@@ -39,6 +39,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { getFavoriteClientIds, toggleFavoriteClient } from "@/lib/portal-prefs";
+import { ClientPreventivePanel } from "./ClientPreventivePanel";
 import { ClientProfileEditor } from "./ClientProfileEditor";
 import { ClientInternalNotes } from "./ClientInternalNotes";
 
@@ -220,6 +221,9 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
             </div>
             <div className="mt-3">
               <ClientProfileEditor ctx={ctx} onOpenPonudbe={() => selectTab("ponudbe")} />
+            </div>
+            <div className="mt-4">
+              <ClientPreventivePanel ctx={ctx} />
             </div>
             <ClientInternalNotes clientId={client.id} />
           </div>

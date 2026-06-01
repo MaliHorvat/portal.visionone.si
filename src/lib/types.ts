@@ -11,6 +11,31 @@ export interface SubscriptionPackageDto {
   description: string;
 }
 
+export type PreventiveItemKind =
+  | "menjava_diska"
+  | "preventivni_pregled"
+  | "fw_posodobitev"
+  | "baterije_ups"
+  | "pregled_sistema"
+  | "certifikati"
+  | "drugo";
+
+export interface ClientPreventiveExtraItem {
+  id: string;
+  title: string;
+  dueDate: string;
+  kind: PreventiveItemKind;
+  note: string;
+}
+
+export interface ClientPreventivePlan {
+  diskReplaceDueDate: string;
+  diskReplaceNote: string;
+  preventiveInspectionDueDate: string;
+  preventiveInspectionNote: string;
+  extraItems: ClientPreventiveExtraItem[];
+}
+
 export interface ClientSummary {
   id: string;
   /** Za URL /portal/stranke/[slug]; če null, se uporabi id. */
@@ -26,6 +51,7 @@ export interface ClientSummary {
   tags: string[];
   careBoxEnabled?: boolean;
   careSlaTier?: string;
+  preventive: ClientPreventivePlan;
 }
 
 export interface CameraDevice {
@@ -257,7 +283,17 @@ export interface InventoryItem {
   unit: string;
 }
 
-export type ReminderKind = "ciscenje_kamer" | "diski" | "servis" | "drugo";
+export type ReminderKind =
+  | "ciscenje_kamer"
+  | "diski"
+  | "servis"
+  | "menjava_diska"
+  | "preventivni_pregled"
+  | "fw_posodobitev"
+  | "baterije_ups"
+  | "pregled_sistema"
+  | "certifikati"
+  | "drugo";
 
 export interface MaintenanceReminder {
   id: string;
@@ -267,6 +303,8 @@ export interface MaintenanceReminder {
   dueDate: string;
   kind: ReminderKind;
   completed: boolean;
+  /** Vidno na moj.visionone.si */
+  clientVisible: boolean;
 }
 
 export type ServiceRequestStatus = "new" | "in_progress" | "waiting_customer" | "done";

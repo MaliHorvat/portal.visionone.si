@@ -30,6 +30,7 @@ export function StrankePageClient() {
           package: c.package,
           health: c.health,
           tags: c.tags ?? [],
+          preventive: c.preventive,
         })),
       );
       setPackages(mockPackages);

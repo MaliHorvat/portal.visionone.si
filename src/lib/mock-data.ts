@@ -1,6 +1,8 @@
+import { emptyClientPreventive } from "@/lib/client-preventive";
 import { slugifyName } from "./slug";
 import type {
   ClientDetail,
+  ClientPreventivePlan,
   DashboardStats,
   InventoryItem,
   MaintenanceReminder,
@@ -85,7 +87,12 @@ export const mockPackages: SubscriptionPackageDto[] = [
   { id: "pkg-proaktivni", name: "Proaktivni", price: 99, description: "24/7 proaktivna podpora in SLA." },
 ];
 
+function withPreventive(c: Omit<ClientDetail, "preventive">, preventive: Partial<ClientPreventivePlan>): ClientDetail {
+  return { ...c, preventive: { ...emptyClientPreventive(), ...preventive } };
+}
+
 const baseClients: ClientDetail[] = [
+  withPreventive(
   {
     id: "c1",
     slug: slugifyName("Logistika Kranj d.o.o."),
@@ -113,6 +120,20 @@ const baseClients: ClientDetail[] = [
     ],
   },
   {
+    diskReplaceDueDate: "2026-10-15",
+    diskReplaceNote: "Preventivna menjava diska v snemalniku zaradi zanesljivosti arhiva.",
+    extraItems: [
+      {
+        id: "pe-fw",
+        title: "Posodobitev firmware kamer",
+        dueDate: "2026-08-01",
+        kind: "fw_posodobitev",
+        note: "Priporočena letna posodobitev.",
+      },
+    ],
+  }),
+  withPreventive(
+  {
     id: "c2",
     slug: slugifyName("Retail Park Maribor"),
     name: "Retail Park Maribor",
@@ -139,6 +160,11 @@ const baseClients: ClientDetail[] = [
     ],
   },
   {
+    diskReplaceDueDate: "2026-06-20",
+    diskReplaceNote: "Disk v opozorilnem stanju — priporočena menjava.",
+  }),
+  withPreventive(
+  {
     id: "c3",
     slug: slugifyName("Stanovanjsko podjetje"),
     name: "Stanovanjsko podjetje",
@@ -146,7 +172,7 @@ const baseClients: ClientDetail[] = [
     contact: "Upravnik",
     phone: "+386 30 555 666",
     email: "uprava@stanovanja.si",
-    package: mockPackages[0],
+    package: null,
     health: "ok",
     tags: ["stanovanja"],
     cameras: [
@@ -160,6 +186,10 @@ const baseClients: ClientDetail[] = [
     ],
     disks: [{ id: "d5", label: "SSD", sizeTb: 8, installedAt: "2023-11-20", health: "ok" }],
   },
+  {
+    preventiveInspectionDueDate: "2026-07-01",
+    preventiveInspectionNote: "Letni preventivni pregled brez naročenega vzdrževalnega paketa.",
+  }),
 ];
 
 export function getMockClients(): ClientDetail[] {
@@ -227,6 +257,7 @@ export const mockReminders: MaintenanceReminder[] = [
     dueDate: "2026-05-12",
     kind: "ciscenje_kamer",
     completed: false,
+    clientVisible: true,
   },
   {
     id: "r2",
@@ -236,6 +267,7 @@ export const mockReminders: MaintenanceReminder[] = [
     dueDate: "2026-05-18",
     kind: "diski",
     completed: false,
+    clientVisible: true,
   },
   {
     id: "r3",
@@ -245,6 +277,7 @@ export const mockReminders: MaintenanceReminder[] = [
     dueDate: "2026-06-02",
     kind: "servis",
     completed: false,
+    clientVisible: true,
   },
 ];
 

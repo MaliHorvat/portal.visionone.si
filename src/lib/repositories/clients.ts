@@ -4,7 +4,9 @@ import { isPrismaJsonParseError, repairClientJsonColumns } from "@/lib/db-json-r
 import { appendClientProfileChanges } from "@/lib/repositories/client-profile";
 import { getMockClient, getMockClients } from "@/lib/mock-data";
 import type { PortalSessionPayload } from "@/lib/portal-session-verify";
+import { parseClientPreventiveExtra } from "@/lib/client-preventive";
 import { slugifyName } from "@/lib/slug";
+import type { ClientPreventivePlan } from "@/lib/types";
 import type {
   CameraDevice,
   ClientDetail,
@@ -93,6 +95,23 @@ function parseClientTags(raw: unknown): string[] {
   return raw.filter((x): x is string => typeof x === "string").map((t) => t.trim()).filter(Boolean);
 }
 
+function mapClientPreventive(c: DbClient): ClientPreventivePlan {
+  const ext = c as DbClient & {
+    diskReplaceDueDate?: string;
+    diskReplaceNote?: string;
+    preventiveInspectionDueDate?: string;
+    preventiveInspectionNote?: string;
+    clientPreventiveExtra?: unknown;
+  };
+  return {
+    diskReplaceDueDate: ext.diskReplaceDueDate ?? "",
+    diskReplaceNote: ext.diskReplaceNote ?? "",
+    preventiveInspectionDueDate: ext.preventiveInspectionDueDate ?? "",
+    preventiveInspectionNote: ext.preventiveInspectionNote ?? "",
+    extraItems: parseClientPreventiveExtra(ext.clientPreventiveExtra),
+  };
+}
+
 function mapClientSummary(c: DbClient): ClientSummary {
   const ext = c as DbClient & { careBoxEnabled?: boolean; careSlaTier?: string };
   return {
@@ -108,6 +127,7 @@ function mapClientSummary(c: DbClient): ClientSummary {
     tags: parseClientTags((c as { tags?: unknown }).tags),
     careBoxEnabled: Boolean(ext.careBoxEnabled),
     careSlaTier: ext.careSlaTier ?? "",
+    preventive: mapClientPreventive(c),
   };
 }
 
@@ -238,6 +258,7 @@ export async function listClients(): Promise<ClientSummary[]> {
       package: c.package,
       health: c.health,
       tags: c.tags ?? [],
+      preventive: c.preventive,
     }));
   }
   const rows = await findClientsForSummary();
@@ -351,6 +372,7 @@ export interface UpsertClientInput {
   tags?: string[];
   topologyData?: Prisma.InputJsonValue;
   rackData?: Prisma.InputJsonValue;
+  preventive?: Partial<ClientPreventivePlan>;
 }
 
 export async function createClient(data: UpsertClientInput): Promise<ClientDetail> {
@@ -437,6 +459,11 @@ export async function updateClient(
       health: true,
       packageId: true,
       tags: true,
+      diskReplaceDueDate: true,
+      diskReplaceNote: true,
+      preventiveInspectionDueDate: true,
+      preventiveInspectionNote: true,
+      clientPreventiveExtra: true,
     },
   });
   let newSlug: string | undefined;
@@ -457,6 +484,24 @@ export async function updateClient(
       topologyData: data.topologyData === undefined ? undefined : data.topologyData,
       rackData: data.rackData === undefined ? undefined : data.rackData,
       tags: data.tags === undefined ? undefined : (data.tags as unknown as Prisma.InputJsonValue),
+      diskReplaceDueDate:
+        data.preventive?.diskReplaceDueDate !== undefined
+          ? data.preventive.diskReplaceDueDate
+          : undefined,
+      diskReplaceNote:
+        data.preventive?.diskReplaceNote !== undefined ? data.preventive.diskReplaceNote : undefined,
+      preventiveInspectionDueDate:
+        data.preventive?.preventiveInspectionDueDate !== undefined
+          ? data.preventive.preventiveInspectionDueDate
+          : undefined,
+      preventiveInspectionNote:
+        data.preventive?.preventiveInspectionNote !== undefined
+          ? data.preventive.preventiveInspectionNote
+          : undefined,
+      clientPreventiveExtra:
+        data.preventive?.extraItems !== undefined
+          ? (data.preventive.extraItems as unknown as Prisma.InputJsonValue)
+          : undefined,
     },
     include: {
       package: true,
@@ -482,6 +527,16 @@ export async function updateClient(
     if (data.packageId !== undefined) push("packageId", prev.packageId ?? "", data.packageId ?? "");
     if (data.tags !== undefined) {
       push("tags", JSON.stringify(parseClientTags(prev.tags)), JSON.stringify(data.tags ?? []));
+    }
+    if (data.preventive?.diskReplaceDueDate !== undefined) {
+      push("diskReplaceDueDate", prev.diskReplaceDueDate, data.preventive.diskReplaceDueDate);
+    }
+    if (data.preventive?.preventiveInspectionDueDate !== undefined) {
+      push(
+        "preventiveInspectionDueDate",
+        prev.preventiveInspectionDueDate,
+        data.preventive.preventiveInspectionDueDate,
+      );
     }
     if (changes.length) await appendClientProfileChanges(id, actor.trim(), changes);
   }
