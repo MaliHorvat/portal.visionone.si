@@ -269,19 +269,19 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         }`}
         style={{ background: "var(--vo-sidebar-bg)" }}
       >
-        <div className="flex min-h-[3.25rem] items-center justify-between gap-1 border-b border-[var(--vo-border)] px-2.5 py-2">
+        <div className="flex min-h-[3.25rem] items-center gap-1 border-b border-[var(--vo-border)] px-2.5 py-2">
           <Link
             href="/portal"
-            className={`vo-brand-link flex min-w-0 flex-1 items-center overflow-hidden py-0.5 ${sidebarCollapsed ? "mx-auto flex-none justify-center" : ""}`}
+            className={`vo-brand-link flex min-w-0 items-center overflow-hidden py-0.5 ${sidebarCollapsed ? "mx-auto flex-none justify-center" : "flex-1"}`}
             aria-label="VisionOne — nadzorna plošča"
           >
-            <VisionOneLogo variant={sidebarCollapsed ? "mark" : "both"} size="sm" />
+            <VisionOneLogo variant={sidebarCollapsed ? "mark" : "both"} size="sm" className="w-full min-w-0" />
           </Link>
           {!sidebarCollapsed ? (
             <button
               type="button"
               onClick={toggleSidebar}
-              className="vo-btn-ghost p-1.5"
+              className="vo-btn-ghost shrink-0 p-1.5"
               title="Skrči"
             >
               <ChevronLeft className="h-4 w-4" />

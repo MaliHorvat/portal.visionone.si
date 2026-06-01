@@ -10,12 +10,12 @@ const SIZE_PRESETS: Record<
 > = {
   sm: {
     mark: "h-7 w-7 shrink-0 object-contain",
-    wordmark: "h-[0.85rem] w-auto max-w-[5.75rem] shrink object-contain object-left",
+    wordmark: "h-5 max-h-5 w-auto min-w-0 flex-1 object-contain object-left",
     gap: "gap-1.5",
     markW: 28,
     markH: 28,
-    wordW: 92,
-    wordH: 14,
+    wordW: 160,
+    wordH: 20,
   },
   md: {
     mark: "h-8 w-8 shrink-0 object-contain",

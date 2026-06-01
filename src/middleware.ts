@@ -1,4 +1,4 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+﻿import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
@@ -6,7 +6,9 @@ import { isPortalSessionCookieValid } from "@/lib/portal-session-verify";
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   const pathname = req.nextUrl.pathname;
-  const { userId } = await auth();
+  // Clerk je začasno izklopljen (portal uporablja samo interno sejo).
+  // const { userId } = await auth();
+  void auth;
 
   const sessionCookie = req.cookies.get(PORTAL_SESSION_COOKIE)?.value;
   const portalOk = await isPortalSessionCookieValid(sessionCookie);
@@ -23,9 +25,9 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   }
 
   if (isMojApp || (isMojHost && !pathname.startsWith("/api"))) {
-    if (!userId) {
-      return NextResponse.redirect(new URL("/portal-login?app=moj", req.url));
-    }
+    // if (!userId) {
+    //   return NextResponse.redirect(new URL("/portal-login?app=moj", req.url));
+    // }
     if (!portalOk) {
       return NextResponse.redirect(new URL("/portal-login?app=moj", req.url));
     }
@@ -33,9 +35,9 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   }
 
   if (isPortalApp) {
-    if (!userId) {
-      return NextResponse.redirect(new URL("/portal-login", req.url));
-    }
+    // if (!userId) {
+    //   return NextResponse.redirect(new URL("/portal-login", req.url));
+    // }
     if (!portalOk) {
       return NextResponse.redirect(new URL("/portal-login", req.url));
     }

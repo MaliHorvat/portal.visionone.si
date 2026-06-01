@@ -44,13 +44,22 @@ html.dark {
   height: auto;
 }
 
-.vo-brand-link .vo-brand-wordmark {
-  opacity: 0.95;
-}
-
-.vo-sidebar-brand .vo-brand,
 .vo-brand-link {
   align-items: center;
+}
+
+.vo-brand-link .vo-brand {
+  min-width: 0;
+  width: 100%;
+}
+
+.vo-brand-link .vo-brand-wordmark {
+  opacity: 0.95;
+  max-width: none !important;
+  width: auto;
+  height: 1.25rem;
+  object-fit: contain;
+  object-position: left center;
 }
 
 /* Svetla tema: temen logotip */

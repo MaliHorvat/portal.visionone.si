@@ -1,5 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
-import bcrypt from "bcryptjs";
+﻿import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { prisma, isDbConfigured } from "@/lib/db";
 import { PORTAL_SESSION_COOKIE } from "@/lib/portal-auth";
@@ -10,14 +9,18 @@ import { normalizeNavPermissions } from "@/lib/nav-permissions";
 import { appendAuditLog } from "@/lib/repositories/audit-log";
 import { logger } from "@/lib/logger";
 
+// import { auth } from "@clerk/nextjs/server";
+// Clerk je začasno izklopljen. Ko ga bomo ponovno vključili,
+// odkomentiramo import zgoraj in preverjanje userId spodaj.
+
 const MAX_FAILED = 5;
 const LOCK_MINUTES = 15;
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.redirect(new URL("/portal-login?error=clerk", request.url), { status: 303 });
-  }
+  // const { userId } = await auth();
+  // if (!userId) {
+  //   return NextResponse.redirect(new URL("/portal-login?error=clerk", request.url), { status: 303 });
+  // }
 
   const formData = await request.formData();
   const username = String(formData.get("username") ?? "").trim();
@@ -39,8 +42,6 @@ export async function POST(request: Request) {
       return NextResponse.redirect(new URL("/portal-login?error=locked", request.url), { status: 303 });
     }
     if (row && (await bcrypt.compare(password, row.passwordHash))) {
-      // V preteklosti so lahko obstajali zapisi z `isAdmin = true` in `role = viewer`.
-      // Za prijavo vedno obravnavamo tak račun kot admin.
       const effectiveRole: "admin" | "operator" | "viewer" = row.isAdmin ? "admin" : row.role;
       granted = {
         username: row.username,
@@ -54,7 +55,6 @@ export async function POST(request: Request) {
           failedLoginCount: 0,
           lockedUntil: null,
           lastLoginAt: new Date(),
-          // Samodejna sanacija neskladja role/isAdmin v bazi.
           ...(row.isAdmin && row.role !== "admin" ? { role: "admin" } : {}),
           ...(!row.isAdmin && row.role === "admin" ? { role: "viewer" } : {}),
         },
@@ -110,7 +110,6 @@ export async function POST(request: Request) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    /** Brez maxAge = sejni piškotek. Z »Ostani prijavljen« ~400 dni (skladno z žetonom). */
     ...(stayLoggedIn ? { maxAge: PORTAL_SESSION_REMEMBER_SEC } : { maxAge: PORTAL_SESSION_SHORT_SEC }),
   });
   return response;
