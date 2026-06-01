@@ -52,6 +52,7 @@ export type CareBoxOverviewRowDto = {
   agentExternalId: string | null;
   online: boolean;
   lastSeenAt: string | null;
+  devicesTotal: number;
   devicesOffline: number;
   lastError: string;
 };
@@ -202,6 +203,7 @@ export async function listCareBoxOverview(session?: PortalSessionPayload): Promi
 
   return clients.map((c) => {
     const agent = c.telemetryAgents[0] ?? null;
+    const devicesTotal = agent?.devices.length ?? 0;
     const devicesOffline = agent?.devices.filter((d) => d.status === "offline" || d.status === "alarm").length ?? 0;
     const online = agent ? isAgentOnline(agent.lastSeenAt) : false;
     return {
@@ -214,6 +216,7 @@ export async function listCareBoxOverview(session?: PortalSessionPayload): Promi
       agentExternalId: agent?.externalId ?? null,
       online,
       lastSeenAt: agent?.lastSeenAt?.toISOString() ?? null,
+      devicesTotal,
       devicesOffline,
       lastError: agent?.lastError ?? "",
     };

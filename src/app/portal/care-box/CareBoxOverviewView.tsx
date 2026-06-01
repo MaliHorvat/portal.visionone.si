@@ -132,10 +132,16 @@ export function CareBoxOverviewView() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {r.devicesOffline > 0 ? (
+                        {!r.agentExternalId ? (
+                          <span className="text-[var(--vo-muted)]">Ni agenta</span>
+                        ) : r.devicesTotal === 0 ? (
+                          <span className="text-[var(--vo-muted)]">
+                            {!r.online ? "Čakamo agenta" : "Brez tarč (IP)"}
+                          </span>
+                        ) : r.devicesOffline > 0 ? (
                           <span className="text-[var(--vo-warn)]">{r.devicesOffline} težav</span>
                         ) : (
-                          <span className="text-[var(--vo-muted)]">OK</span>
+                          <span className="text-[var(--vo-ok)]">Vse dosegljivo</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-[var(--vo-muted)]">

@@ -119,6 +119,29 @@ export function TabCareBox({ ctx }: { ctx: WorkspaceCtx }) {
 
   const agent = status?.agents[0];
   const online = status?.summary.online ?? false;
+  const devicesTotal = status?.summary.devicesTotal ?? 0;
+  const devicesOffline = status?.summary.devicesOffline ?? 0;
+
+  const deviceProbeHint = (() => {
+    if (devicesTotal === 0) {
+      if (!agent) return { text: "Še ni nameščen — prenesite paket za Raspberry Pi", tone: "muted" as const };
+      if (!online) return { text: "Agent offline — še ni podatkov o napravah", tone: "muted" as const };
+      return { text: "Ni tarč — vpišite IP-je kamer/NVR na stranki", tone: "warn" as const };
+    }
+    if (devicesOffline > 0) {
+      return { text: `${devicesOffline} offline / alarm`, tone: "danger" as const };
+    }
+    return { text: "Vse dosegljivo", tone: "ok" as const };
+  })();
+
+  const deviceProbeHintClass =
+    deviceProbeHint.tone === "ok"
+      ? "text-[var(--vo-ok)]"
+      : deviceProbeHint.tone === "danger"
+        ? "text-[var(--vo-danger)]"
+        : deviceProbeHint.tone === "warn"
+          ? "text-amber-700 dark:text-amber-300"
+          : "text-[var(--vo-muted)]";
 
   return (
     <div className="space-y-6">
@@ -174,16 +197,8 @@ export function TabCareBox({ ctx }: { ctx: WorkspaceCtx }) {
               </div>
               <div className="vo-stat-tile p-4">
                 <p className="text-xs text-[var(--vo-muted)]">Naprave (probe)</p>
-                <p className="mt-1 text-lg font-semibold text-[var(--vo-fg)]">
-                  {status?.summary.devicesTotal ?? 0} skupaj
-                </p>
-                {(status?.summary.devicesOffline ?? 0) > 0 ? (
-                  <p className="mt-1 text-xs text-[var(--vo-danger)]">
-                    {status?.summary.devicesOffline} offline / alarm
-                  </p>
-                ) : (
-                  <p className="mt-1 text-xs text-[var(--vo-ok)]">Vse dosegljivo</p>
-                )}
+                <p className="mt-1 text-lg font-semibold text-[var(--vo-fg)]">{devicesTotal} skupaj</p>
+                <p className={`mt-1 text-xs ${deviceProbeHintClass}`}>{deviceProbeHint.text}</p>
               </div>
               <div className="vo-stat-tile p-4">
                 <p className="text-xs text-[var(--vo-muted)]">SLA paket</p>
