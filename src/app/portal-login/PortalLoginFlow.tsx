@@ -1,7 +1,7 @@
 "use client";
 
 import { Show, SignIn, SignOutButton, useUser } from "@clerk/nextjs";
-import { Lock, User } from "lucide-react";
+import { ArrowRight, Check, Lock, ShieldCheck, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
@@ -15,36 +15,64 @@ const clerkAppearance = {
   variables: {
     colorPrimary: "#0d7a7a",
     colorBackground: "#ffffff",
-    colorInputBackground: "#ffffff",
+    colorInputBackground: "#f8fafc",
     colorInputText: "#0c1222",
     colorText: "#0c1222",
     colorTextSecondary: "#5c6578",
-    borderRadius: "0.5rem",
+    borderRadius: "0.75rem",
+    fontFamily: "var(--font-inter), ui-sans-serif, system-ui, sans-serif",
   },
   elements: {
     rootBox: "w-full",
-    card: "border border-slate-200 bg-white shadow-md",
-    headerTitle: "text-slate-900",
-    headerSubtitle: "text-slate-500",
-    socialButtonsBlockButton: "border-slate-200 bg-white text-slate-900",
-    socialButtonsBlockButtonText: "text-slate-900",
+    card: "border-0 bg-transparent shadow-none p-0 gap-4",
+    header: "hidden",
+    headerTitle: "hidden",
+    headerSubtitle: "hidden",
+    socialButtonsBlockButton:
+      "border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50 transition",
+    socialButtonsBlockButtonText: "text-slate-800 font-medium",
     dividerLine: "bg-slate-200",
-    dividerText: "text-slate-500",
-    formFieldLabel: "text-slate-600",
-    formButtonPrimary: "bg-[#0d7a7a] text-white font-bold hover:bg-[#0a6363]",
-    footerActionLink: "text-[#0d7a7a] hover:text-[#0a6363]",
+    dividerText: "text-slate-400 text-xs",
+    formFieldLabel: "text-slate-600 text-xs font-semibold uppercase tracking-wide",
+    formButtonPrimary:
+      "bg-[#0d7a7a] text-white font-bold hover:bg-[#0a6363] shadow-md shadow-teal-900/15 transition",
+    footerActionLink: "text-[#0d7a7a] font-semibold hover:text-[#0a6363]",
     identityPreviewText: "text-slate-900",
     identityPreviewEditButton: "text-[#0d7a7a]",
-    formFieldInput: "border-slate-300 bg-white text-slate-900",
-    otpCodeFieldInput: "border-slate-300 bg-white text-slate-900",
+    formFieldInput:
+      "border-slate-200 bg-slate-50 text-slate-900 focus:border-[#0d7a7a] focus:ring-2 focus:ring-[#0d7a7a]/20",
+    otpCodeFieldInput: "border-slate-200 bg-slate-50",
+    footer: "hidden",
   },
 } as const;
+
+function StepBadge({ step, label, state }: { step: number; label: string; state: "active" | "done" | "pending" }) {
+  const stateClass =
+    state === "active" ? "vo-login-step-active" : state === "done" ? "vo-login-step-done" : "vo-login-step-pending";
+
+  return (
+    <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
+      <span
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition ${stateClass}`}
+      >
+        {state === "done" ? <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden /> : step}
+      </span>
+      <span
+        className={`text-center text-[10px] font-semibold uppercase tracking-wide ${state === "active" ? "text-[var(--vo-accent)]" : "text-[var(--vo-muted)]"}`}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
 
 export function PortalLoginFlow({ showError, configError, clerkError, lockedError }: Props) {
   const { user, isLoaded } = useUser();
   const accessSentRef = useRef(false);
   const [showNewUserNotice, setShowNewUserNotice] = useState(false);
   const [showAccessToast, setShowAccessToast] = useState(false);
+
+  const clerkDone = isLoaded && !!user;
 
   useEffect(() => {
     if (!isLoaded || !user?.id || accessSentRef.current) return;
@@ -68,140 +96,178 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
   }, [showAccessToast]);
 
   return (
-    <div className="rounded-2xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-6 shadow-[var(--vo-card-shadow)] sm:p-8">
-      {showAccessToast ? (
-        <div className="mb-4 rounded-lg border border-[var(--vo-ok-muted)] bg-[var(--vo-ok-muted)] px-3 py-2 text-sm text-[var(--vo-ok)]">
-          Prijava v Clerk uspešna. Zahteva poslana administratorju.
+    <div className="vo-login-card overflow-hidden rounded-2xl border border-[var(--vo-border)]/80">
+      <div className="h-1 bg-gradient-to-r from-[#0d7a7a] via-cyan-500 to-[#0a6363]" aria-hidden />
+
+      <div className="p-6 sm:p-8">
+        {showAccessToast ? (
+          <div className="mb-5 flex items-start gap-3 rounded-xl border border-[var(--vo-ok-muted)] bg-[var(--vo-ok-muted)] px-4 py-3 text-sm text-[var(--vo-ok)]">
+            <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>Prijava v Clerk uspešna. Zahteva poslana administratorju.</span>
+          </div>
+        ) : null}
+
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--vo-accent-muted)] ring-1 ring-[var(--vo-accent)]/20">
+            <img src="/visionone-mark.png" alt="" className="h-9 w-9 object-contain" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--vo-accent)]">VisionOne</p>
+            <h1 className="text-xl font-bold tracking-tight text-[var(--vo-fg)]">Portal</h1>
+          </div>
         </div>
-      ) : null}
-      <div className="mb-6 flex items-center gap-3">
-        <img src="/visionone-mark.png" alt="VisionOne znak" className="h-12 w-12 rounded-lg object-contain" />
-        <img src="/visionone-wordmark.png" alt="VisionOne napis" className="h-8 w-auto object-contain" />
-      </div>
-      <p className="mb-8 max-w-sm text-2xl font-semibold tracking-tight text-[var(--vo-fg)]">Dobrodošli nazaj</p>
-      {clerkError ? (
-        <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-          Najprej se prijavite z Clerk (varnostna prijava). Brez nje portalna prijava ni na voljo.
-        </p>
-      ) : null}
 
-      <Show when="signed-out">
-        <p className="mb-4 text-sm leading-relaxed text-[var(--vo-muted)]">
-          Za dostop do portala se najprej prijavite z računom VisionOne (varnostna prijava preko Clerk).
+        <p className="mt-5 text-sm leading-relaxed text-[var(--vo-muted)]">
+          Dobrodošli. Prijavite se v dveh korakih — najprej varnostno preverjanje, nato portalni dostop.
         </p>
-        <SignIn appearance={clerkAppearance} />
-        <p className="mt-4 text-[11px] text-[var(--vo-muted)]">
-          Po prijavi bo zahteva za dostop posredovana skrbniku. Portalna prijava z uporabniškim imenom in geslom sledi v
-          naslednjem koraku.
-        </p>
-      </Show>
 
-      <Show when="signed-in">
-        <div className="space-y-6 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-4 py-4">
-          {showNewUserNotice ? (
-            <p className="text-sm leading-relaxed text-[var(--vo-fg)]">
-              Ko prejmete podatke od skrbnika, se spodaj prijavite.
+        <div className="mt-6 flex gap-2">
+          <StepBadge step={1} label="Varnost" state={clerkDone ? "done" : "active"} />
+          <div className="mt-4 h-px flex-1 self-start bg-[var(--vo-border)]" aria-hidden />
+          <StepBadge step={2} label="Portal" state={clerkDone ? "active" : "pending"} />
+        </div>
+
+        {clerkError ? (
+          <p className="mt-5 rounded-xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Najprej dokončajte varnostno prijavo (Clerk). Brez nje portalni dostop ni na voljo.
+          </p>
+        ) : null}
+
+        <Show when="signed-out">
+          <div className="mt-6 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)]/80 p-4">
+            <div className="mb-4 flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-[var(--vo-accent)]" aria-hidden />
+              <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Korak 1 — Varnostna prijava</h2>
+            </div>
+            <SignIn appearance={clerkAppearance} />
+            <p className="mt-4 text-[11px] leading-relaxed text-[var(--vo-muted)]">
+              Po prijavi bo zahteva posredovana skrbniku. Portalna prijava z uporabniškim imenom in geslom sledi v
+              koraku 2.
             </p>
-          ) : null}
-          <SignOutButton signOutOptions={{ redirectUrl: "/portal-login" }}>
-            <button
-              type="button"
-              className="text-xs font-medium text-[var(--vo-muted)] underline-offset-2 hover:text-[var(--vo-fg)] hover:underline"
-            >
-              Odjava (Clerk) — drug račun
-            </button>
-          </SignOutButton>
-        </div>
+          </div>
+        </Show>
 
-        <div className="mt-8 border-t border-[var(--vo-border)] pt-8">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--vo-muted)]">Portalna prijava</h2>
-          <p className="mt-1 text-xs text-[var(--vo-muted)]">Ko imate podatke od skrbnika.</p>
-
-          <form action="/api/portal-login" method="post" className="mt-6 space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="username" className="text-[11px] font-semibold uppercase tracking-wider text-[var(--vo-muted)]">
-                Uporabniško ime
-              </label>
-              <div className="relative">
-                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--vo-muted)]" aria-hidden />
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  autoComplete="username"
-                  required
-                  placeholder="Vnesite uporabniško ime"
-                  className="w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] py-3 pl-10 pr-3 text-sm text-[var(--vo-fg)] outline-none ring-0 placeholder:text-[var(--vo-muted)] focus:border-[var(--vo-accent)]"
-                />
+        <Show when="signed-in">
+          <div className="mt-6 space-y-4">
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--vo-ok-muted)] bg-[var(--vo-ok-muted)]/60 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-[var(--vo-ok)]">
+                <Check className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="font-medium">Varnostna prijava OK</span>
               </div>
+              <SignOutButton signOutOptions={{ redirectUrl: "/portal-login" }}>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-[var(--vo-muted)] underline-offset-2 hover:text-[var(--vo-fg)] hover:underline"
+                >
+                  Drug račun
+                </button>
+              </SignOutButton>
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-[11px] font-semibold uppercase tracking-wider text-[var(--vo-muted)]">
-                Geslo
-              </label>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--vo-muted)]" aria-hidden />
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  placeholder="Vnesite geslo"
-                  className="w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] py-3 pl-10 pr-3 text-sm text-[var(--vo-fg)] outline-none ring-0 placeholder:text-[var(--vo-muted)] focus:border-[var(--vo-accent)]"
-                />
+            {showNewUserNotice ? (
+              <p className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-4 py-3 text-sm text-[var(--vo-fg)]">
+                Ko prejmete podatke od skrbnika, vnesite jih spodaj.
+              </p>
+            ) : null}
+
+            <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-sm">
+              <div className="mb-5 flex items-center gap-2">
+                <Lock className="h-4 w-4 text-[var(--vo-accent)]" aria-hidden />
+                <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Korak 2 — Portalna prijava</h2>
               </div>
+
+              <form action="/api/portal-login" method="post" className="space-y-5">
+                <div className="space-y-2">
+                  <label htmlFor="username" className="text-xs font-semibold text-[var(--vo-muted)]">
+                    Uporabniško ime
+                  </label>
+                  <div className="relative">
+                    <User
+                      className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--vo-muted)]"
+                      aria-hidden
+                    />
+                    <input
+                      id="username"
+                      name="username"
+                      type="text"
+                      autoComplete="username"
+                      required
+                      placeholder="npr. uporabnik"
+                      className="w-full rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)]/50 py-3 pl-10 pr-4 text-sm text-[var(--vo-fg)] outline-none transition placeholder:text-[var(--vo-muted)]/70 focus:border-[var(--vo-accent)] focus:bg-[var(--vo-surface)] focus:ring-2 focus:ring-[var(--vo-accent)]/15"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-xs font-semibold text-[var(--vo-muted)]">
+                    Geslo
+                  </label>
+                  <div className="relative">
+                    <Lock
+                      className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--vo-muted)]"
+                      aria-hidden
+                    />
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      placeholder="••••••••"
+                      className="w-full rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)]/50 py-3 pl-10 pr-4 text-sm text-[var(--vo-fg)] outline-none transition placeholder:text-[var(--vo-muted)]/70 focus:border-[var(--vo-accent)] focus:bg-[var(--vo-surface)] focus:ring-2 focus:ring-[var(--vo-accent)]/15"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <label className="flex cursor-pointer select-none items-center gap-2.5 text-sm text-[var(--vo-muted)]">
+                    <input
+                      type="checkbox"
+                      name="stay_logged_in"
+                      value="1"
+                      className="h-4 w-4 rounded border-[var(--vo-border)] accent-[var(--vo-accent)]"
+                    />
+                    Ostani prijavljen
+                  </label>
+                  <a
+                    href="mailto:info@visionone.si?subject=Pozabljeno%20portalno%20geslo"
+                    className="text-xs font-medium text-[var(--vo-accent)] hover:underline"
+                  >
+                    Pozabljeno geslo?
+                  </a>
+                </div>
+
+                {lockedError ? (
+                  <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    Račun je začasno zaklenjen. Poskusite ponovno čez približno 15 minut.
+                  </p>
+                ) : null}
+
+                {showError ? (
+                  <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    Napačno uporabniško ime ali geslo — ali račun še ni ustvarjen.
+                  </p>
+                ) : null}
+
+                {configError ? (
+                  <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    Strežnik ne more podpisati seje. Na Vercelu nastavite{" "}
+                    <code className="rounded bg-red-100 px-1 text-xs">PORTAL_SESSION_SECRET</code> (vsaj 16 znakov).
+                  </p>
+                ) : null}
+
+                <button
+                  type="submit"
+                  className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0d7a7a] to-[#0a6363] py-3.5 text-sm font-bold tracking-wide text-white shadow-lg shadow-teal-900/20 transition hover:shadow-xl hover:shadow-teal-900/25 active:scale-[0.99]"
+                >
+                  Vstopi v portal
+                  <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden />
+                </button>
+              </form>
             </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <label className="flex cursor-pointer select-none items-center gap-2.5 text-sm text-[var(--vo-muted)]">
-                <input
-                  type="checkbox"
-                  name="stay_logged_in"
-                  value="1"
-                  className="h-4 w-4 rounded border-[var(--vo-border)] bg-[var(--vo-surface)] text-[var(--vo-accent)] accent-[var(--vo-accent)]"
-                />
-                Ostani prijavljen
-              </label>
-              <a
-                href="mailto:info@visionone.si?subject=Pozabljeno%20portalno%20geslo"
-                className="text-xs text-[var(--vo-muted)] hover:text-[var(--vo-fg)]"
-              >
-                Pozabljeno geslo?
-              </a>
-            </div>
-
-            {lockedError ? (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                Račun je začasno zaklenjen zaradi preveč neuspešnih prijav. Poskusite ponovno čez približno 15 minut.
-              </p>
-            ) : null}
-
-            {showError ? (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                Napačno uporabniško ime ali geslo — ali račun še ni ustvarjen.
-              </p>
-            ) : null}
-
-            {configError ? (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                Strežnik ne more podpisati seje. Na Vercelu dodajte{" "}
-                <code className="rounded bg-black/30 px-1 text-xs">PORTAL_SESSION_SECRET</code> (vsaj 16 znakov) v
-                Environment Variables. Lokalno v <code className="rounded bg-black/30 px-1 text-xs">.env.local</code>{" "}
-                — glejte <code className="rounded bg-black/30 px-1 text-xs">.env.example</code>.
-              </p>
-            ) : null}
-
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-[var(--vo-accent)] py-3.5 text-sm font-bold tracking-wide text-white transition-opacity hover:bg-[var(--vo-accent-hover)] active:opacity-90"
-            >
-              VSTOPI
-            </button>
-          </form>
-        </div>
-      </Show>
+          </div>
+        </Show>
+      </div>
     </div>
   );
 }
