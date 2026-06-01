@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  formatDecimalForField,
   formatDecimalInput,
+  isExplicitZeroDraft,
   isValidDecimalDraft,
   parseDecimalInput,
 } from "@/lib/decimal-number-input";
@@ -15,6 +17,8 @@ type DecimalInputProps = Omit<
   onChange: (value: number) => void;
   /** Ob blur: prazno polje → 0 */
   emptyAsZero?: boolean;
+  /** Pri vrednosti 0 ne prikaži "0" — placeholder ostane viden. Privzeto true. */
+  hideZeroWhenEmpty?: boolean;
   maxDecimals?: number;
 };
 
@@ -23,20 +27,23 @@ export function DecimalInput({
   value,
   onChange,
   emptyAsZero = true,
+  hideZeroWhenEmpty = true,
   maxDecimals,
   className,
   onBlur,
   onFocus,
   ...rest
 }: DecimalInputProps) {
-  const [draft, setDraft] = useState(() => formatDecimalInput(value, { maxDecimals }));
+  const [draft, setDraft] = useState(() =>
+    formatDecimalForField(value, { maxDecimals, hideZeroWhenEmpty }),
+  );
   const focused = useRef(false);
 
   useEffect(() => {
     if (!focused.current) {
-      setDraft(formatDecimalInput(value, { maxDecimals }));
+      setDraft(formatDecimalForField(value, { maxDecimals, hideZeroWhenEmpty }));
     }
-  }, [value, maxDecimals]);
+  }, [value, maxDecimals, hideZeroWhenEmpty]);
 
   return (
     <input
@@ -51,15 +58,20 @@ export function DecimalInput({
       }}
       onBlur={(e) => {
         focused.current = false;
+        const trimmed = draft.trim();
         const parsed = parseDecimalInput(draft);
-        if (Number.isFinite(parsed)) {
+        if (trimmed === "" || trimmed === "," || trimmed === "." || trimmed === "-") {
+          if (emptyAsZero) onChange(0);
+          setDraft(hideZeroWhenEmpty ? "" : formatDecimalInput(0, { maxDecimals }));
+        } else if (Number.isFinite(parsed)) {
           onChange(parsed);
-          setDraft(formatDecimalInput(parsed, { maxDecimals }));
+          const showEmpty = hideZeroWhenEmpty && parsed === 0 && !isExplicitZeroDraft(draft);
+          setDraft(showEmpty ? "" : formatDecimalInput(parsed, { maxDecimals }));
         } else if (emptyAsZero) {
           onChange(0);
-          setDraft(formatDecimalInput(0, { maxDecimals }));
+          setDraft(hideZeroWhenEmpty ? "" : formatDecimalInput(0, { maxDecimals }));
         } else {
-          setDraft(formatDecimalInput(value, { maxDecimals }));
+          setDraft(formatDecimalForField(value, { maxDecimals, hideZeroWhenEmpty }));
         }
         onBlur?.(e);
       }}

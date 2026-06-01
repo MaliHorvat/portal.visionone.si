@@ -32,6 +32,9 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
     model: "",
     comment: "",
   });
+  const [bulkUser, setBulkUser] = useState("");
+  const [bulkPass, setBulkPass] = useState("");
+  const [bulkOnlyEmpty, setBulkOnlyEmpty] = useState(true);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; camId: string } | null>(null);
 
   useEffect(() => {
@@ -105,6 +108,33 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
     showToast("Kamera izbrisana.");
   }
 
+  async function applyCredentialsToAll() {
+    if (!dbConfigured) return;
+    if (!bulkUser.trim() && !bulkPass) {
+      showToast("Vnesite uporabniško ime ali geslo.", "err");
+      return;
+    }
+    if (!confirm(`Posodobim RTSP podatke za ${bulkOnlyEmpty ? "kamere brez podatkov" : "vse kamere"}?`)) return;
+    setBusy(true);
+    const r = await fetch(`/api/clients/${ctx.clientId}/cameras/bulk-credentials`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        rtspUser: bulkUser.trim(),
+        rtspPass: bulkPass,
+        onlyEmpty: bulkOnlyEmpty,
+      }),
+    });
+    setBusy(false);
+    const j = (await r.json()) as { updated?: number; error?: string };
+    if (!r.ok) {
+      showToast(j.error ?? "Množično posodabljanje ni uspelo.", "err");
+      return;
+    }
+    await reload();
+    showToast(`Posodobljenih ${j.updated ?? 0} kamer.`);
+  }
+
   async function saveCam(id: string, patch: Record<string, string>) {
     setBusy(true);
     const r = await fetch(`/api/clients/${ctx.clientId}/cameras/${id}`, {
@@ -154,6 +184,61 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
         </p>
       ) : null}
 
+      {client.cameras.length > 0 ? (
+        <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs shadow-[var(--vo-card-shadow)]">
+          <p className="mb-2 font-semibold text-[var(--vo-fg)]">Izpolni uporabniško ime in geslo za vse kamere</p>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-[var(--vo-muted)]">
+              <span className="vo-field-label">RTSP uporabnik</span>
+              <input
+                placeholder="admin"
+                value={bulkUser}
+                onChange={(e) => setBulkUser(e.target.value)}
+                className="vo-input vo-input-touch mt-1 w-full min-w-[120px] font-mono"
+              />
+            </label>
+            <label className="text-[var(--vo-muted)]">
+              <span className="vo-field-label">RTSP geslo</span>
+              <input
+                type="password"
+                placeholder="geslo"
+                value={bulkPass}
+                onChange={(e) => setBulkPass(e.target.value)}
+                className="vo-input vo-input-touch mt-1 w-full min-w-[120px]"
+              />
+            </label>
+            <label className="flex min-h-[2.75rem] items-center gap-2 self-end text-[var(--vo-muted)]">
+              <input
+                type="checkbox"
+                checked={bulkOnlyEmpty}
+                onChange={(e) => setBulkOnlyEmpty(e.target.checked)}
+                className="h-4 w-4"
+              />
+              Samo prazne vnose
+            </label>
+            <button
+              type="button"
+              disabled={busy || !dbConfigured}
+              onClick={() => void applyCredentialsToAll()}
+              className="vo-touch-btn vo-btn-primary px-4 py-2 text-sm font-semibold disabled:opacity-40"
+            >
+              Uporabi za vse kamere
+            </button>
+            <button
+              type="button"
+              disabled={busy || !dbConfigured}
+              className="vo-touch-btn vo-btn-secondary px-3 py-2 text-sm disabled:opacity-40"
+              onClick={() => {
+                setForm((f) => ({ ...f, rtspUser: bulkUser, rtspPass: bulkPass }));
+                showToast("Vrednosti kopirane v obrazec za novo kamero.");
+              }}
+            >
+              Kopiraj v nov vnos
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <form
         onSubmit={addCamera}
         className="flex flex-wrap items-end gap-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs shadow-[var(--vo-card-shadow)]"
@@ -162,45 +247,45 @@ export function TabKamere({ ctx }: { ctx: WorkspaceCtx }) {
           placeholder="Oznaka"
           value={form.tag}
           onChange={(e) => setForm((f) => ({ ...f, tag: e.target.value }))}
-          className="min-w-[72px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
+          className="min-w-[72px] flex-1 vo-select px-2 py-1 text-xs.5"
         />
         <input
           placeholder="Ime"
           required
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          className="min-w-[100px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
+          className="min-w-[100px] flex-1 vo-select px-2 py-1 text-xs.5"
         />
         <input
           placeholder="IP"
           value={form.ip}
           onChange={(e) => setForm((f) => ({ ...f, ip: e.target.value }))}
-          className="min-w-[110px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-mono"
+          className="min-w-[110px] flex-1 vo-select px-2 py-1 text-xs.5 font-mono"
         />
         <input
           placeholder="User"
           value={form.rtspUser}
           onChange={(e) => setForm((f) => ({ ...f, rtspUser: e.target.value }))}
-          className="min-w-[72px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
+          className="min-w-[72px] flex-1 vo-select px-2 py-1 text-xs.5"
         />
         <input
           placeholder="Pass"
           type="password"
           value={form.rtspPass}
           onChange={(e) => setForm((f) => ({ ...f, rtspPass: e.target.value }))}
-          className="min-w-[72px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
+          className="min-w-[72px] flex-1 vo-select px-2 py-1 text-xs.5"
         />
         <input
           placeholder="Model"
           value={form.model}
           onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
-          className="min-w-[90px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
+          className="min-w-[90px] flex-1 vo-select px-2 py-1 text-xs.5"
         />
         <input
           placeholder="Komentar"
           value={form.comment}
           onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
-          className="min-w-[120px] flex-[2] rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
+          className="min-w-[120px] flex-[2] vo-select px-2 py-1 text-xs.5"
         />
         <button
           type="submit"

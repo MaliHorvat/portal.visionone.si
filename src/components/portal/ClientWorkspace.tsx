@@ -2,6 +2,7 @@
 
 import type { ElementType, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ClientDetail } from "@/lib/types";
 import { TabCas } from "./client-workspace/TabCas";
 import { TabKamere } from "./client-workspace/TabKamere";
@@ -15,9 +16,15 @@ import { TabDokumenti } from "./client-workspace/TabDokumenti";
 import { TabTimeline } from "./client-workspace/TabTimeline";
 import { TabField } from "./client-workspace/TabField";
 import { TabCareBox } from "./client-workspace/TabCareBox";
+import { TabPreventiva } from "./client-workspace/TabPreventiva";
 import type { WorkspaceCtx, WorkspaceTab } from "./client-workspace/types";
 import { parseWorkspaceTab } from "./client-workspace/types";
-import { getLastClientTab, pushRecentClient, setLastClientTab } from "@/lib/portal-prefs";
+import { getLastClientTab, pushRecentClient, setLastClientTab, toggleFavoriteClient, getFavoriteClientIds } from "@/lib/portal-prefs";
+import { PortalContextMenu } from "@/components/portal/PortalContextMenu";
+import { buildClientContextMenuItems, copyClientContactText } from "@/lib/client-context-menu";
+import { clientProfilePath } from "@/lib/client-url";
+import { usePortalToast } from "@/context/PortalToastContext";
+import { usePortalRole } from "@/context/PortalRoleContext";
 import {
   Building2,
   Boxes,
@@ -34,12 +41,11 @@ import {
   Network,
   Shield,
   Smartphone,
-  Star,
   RadioTower,
   Wrench,
+  CalendarClock,
 } from "lucide-react";
-import { getFavoriteClientIds, toggleFavoriteClient } from "@/lib/portal-prefs";
-import { ClientPreventivePanel } from "./ClientPreventivePanel";
+import { ClientMojStatusDot } from "./ClientMojStatusDot";
 import { ClientProfileEditor } from "./ClientProfileEditor";
 import { ClientInternalNotes } from "./ClientInternalNotes";
 
@@ -53,6 +59,7 @@ const TABS: { id: WorkspaceTab; label: string; icon: ElementType }[] = [
   { id: "popisi", label: "Popisi", icon: ClipboardList },
   { id: "cas", label: "Čas", icon: Clock },
   { id: "vzdrzevanje", label: "Vzdrževanje", icon: Wrench },
+  { id: "preventiva", label: "Preventiva", icon: CalendarClock },
   { id: "dokumenti", label: "Dokumenti", icon: FolderOpen },
   /** Pred Timeline — na ozkih zaslonih se Field skrival desno od vrstice z overflow-x. */
   { id: "field", label: "Teren", icon: Smartphone },
@@ -66,10 +73,14 @@ type Props = {
 };
 
 export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Props) {
+  const router = useRouter();
+  const { role } = usePortalRole();
+  const { showToast } = usePortalToast();
   const [tab, setTab] = useState<WorkspaceTab>(initialTab);
   const [visited, setVisited] = useState<Set<WorkspaceTab>>(() => new Set([initialTab]));
   const [client, setClient] = useState(initialClient);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     setClient(initialClient);
@@ -155,21 +166,42 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
     );
   }
 
+  function openContextMenu(e: React.MouseEvent) {
+    e.preventDefault();
+    setCtxMenu({ x: e.clientX, y: e.clientY });
+  }
+
+  const menuClient = {
+    id: client.id,
+    slug: client.slug,
+    name: client.name,
+    address: client.address,
+    contact: client.contact,
+    phone: client.phone,
+    email: client.email,
+    package: client.package,
+    health: client.health,
+    tags: client.tags ?? [],
+    mojPortalEnabled: client.mojPortalEnabled,
+    preventive: client.preventive,
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onContextMenu={openContextMenu}>
       <div className="vo-card vo-card-glass p-4 md:p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
+              <ClientMojStatusDot
+                enabled={Boolean(client.mojPortalEnabled)}
+                health={client.health}
+              />
               <h1 className="vo-page-title text-2xl">{client.name}</h1>
-              <button
-                type="button"
-                title={isFavorite ? "Odstrani iz priljubljenih" : "Dodaj med priljubljene"}
-                onClick={() => setIsFavorite(toggleFavoriteClient(client.id).includes(client.id))}
-                className="rounded p-1 text-[var(--vo-muted)] hover:text-amber-400"
-              >
-                <Star className={`h-5 w-5 ${isFavorite ? "fill-amber-400 text-amber-400" : ""}`} />
-              </button>
+              {isFavorite ? (
+                <span className="text-[10px] font-semibold uppercase text-amber-500" title="Priljubljena">
+                  ★
+                </span>
+              ) : null}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <span
@@ -222,9 +254,6 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
             <div className="mt-3">
               <ClientProfileEditor ctx={ctx} onOpenPonudbe={() => selectTab("ponudbe")} />
             </div>
-            <div className="mt-4">
-              <ClientPreventivePanel ctx={ctx} />
-            </div>
             <ClientInternalNotes clientId={client.id} />
           </div>
           <button
@@ -239,24 +268,7 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="text-xs text-[var(--vo-muted)]">
-          Skok na zavihek
-          <select
-            value={tab}
-            onChange={(e) => selectTab(e.target.value as WorkspaceTab)}
-            className="ml-2 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-1.5 text-xs text-[var(--vo-fg)]"
-          >
-            {TABS.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <nav className="vo-tab-nav text-xs font-medium md:text-sm">
+      <nav className="vo-tab-nav text-xs font-medium md:text-sm" onContextMenu={openContextMenu}>
         {TABS.map(({ id, label, icon: Icon }) => {
           const active = tab === id;
           return (
@@ -283,10 +295,75 @@ export function ClientWorkspace({ initialClient, dbConfigured, initialTab }: Pro
         {panel("popisi", <TabPopisi ctx={ctx} />)}
         {panel("cas", <TabCas ctx={ctx} />)}
         {panel("vzdrzevanje", <TabVzdrzevanje ctx={ctx} />)}
+        {panel("preventiva", <TabPreventiva ctx={ctx} />)}
         {panel("dokumenti", <TabDokumenti ctx={ctx} />)}
         {panel("field", <TabField ctx={ctx} />)}
         {panel("timeline", <TabTimeline ctx={ctx} />)}
       </div>
+
+      {ctxMenu ? (
+        <PortalContextMenu
+          open
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          items={buildClientContextMenuItems(menuClient, {
+            isFavorite,
+            dbConfigured,
+            canAdmin: role === "admin",
+            onOpen: () => router.push(clientProfilePath(client)),
+            onOpenNewTab: () => window.open(clientProfilePath(client), "_blank", "noopener,noreferrer"),
+            onEdit: () => selectTab("kamere"),
+            onDelete: () => undefined,
+            showDelete: false,
+            onToggleFavorite: () => setIsFavorite(toggleFavoriteClient(client.id).includes(client.id)),
+            onToggleMojPortal: () => {
+              void fetch(`/api/clients/${client.id}`, {
+                method: "PUT",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ mojPortalEnabled: !client.mojPortalEnabled }),
+              }).then(async (r) => {
+                if (!r.ok) {
+                  showToast("Posodobitev moj portala ni uspela.", "err");
+                  return;
+                }
+                const j = (await r.json()) as { client?: typeof client };
+                if (j.client) setClient(j.client);
+                showToast(j.client?.mojPortalEnabled ? "moj.visionone.si vklopljen." : "moj.visionone.si izklopljen.");
+              });
+            },
+            onMarkOk: () => {
+              void fetch(`/api/clients/${client.id}`, {
+                method: "PUT",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ health: "ok" }),
+              }).then(async (r) => {
+                if (!r.ok) return;
+                const j = (await r.json()) as { client?: typeof client };
+                if (j.client) setClient(j.client);
+              });
+            },
+            onMarkAlarm: () => {
+              void fetch(`/api/clients/${client.id}`, {
+                method: "PUT",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ health: "alarm" }),
+              }).then(async (r) => {
+                if (!r.ok) return;
+                const j = (await r.json()) as { client?: typeof client };
+                if (j.client) setClient(j.client);
+              });
+            },
+            onCopyContact: () => {
+              void navigator.clipboard.writeText(copyClientContactText(menuClient)).then(
+                () => showToast("Kontakt kopiran."),
+                () => showToast("Kopiranje ni uspelo.", "err"),
+              );
+            },
+            onOpenTab: (t) => selectTab(t as WorkspaceTab),
+          })}
+        />
+      ) : null}
     </div>
   );
 }

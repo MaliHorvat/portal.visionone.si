@@ -139,12 +139,12 @@ export function OpomnikiView({ reminders, clients, dbConfigured, onRemindersChan
           placeholder="Išči opomnike…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="min-w-[160px] flex-1 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5"
+          className="min-w-[160px] flex-1 vo-input px-3 py-1.5 text-sm"
         />
         <select
           value={kindFilter}
           onChange={(e) => setKindFilter(e.target.value as typeof kindFilter)}
-          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-xs"
+          className="vo-select px-2 py-1.5 text-xs"
         >
           <option value="all">Vse vrste</option>
           {(Object.keys(KIND_LABELS) as ReminderKind[]).map((k) => (
@@ -182,7 +182,7 @@ export function OpomnikiView({ reminders, clients, dbConfigured, onRemindersChan
           className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]"
         >
           <div className="grid gap-3 md:grid-cols-2">
-            <select name="clientId" required className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm">
+            <select name="clientId" required className="vo-input px-3 py-2 text-sm">
               <option value="">— izberi stranko —</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -190,7 +190,7 @@ export function OpomnikiView({ reminders, clients, dbConfigured, onRemindersChan
                 </option>
               ))}
             </select>
-            <select name="kind" defaultValue="drugo" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm">
+            <select name="kind" defaultValue="drugo" className="vo-input px-3 py-2 text-sm">
               {(Object.keys(KIND_LABELS) as ReminderKind[]).map((k) => (
                 <option key={k} value={k}>
                   {KIND_LABELS[k]}
@@ -201,13 +201,13 @@ export function OpomnikiView({ reminders, clients, dbConfigured, onRemindersChan
               name="title"
               required
               placeholder="Naslov opomnika"
-              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
+              className="vo-input px-3 py-2 text-sm md:col-span-2"
             />
             <input
               name="dueDate"
               type="date"
               required
-              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
+              className="vo-input px-3 py-2 text-sm md:col-span-2"
             />
             <label className="inline-flex items-center gap-2 text-xs text-[var(--vo-muted)] md:col-span-2">
               <input type="checkbox" name="clientVisible" defaultChecked />

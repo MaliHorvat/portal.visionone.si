@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { AdminGate } from "@/components/portal/AdminGate";
 import { DecimalInput } from "@/components/portal/DecimalInput";
@@ -33,6 +34,23 @@ function emptyItem(): Item {
     supplier: "",
     location: "",
   };
+}
+
+function Field({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <label className={`block text-sm ${className}`.trim()}>
+      <span className="vo-field-label">{label}</span>
+      {children}
+    </label>
+  );
 }
 
 export default function InventarPage() {
@@ -88,42 +106,125 @@ export default function InventarPage() {
     setEditId(null);
   }
 
+  function cancelEdit() {
+    setF(emptyItem());
+    setEditId(null);
+  }
+
   return (
     <AdminGate>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-[env(safe-area-inset-bottom)]">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--vo-fg)]">Inventar</h1>
-          <p className="mt-1 text-sm text-[var(--vo-muted)]">Urejanje zalog: ime, model, količina, cena, enota, minimum, dobavitelj in lokacija.</p>
+          <h1 className="vo-page-title text-xl sm:text-2xl">Inventar</h1>
+          <p className="vo-page-desc mt-1 text-sm">
+            Urejanje zalog: ime, model, količina, cena, enota, minimum, dobavitelj in lokacija.
+          </p>
         </div>
 
-        <form onSubmit={saveItem} className="grid gap-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 text-sm md:grid-cols-3">
-          <input placeholder="Ime artikla" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <input placeholder="Model" value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <input placeholder="SKU" value={f.sku} onChange={(e) => setF({ ...f, sku: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <DecimalInput placeholder="Količina" value={f.qty} onChange={(qty) => setF({ ...f, qty })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <DecimalInput placeholder="Cena / enoto (€)" value={f.unitPrice} onChange={(unitPrice) => setF({ ...f, unitPrice })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <input placeholder="Enota (kos/m/...)" value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <DecimalInput placeholder="Minimum" value={f.minQty} onChange={(minQty) => setF({ ...f, minQty })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <input placeholder="Dobavitelj" value={f.supplier} onChange={(e) => setF({ ...f, supplier: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <input placeholder="Lokacija v skladišču" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-          <button type="submit" className="rounded bg-[var(--vo-accent)] px-3 py-2 font-semibold text-white md:col-span-3">{editId ? "Shrani spremembe" : "Dodaj artikel"}</button>
+        <form
+          onSubmit={saveItem}
+          className="vo-tool-section grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3"
+        >
+          <Field label="Ime artikla *">
+            <input
+              placeholder="npr. IP kamera 4MP"
+              value={f.name}
+              onChange={(e) => setF({ ...f, name: e.target.value })}
+              className="vo-input vo-input-touch w-full"
+              required
+            />
+          </Field>
+          <Field label="Model">
+            <input
+              placeholder="npr. DS-2CD2143G2"
+              value={f.model}
+              onChange={(e) => setF({ ...f, model: e.target.value })}
+              className="vo-input vo-input-touch w-full"
+            />
+          </Field>
+          <Field label="SKU">
+            <input
+              placeholder="šifra artikla"
+              value={f.sku}
+              onChange={(e) => setF({ ...f, sku: e.target.value })}
+              className="vo-input vo-input-touch w-full font-mono"
+            />
+          </Field>
+          <Field label="Količina na zalogi">
+            <DecimalInput
+              placeholder="npr. 12"
+              value={f.qty}
+              onChange={(qty) => setF({ ...f, qty })}
+              className="vo-input vo-input-touch w-full"
+            />
+          </Field>
+          <Field label="Cena / enoto (€)">
+            <DecimalInput
+              placeholder="npr. 89,50"
+              value={f.unitPrice}
+              onChange={(unitPrice) => setF({ ...f, unitPrice })}
+              className="vo-input vo-input-touch w-full"
+            />
+          </Field>
+          <Field label="Enota">
+            <input
+              placeholder="kos, m, komplet …"
+              value={f.unit}
+              onChange={(e) => setF({ ...f, unit: e.target.value })}
+              className="vo-input vo-input-touch w-full"
+            />
+          </Field>
+          <Field label="Minimum (opozorilo)">
+            <DecimalInput
+              placeholder="npr. 2"
+              value={f.minQty}
+              onChange={(minQty) => setF({ ...f, minQty })}
+              className="vo-input vo-input-touch w-full"
+            />
+          </Field>
+          <Field label="Dobavitelj">
+            <input
+              placeholder="ime dobavitelja"
+              value={f.supplier}
+              onChange={(e) => setF({ ...f, supplier: e.target.value })}
+              className="vo-input vo-input-touch w-full"
+            />
+          </Field>
+          <Field label="Lokacija v skladišču">
+            <input
+              placeholder="npr. Polica A3"
+              value={f.location}
+              onChange={(e) => setF({ ...f, location: e.target.value })}
+              className="vo-input vo-input-touch w-full"
+            />
+          </Field>
+          <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-3 sm:flex-row">
+            <button type="submit" className="vo-touch-btn vo-btn-primary flex-1 px-4 py-2.5 text-sm font-semibold">
+              {editId ? "Shrani spremembe" : "Dodaj artikel"}
+            </button>
+            {editId ? (
+              <button type="button" onClick={cancelEdit} className="vo-touch-btn vo-btn-secondary px-4 py-2.5 text-sm">
+                Prekliči
+              </button>
+            ) : null}
+          </div>
         </form>
 
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-sm">
+        <div className="vo-tool-section flex flex-wrap items-center gap-2 text-sm">
           <input
             type="search"
             placeholder="Išči artikel…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="min-w-[160px] flex-1 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5"
+            className="vo-input vo-input-touch min-w-0 flex-1"
           />
-          <label className="inline-flex items-center gap-1 text-xs text-[var(--vo-muted)]">
-            <input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} />
+          <label className="inline-flex min-h-[2.75rem] items-center gap-2 text-xs text-[var(--vo-muted)]">
+            <input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} className="h-4 w-4" />
             Samo nizka zaloga
           </label>
           <button
             type="button"
-            className="rounded-lg border border-[var(--vo-border)] px-3 py-1.5 text-xs hover:bg-[var(--vo-surface-2)]"
+            className="vo-touch-btn vo-btn-secondary px-3 py-2 text-xs"
             onClick={() =>
               downloadCsv("inventar.csv", [
                 ["Ime", "Model", "SKU", "Količina", "Enota", "Cena", "Minimum", "Dobavitelj", "Lokacija"],
@@ -143,16 +244,74 @@ export default function InventarPage() {
           >
             Izvozi CSV
           </button>
-          <span className="text-xs text-[var(--vo-muted)]">
+          <span className="w-full text-xs text-[var(--vo-muted)] sm:w-auto">
             Vrednost zaloge: <strong className="text-[var(--vo-fg)]">{stockValue.toFixed(2)} €</strong>
           </span>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] shadow-[var(--vo-card-shadow)]">
+        <div className="space-y-3 md:hidden">
+          {visibleItems.map((row) => {
+            const low = row.qty <= row.minQty;
+            return (
+              <article key={row.id} className="vo-mobile-card text-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold text-[var(--vo-fg)]">{row.name}</p>
+                  {low ? (
+                    <span className="shrink-0 rounded bg-red-500/20 px-1.5 py-0.5 text-xs font-semibold text-red-400">
+                      LOW
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-xs text-[var(--vo-muted)]">{row.model || "—"} · {row.sku || "—"}</p>
+                <p className="mt-2">
+                  <span className="font-semibold">{row.qty}</span> {row.unit} × {row.unitPrice.toFixed(2)} € ={" "}
+                  <span className="font-semibold">{(row.qty * row.unitPrice).toFixed(2)} €</span>
+                </p>
+                <p className="text-xs text-[var(--vo-muted)]">
+                  Min. {row.minQty} · {row.supplier || "—"} · {row.location || "—"}
+                </p>
+                <div className="mt-3 flex gap-3">
+                  <button
+                    type="button"
+                    className="text-[var(--vo-accent)] hover:underline"
+                    onClick={() => {
+                      setEditId(row.id);
+                      setF(row);
+                    }}
+                  >
+                    Uredi
+                  </button>
+                  <button
+                    type="button"
+                    className="text-[var(--vo-danger)] hover:underline"
+                    onClick={() => setItems((p) => p.filter((x) => x.id !== row.id))}
+                  >
+                    Izbriši
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+          {visibleItems.length === 0 ? (
+            <p className="py-8 text-center text-sm text-[var(--vo-muted)]">Ni artiklov.</p>
+          ) : null}
+        </div>
+
+        <div className="hidden overflow-x-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] shadow-[var(--vo-card-shadow)] md:block">
           <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
               <tr>
-                <th className="px-3 py-2">Ime</th><th className="px-3 py-2">Model</th><th className="px-3 py-2">SKU</th><th className="px-3 py-2">Količina</th><th className="px-3 py-2">Enota</th><th className="px-3 py-2">Cena</th><th className="px-3 py-2">Skupaj</th><th className="px-3 py-2">Minimum</th><th className="px-3 py-2">Dobavitelj</th><th className="px-3 py-2">Lokacija</th><th className="px-3 py-2" />
+                <th className="px-3 py-2">Ime</th>
+                <th className="px-3 py-2">Model</th>
+                <th className="px-3 py-2">SKU</th>
+                <th className="px-3 py-2">Količina</th>
+                <th className="px-3 py-2">Enota</th>
+                <th className="px-3 py-2">Cena</th>
+                <th className="px-3 py-2">Skupaj</th>
+                <th className="px-3 py-2">Minimum</th>
+                <th className="px-3 py-2">Dobavitelj</th>
+                <th className="px-3 py-2">Lokacija</th>
+                <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
@@ -167,18 +326,42 @@ export default function InventarPage() {
                     <td className="px-3 py-2">{row.unit}</td>
                     <td className="px-3 py-2">{row.unitPrice.toFixed(2)} €</td>
                     <td className="px-3 py-2">{(row.qty * row.unitPrice).toFixed(2)} €</td>
-                    <td className="px-3 py-2">{row.minQty}{low ? <span className="ml-2 rounded bg-red-500/20 px-1.5 py-0.5 text-xs text-red-300">LOW</span> : null}</td>
+                    <td className="px-3 py-2">
+                      {row.minQty}
+                      {low ? (
+                        <span className="ml-2 rounded bg-red-500/20 px-1.5 py-0.5 text-xs text-red-300">LOW</span>
+                      ) : null}
+                    </td>
                     <td className="px-3 py-2">{row.supplier || "—"}</td>
                     <td className="px-3 py-2">{row.location || "—"}</td>
                     <td className="px-3 py-2 text-right">
-                      <button type="button" className="text-[var(--vo-accent)] hover:underline" onClick={() => { setEditId(row.id); setF(row); }}>Uredi</button>
-                      <button type="button" className="ml-2 text-red-500 hover:underline" onClick={() => setItems((p) => p.filter((x) => x.id !== row.id))}>Izbriši</button>
+                      <button
+                        type="button"
+                        className="text-[var(--vo-accent)] hover:underline"
+                        onClick={() => {
+                          setEditId(row.id);
+                          setF(row);
+                        }}
+                      >
+                        Uredi
+                      </button>
+                      <button
+                        type="button"
+                        className="ml-2 text-[var(--vo-danger)] hover:underline"
+                        onClick={() => setItems((p) => p.filter((x) => x.id !== row.id))}
+                      >
+                        Izbriši
+                      </button>
                     </td>
                   </tr>
                 );
               })}
               {items.length === 0 ? (
-                <tr><td colSpan={11} className="px-3 py-8 text-center text-[var(--vo-muted)]">Ni artiklov.</td></tr>
+                <tr>
+                  <td colSpan={11} className="px-3 py-8 text-center text-[var(--vo-muted)]">
+                    Ni artiklov.
+                  </td>
+                </tr>
               ) : null}
             </tbody>
           </table>

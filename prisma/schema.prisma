@@ -48,6 +48,8 @@ model Client {
   tags      Json     @default("[]")
   /** VisionOne Care Box — monitoring + 24/7 podpora (brez VMS za stranko). */
   careBoxEnabled Boolean @default(false)
+  /** Stranka vidi stanje kamer na moj.visionone.si (zelena/rdeča pika v seznamu). */
+  mojPortalEnabled Boolean @default(false)
   /** SLA: standard | priority | critical (prazno = ni nastavljeno). */
   careSlaTier    String  @default("")
   careRemoteNotes String @db.Text @default("")
@@ -557,6 +559,7 @@ enum PortalAccessRequestStatus {
   new
   approved
   rejected
+  ignored
 }
 
 enum ServiceRequestStatus {

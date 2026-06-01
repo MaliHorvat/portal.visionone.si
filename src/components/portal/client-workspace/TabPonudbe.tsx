@@ -1,4 +1,4 @@
-Ôªø"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Download } from "lucide-react";
@@ -8,7 +8,7 @@ import { exportOfferLinesCsv } from "@/lib/portal-export";
 import { OfferLineTable, type OfferLineRow } from "./OfferLineTable";
 import type { WorkspaceCtx } from "./types";
 
-/** ASCII-safe ‚Äî datoteka ne sme pokvariti znaka ‚Ç¨ ob shranjevanju */
+/** ASCII-safe ù datoteka ne sme pokvariti znaka ù ob shranjevanju */
 const EUR = "\u20AC";
 
 type LineRow = OfferLineRow;
@@ -195,7 +195,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
     const num = o.offerNumber?.trim();
     const st = o.offerStatus ? OFFER_STATUS_LABEL[o.offerStatus] ?? o.offerStatus : "";
     const t = o.title?.trim();
-    const base = num || t || (o.offerDate ? `Ponudba ${o.offerDate}` : o.id.slice(0, 8) + "‚Ä¶");
+    const base = num || t || (o.offerDate ? `Ponudba ${o.offerDate}` : o.id.slice(0, 8) + "ù");
     return st ? `${base} (${st})` : base;
   }
 
@@ -374,7 +374,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         <table>
           <thead>
             <tr>
-              <th>≈†IFRA</th>
+              <th>ùIFRA</th>
               <th>OPIS</th>
               <th>ENOTA</th>
               <th class="right">KOL.</th>
@@ -397,8 +397,8 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         <h1>${escapeHtml(draft.title?.trim() || "Ponudba")}</h1>
         <div class="meta">
           <div><b>Stranka:</b> ${escapeHtml(client.name)}</div>
-          <div><b>Datum:</b> ${escapeHtml(draft.offerDate || "‚Äî")}</div>
-          <div><b>Naslov:</b> ${escapeHtml(draft.clientAddress || "‚Äî")}</div>
+          <div><b>Datum:</b> ${escapeHtml(draft.offerDate || "ù")}</div>
+          <div><b>Naslov:</b> ${escapeHtml(draft.clientAddress || "ù")}</div>
         </div>
         ${table("Material", mat)}
         ${table("Storitve / delo", svc)}
@@ -450,7 +450,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
       ]);
       autoTable(doc, {
         startY: y,
-        head: [["Tip", "≈†ifra", "Opis", "Enota", "Kol.", `Cena ${EUR}`, "Popust %", `Neto ${EUR}`]],
+        head: [["Tip", "ùifra", "Opis", "Enota", "Kol.", `Cena ${EUR}`, "Popust %", `Neto ${EUR}`]],
         body,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [45, 45, 48] },
@@ -470,7 +470,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
         doc.text(split, 14, finalY + 50);
       }
       doc.save(`ponudba-${sel.slice(0, 8)}.pdf`);
-      showToast("PDF ponudbe izvo≈æen.");
+      showToast("PDF ponudbe izvoùen.");
     } catch {
       showToast("Izvoz PDF ni uspel.", "err");
     }
@@ -507,7 +507,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
           }}
           className="max-w-[min(100%,280px)] rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-sm"
         >
-          <option value="">‚Äî izberi ponudbo ‚Äî</option>
+          <option value="">ù izberi ponudbo ù</option>
           {offers.map((o) => (
             <option key={o.id} value={o.id}>
               {offerLabel(o)}
@@ -527,7 +527,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
             onChange={(e) => setTemplateId(e.target.value)}
             className="max-w-[200px] rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 text-xs"
           >
-            <option value="">‚Äî brez predloge ‚Äî</option>
+            <option value="">ù brez predloge ù</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -599,7 +599,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
           Shrani
         </button>
         <button type="button" disabled={!sel || !dbConfigured} onClick={() => void deleteOffer()} className="text-xs text-red-500 hover:underline disabled:opacity-40">
-          Izbri≈°i
+          Izbriùi
         </button>
       </div>
 
@@ -615,7 +615,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
                 value={draft.title ?? ""}
                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                 placeholder="npr. Ponudba video nadzor 2026"
-                className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-medium"
+                className="mt-1 w-full vo-select px-2 py-1 text-xs.5 font-medium"
               />
             </label>
             <label className="text-xs">
@@ -627,16 +627,16 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               <input
                 value={draft.offerDate}
                 onChange={(e) => setDraft({ ...draft, offerDate: e.target.value })}
-                className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
+                className="mt-1 w-full vo-select px-2 py-1 text-xs.5"
               />
             </label>
             <label className="text-xs">
-              <span className="text-[var(--vo-muted)]">≈†tevilka ponudbe</span>
+              <span className="text-[var(--vo-muted)]">ùtevilka ponudbe</span>
               <input
                 value={draft.offerNumber ?? ""}
                 onChange={(e) => setDraft({ ...draft, offerNumber: e.target.value })}
                 placeholder="npr. PON-2026-001"
-                className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-mono text-sm"
+                className="mt-1 w-full vo-select px-2 py-1 text-xs.5 font-mono text-sm"
               />
             </label>
             <label className="text-xs">
@@ -644,7 +644,7 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               <select
                 value={draft.offerStatus ?? "draft"}
                 onChange={(e) => setDraft({ ...draft, offerStatus: e.target.value })}
-                className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
+                className="mt-1 w-full vo-select px-2 py-1 text-xs.5"
               >
                 {Object.entries(OFFER_STATUS_LABEL).map(([k, v]) => (
                   <option key={k} value={k}>
@@ -658,8 +658,8 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               <input
                 value={draft.clientAddress}
                 onChange={(e) => setDraft({ ...draft, clientAddress: e.target.value })}
-                placeholder="Ulica, Po≈°ta, Kraj"
-                className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5"
+                placeholder="Ulica, Poùta, Kraj"
+                className="mt-1 w-full vo-select px-2 py-1 text-xs.5"
               />
             </label>
           </div>
@@ -671,9 +671,10 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
             <label className="flex flex-col text-xs">
               Skupni popust %
               <DecimalInput
+                placeholder="npr. 5"
                 value={draft.totalDiscountPct}
                 onChange={(totalDiscountPct) => setDraft({ ...draft, totalDiscountPct })}
-                className="mt-1 w-24 rounded border border-[var(--vo-border)] px-2 py-1"
+                className="vo-input mt-1 w-24 px-2 py-1"
               />
             </label>
             <label className="flex items-center gap-2 text-xs">
@@ -681,9 +682,10 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               DDV {draft.vatPct}%
             </label>
             <DecimalInput
+              placeholder="22"
               value={draft.vatPct}
               onChange={(vatPct) => setDraft({ ...draft, vatPct })}
-              className="w-16 rounded border border-[var(--vo-border)] px-2 py-1 text-xs"
+              className="vo-input w-16 px-2 py-1 text-xs"
             />
             <div>
               <div className="text-[var(--vo-muted)]">Osnova</div>
@@ -706,12 +708,12 @@ export function TabPonudbe({ ctx }: { ctx: WorkspaceCtx }) {
               onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
               rows={3}
               className="mt-1 w-full rounded border border-[var(--vo-border)] bg-transparent px-2 py-2"
-              placeholder="Pogoji ponudbe‚Ä¶"
+              placeholder="Pogoji ponudbeù"
             />
           </label>
         </div>
       ) : (
-        <p className="text-sm text-[var(--vo-muted)]">Ustvarite ponudbo ali izberite obstojeƒço.</p>
+        <p className="text-sm text-[var(--vo-muted)]">Ustvarite ponudbo ali izberite obstojeùo.</p>
       )}
     </div>
   );

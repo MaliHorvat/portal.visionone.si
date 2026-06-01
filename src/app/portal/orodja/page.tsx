@@ -2,17 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Calculator, Image as ImageIcon, Network, Scan, Shield, Wifi } from "lucide-react";
+import { Calculator, Image as ImageIcon, Network, Shield, Wifi } from "lucide-react";
 import { DecimalInput } from "@/components/portal/DecimalInput";
-
-function mockScan(start: string, end: string) {
-  const base = start.replace(/\.\d+$/, "");
-  return [
-    { ip: `${base}.1`, mac: "00:11:22:33:44:01", host: "router.gateway" },
-    { ip: `${base}.10`, mac: "aa:bb:cc:dd:ee:ff", host: "nvr.local" },
-    { ip: `${base}.50`, mac: "de:ad:be:ef:00:01", host: "cam-vhod" },
-  ].filter(() => start && end);
-}
+import { LanNetworkScanner } from "@/components/portal/LanNetworkScanner";
+import { OrodjaToolNav, OrodjaToolSection } from "@/components/portal/OrodjaToolNav";
+import { isOrodjaToolId } from "@/lib/orodja-tools";
 
 function clampInt(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, Math.trunc(v)));
@@ -48,11 +42,9 @@ const OUI: Record<string, string> = {
 
 export default function OrodjaPage() {
   const sp = useSearchParams();
-  const tool = sp.get("tool") || "ip-scan";
+  const toolParam = sp.get("tool");
+  const tool = isOrodjaToolId(toolParam) ? toolParam : "ip-scan";
 
-  const [startIp, setStartIp] = useState("192.168.1.1");
-  const [endIp, setEndIp] = useState("192.168.1.30");
-  const [scanResult, setScanResult] = useState<ReturnType<typeof mockScan>>([]);
   const [mac, setMac] = useState("aa:bb:cc:dd:ee:ff");
   const [wolMsg, setWolMsg] = useState<string | null>(null);
   const [pwLen, setPwLen] = useState(16);
@@ -204,110 +196,98 @@ export default function OrodjaPage() {
 
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--vo-fg)]">Orodja in diagnostika</h1>
-        <p className="mt-1 text-sm text-[var(--vo-muted)]">
-          Orodja so zbrana na eni strani; v meniju se preklaplja prek parametra{" "}
-          <span className="font-mono">tool</span>.
+    <div className="space-y-4 pb-[env(safe-area-inset-bottom)] sm:space-y-6">
+      <header>
+        <h1 className="vo-page-title text-xl sm:text-2xl">Orodja in diagnostika</h1>
+        <p className="vo-page-desc mt-1 text-sm">
+          Kalkulatorji in mrežna orodja — optimizirano za telefon in tablico. Izberite orodje spodaj.
         </p>
-      </div>
+      </header>
+      <OrodjaToolNav active={tool} />
       {tool === "ip-scan" ? (
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-          <div className="flex items-center gap-2 text-[var(--vo-fg)]">
-            <Scan className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />
-            <h2 className="font-semibold">IP scanner</h2>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="text-sm">
-              <span className="text-[var(--vo-muted)]">Začetni IP</span>
-              <input value={startIp} onChange={(e) => setStartIp(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 font-mono text-sm" />
-            </label>
-            <label className="text-sm">
-              <span className="text-[var(--vo-muted)]">Končni IP</span>
-              <input value={endIp} onChange={(e) => setEndIp(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 font-mono text-sm" />
-            </label>
-          </div>
-          <button type="button" onClick={() => setScanResult(mockScan(startIp, endIp))} className="mt-4 rounded-lg bg-[var(--vo-accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--vo-accent-hover)]">
-            Zaženi sken (demo)
-          </button>
-          {scanResult.length > 0 ? (
-            <table className="mt-4 w-full text-left text-xs">
-              <thead className="text-[var(--vo-muted)]">
-                <tr>
-                  <th className="py-1">IP</th>
-                  <th className="py-1">MAC</th>
-                  <th className="py-1">Opomba</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scanResult.map((r) => (
-                  <tr key={r.ip} className="border-t border-[var(--vo-border)]">
-                    <td className="py-2 font-mono">{r.ip}</td>
-                    <td className="py-2 font-mono">{r.mac}</td>
-                    <td className="py-2 text-[var(--vo-muted)]">{r.host}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : null}
-        </section>
+        <LanNetworkScanner
+          onAddToIpam={(entry) => {
+            setIpam((prev) => {
+              if (prev.some((e) => e.ip === entry.ip)) return prev;
+              return [{ ip: entry.ip, name: entry.name }, ...prev];
+            });
+          }}
+        />
       ) : null}
 
       {tool === "wol" ? (
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-          <div className="flex items-center gap-2 text-[var(--vo-fg)]">
-            <Wifi className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />
-            <h2 className="font-semibold">Wake on LAN</h2>
-          </div>
-          <label className="mt-4 block text-sm">
+        <OrodjaToolSection title="Wake on LAN" icon={Wifi}>
+          <label className="block text-sm">
             <span className="text-[var(--vo-muted)]">MAC naslov</span>
-            <input value={mac} onChange={(e) => setMac(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 font-mono text-sm" />
+            <input
+              value={mac}
+              onChange={(e) => setMac(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="off"
+              className="vo-input vo-input-touch mt-1 w-full font-mono"
+            />
           </label>
-          <button type="button" onClick={() => setWolMsg(`Magic packet poslan na ${mac} (demo).`)} className="mt-4 rounded-lg border border-[var(--vo-border)] px-4 py-2 text-sm font-semibold text-[var(--vo-fg)] hover:bg-[var(--vo-surface-2)]">
+          <button
+            type="button"
+            onClick={() => setWolMsg(`Magic packet poslan na ${mac} (demo).`)}
+            className="vo-touch-btn vo-btn-secondary mt-4 w-full sm:w-auto"
+          >
             Pošlji WoL
           </button>
           {wolMsg ? <p className="mt-3 text-sm text-[var(--vo-ok)]">{wolMsg}</p> : null}
-        </section>
+        </OrodjaToolSection>
       ) : null}
 
       {tool === "pw" ? (
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-          <div className="flex items-center gap-2 text-[var(--vo-fg)]">
-            <Shield className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />
-            <h2 className="font-semibold">Generator gesel</h2>
-          </div>
-          <div className="mt-4 flex flex-wrap items-end gap-3">
+        <OrodjaToolSection title="Generator gesel" icon={Shield}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">Dolžina</span>
-              <input type="number" value={pwLen} onChange={(e) => setPwLen(clampInt(Number(e.target.value) || 0, 6, 64))} className="mt-1 w-24 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <input
+                type="number"
+                inputMode="numeric"
+                value={pwLen}
+                onChange={(e) => setPwLen(clampInt(Number(e.target.value) || 0, 6, 64))}
+                className="vo-input vo-input-touch mt-1 w-full max-w-[8rem]"
+              />
             </label>
-            <label className="flex items-center gap-2 text-sm text-[var(--vo-muted)]">
-              <input type="checkbox" checked={pwOpt.upper} onChange={(e) => setPwOpt((o) => ({ ...o, upper: e.target.checked }))} />
-              Velike črke
-            </label>
-            <label className="flex items-center gap-2 text-sm text-[var(--vo-muted)]">
-              <input type="checkbox" checked={pwOpt.lower} onChange={(e) => setPwOpt((o) => ({ ...o, lower: e.target.checked }))} />
-              Male črke
-            </label>
-            <label className="flex items-center gap-2 text-sm text-[var(--vo-muted)]">
-              <input type="checkbox" checked={pwOpt.digits} onChange={(e) => setPwOpt((o) => ({ ...o, digits: e.target.checked }))} />
-              Številke
-            </label>
-            <label className="flex items-center gap-2 text-sm text-[var(--vo-muted)]">
-              <input type="checkbox" checked={pwOpt.special} onChange={(e) => setPwOpt((o) => ({ ...o, special: e.target.checked }))} />
-              Posebni znaki
-            </label>
-            <button type="button" className="rounded-lg bg-[var(--vo-accent)] px-4 py-2 text-sm font-semibold text-white" onClick={() => setPassword(genPassword(pwLen, pwOpt))}>
+            <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:col-span-1 lg:flex lg:flex-wrap lg:gap-3">
+              <label className="vo-touch-btn flex min-h-[2.75rem] items-center gap-2 rounded-lg border border-[var(--vo-border)] px-3 text-sm text-[var(--vo-muted)]">
+                <input type="checkbox" checked={pwOpt.upper} onChange={(e) => setPwOpt((o) => ({ ...o, upper: e.target.checked }))} className="h-4 w-4" />
+                Velike
+              </label>
+              <label className="vo-touch-btn flex min-h-[2.75rem] items-center gap-2 rounded-lg border border-[var(--vo-border)] px-3 text-sm text-[var(--vo-muted)]">
+                <input type="checkbox" checked={pwOpt.lower} onChange={(e) => setPwOpt((o) => ({ ...o, lower: e.target.checked }))} className="h-4 w-4" />
+                Male
+              </label>
+              <label className="vo-touch-btn flex min-h-[2.75rem] items-center gap-2 rounded-lg border border-[var(--vo-border)] px-3 text-sm text-[var(--vo-muted)]">
+                <input type="checkbox" checked={pwOpt.digits} onChange={(e) => setPwOpt((o) => ({ ...o, digits: e.target.checked }))} className="h-4 w-4" />
+                Številke
+              </label>
+              <label className="vo-touch-btn flex min-h-[2.75rem] items-center gap-2 rounded-lg border border-[var(--vo-border)] px-3 text-sm text-[var(--vo-muted)]">
+                <input type="checkbox" checked={pwOpt.special} onChange={(e) => setPwOpt((o) => ({ ...o, special: e.target.checked }))} className="h-4 w-4" />
+                Posebni
+              </label>
+            </div>
+            <button
+              type="button"
+              className="vo-touch-btn vo-btn-primary w-full px-4 py-2.5 text-sm font-semibold sm:w-auto"
+              onClick={() => setPassword(genPassword(pwLen, pwOpt))}
+            >
               Generiraj
             </button>
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <input readOnly value={password} placeholder="—" className="min-w-[260px] flex-1 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 font-mono text-sm" />
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-stretch">
+            <input
+              readOnly
+              value={password}
+              placeholder="—"
+              className="vo-input vo-input-touch min-w-0 flex-1 font-mono text-base sm:text-sm"
+            />
             <button
               type="button"
               disabled={!password}
-              className="rounded-lg border border-[var(--vo-border)] px-4 py-2 text-sm font-semibold disabled:opacity-40"
+              className="vo-touch-btn vo-btn-secondary w-full shrink-0 disabled:opacity-40 sm:w-auto"
               onClick={async () => {
                 try {
                   await navigator.clipboard.writeText(password);
@@ -317,134 +297,169 @@ export default function OrodjaPage() {
               Kopiraj
             </button>
           </div>
-        </section>
+        </OrodjaToolSection>
       ) : null}
 
       {tool === "poe" ? (
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-          <div className="flex items-center gap-2 text-[var(--vo-fg)]">
-            <Calculator className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />
-            <h2 className="font-semibold">PoE kalkulator</h2>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <OrodjaToolSection title="PoE kalkulator" icon={Calculator}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">Št. portov</span>
-              <input type="number" value={poePorts} onChange={(e) => setPoePorts(clampInt(Number(e.target.value) || 0, 0, 96))} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <input
+                type="number"
+                inputMode="numeric"
+                value={poePorts}
+                onChange={(e) => setPoePorts(clampInt(Number(e.target.value) || 0, 0, 96))}
+                className="vo-input vo-input-touch mt-1 w-full"
+              />
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">W / port</span>
-              <DecimalInput value={poePerPortW} onChange={setPoePerPortW} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <DecimalInput value={poePerPortW} onChange={setPoePerPortW} className="vo-input vo-input-touch mt-1 w-full" />
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">PoE budget (W)</span>
-              <DecimalInput value={poeBudgetW} onChange={setPoeBudgetW} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <DecimalInput value={poeBudgetW} onChange={setPoeBudgetW} className="vo-input vo-input-touch mt-1 w-full" />
             </label>
           </div>
-          <div className="mt-4 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-4 py-3 text-sm">
-            <div className="flex flex-wrap justify-between gap-3">
+          <div className="vo-mobile-card mt-4 text-sm">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-[var(--vo-muted)]">Skupaj poraba</div>
-                <div className="text-lg font-bold text-[var(--vo-fg)]">{poeTotal.toFixed(1)} W</div>
+                <div className="text-xl font-bold text-[var(--vo-fg)]">{poeTotal.toFixed(1)} W</div>
               </div>
               <div>
                 <div className="text-[var(--vo-muted)]">Rezerva</div>
-                <div className={`text-lg font-bold ${poeMargin >= 0 ? "text-[var(--vo-ok)]" : "text-[var(--vo-danger)]"}`}>{poeMargin.toFixed(1)} W</div>
+                <div className={`text-xl font-bold ${poeMargin >= 0 ? "text-[var(--vo-ok)]" : "text-[var(--vo-danger)]"}`}>
+                  {poeMargin.toFixed(1)} W
+                </div>
               </div>
             </div>
           </div>
-        </section>
+        </OrodjaToolSection>
       ) : null}
 
       {tool === "storage" ? (
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-          <div className="flex items-center gap-2 text-[var(--vo-fg)]">
-            <Calculator className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />
-            <h2 className="font-semibold">Kalkulator shrambe</h2>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <OrodjaToolSection title="Kalkulator shrambe" icon={Calculator}>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">Kamere</span>
-              <input type="number" value={storCams} onChange={(e) => setStorCams(clampInt(Number(e.target.value) || 0, 0, 512))} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <input
+                type="number"
+                inputMode="numeric"
+                value={storCams}
+                onChange={(e) => setStorCams(clampInt(Number(e.target.value) || 0, 0, 512))}
+                className="vo-input vo-input-touch mt-1 w-full"
+              />
             </label>
             <label className="text-sm">
-              <span className="text-[var(--vo-muted)]">Bitrate (Mbps)</span>
-              <DecimalInput value={storBitrate} onChange={setStorBitrate} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <span className="text-[var(--vo-muted)]">Mbps</span>
+              <DecimalInput value={storBitrate} onChange={setStorBitrate} className="vo-input vo-input-touch mt-1 w-full" />
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">Dni</span>
-              <input type="number" value={storDays} onChange={(e) => setStorDays(clampInt(Number(e.target.value) || 0, 0, 365))} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <input
+                type="number"
+                inputMode="numeric"
+                value={storDays}
+                onChange={(e) => setStorDays(clampInt(Number(e.target.value) || 0, 0, 365))}
+                className="vo-input vo-input-touch mt-1 w-full"
+              />
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">Overhead %</span>
-              <input type="number" value={storOverhead} onChange={(e) => setStorOverhead(clampInt(Number(e.target.value) || 0, 0, 200))} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <input
+                type="number"
+                inputMode="numeric"
+                value={storOverhead}
+                onChange={(e) => setStorOverhead(clampInt(Number(e.target.value) || 0, 0, 200))}
+                className="vo-input vo-input-touch mt-1 w-full"
+              />
             </label>
           </div>
-          <div className="mt-4 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-4 py-3 text-sm">
+          <div className="vo-mobile-card mt-4 text-sm">
             <div className="text-[var(--vo-muted)]">Ocena prostora (TB)</div>
-            <div className="text-2xl font-bold text-[var(--vo-accent)]">{storageTb.toFixed(2)} TB</div>
+            <div className="text-3xl font-bold text-[var(--vo-accent)]">{storageTb.toFixed(2)} TB</div>
           </div>
-        </section>
+        </OrodjaToolSection>
       ) : null}
 
       {tool === "lcc" ? (
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-          <div className="flex items-center gap-2 text-[var(--vo-fg)]">
-            <Calculator className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />
-            <h2 className="font-semibold">Kalkulator LCC</h2>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <OrodjaToolSection title="Kalkulator LCC" icon={Calculator}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">CAPEX (€)</span>
-              <DecimalInput value={lccCapex} onChange={setLccCapex} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <DecimalInput value={lccCapex} onChange={setLccCapex} className="vo-input vo-input-touch mt-1 w-full" />
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">OPEX / leto (€)</span>
-              <DecimalInput value={lccOpex} onChange={setLccOpex} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <DecimalInput value={lccOpex} onChange={setLccOpex} className="vo-input vo-input-touch mt-1 w-full" />
             </label>
             <label className="text-sm">
               <span className="text-[var(--vo-muted)]">Leta</span>
-              <input type="number" value={lccYears} onChange={(e) => setLccYears(clampInt(Number(e.target.value) || 0, 0, 20))} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
+              <input
+                type="number"
+                inputMode="numeric"
+                value={lccYears}
+                onChange={(e) => setLccYears(clampInt(Number(e.target.value) || 0, 0, 20))}
+                className="vo-input vo-input-touch mt-1 w-full"
+              />
             </label>
           </div>
-          <div className="mt-4 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-4 py-3 text-sm">
+          <div className="vo-mobile-card mt-4 text-sm">
             <div className="text-[var(--vo-muted)]">Skupni LCC</div>
-            <div className="text-2xl font-bold text-[var(--vo-accent)]">{lccTotal.toFixed(2)} €</div>
+            <div className="text-3xl font-bold text-[var(--vo-accent)]">{lccTotal.toFixed(2)} €</div>
           </div>
-        </section>
+        </OrodjaToolSection>
       ) : null}
 
       {tool === "mac" ? (
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-          <div className="flex items-center gap-2 text-[var(--vo-fg)]">
-            <Network className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />
-            <h2 className="font-semibold">MAC lookup</h2>
-          </div>
-          <label className="mt-4 block text-sm">
+        <OrodjaToolSection title="MAC lookup" icon={Network}>
+          <label className="block text-sm">
             <span className="text-[var(--vo-muted)]">MAC</span>
-            <input value={macInput} onChange={(e) => setMacInput(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 font-mono text-sm" />
+            <input
+              value={macInput}
+              onChange={(e) => setMacInput(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="off"
+              className="vo-input vo-input-touch mt-1 w-full font-mono"
+            />
           </label>
-          <div className="mt-4 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-4 py-3 text-sm">
+          <div className="vo-mobile-card mt-4 text-sm">
             <div className="text-[var(--vo-muted)]">Normaliziran</div>
-            <div className="font-mono text-[var(--vo-fg)]">{macNorm ?? "Neveljaven MAC"}</div>
-            <div className="mt-2 text-[var(--vo-muted)]">Vendor (demo)</div>
+            <div className="break-all font-mono text-base text-[var(--vo-fg)]">{macNorm ?? "Neveljaven MAC"}</div>
+            <div className="mt-3 text-[var(--vo-muted)]">Vendor (demo)</div>
             <div className="text-[var(--vo-fg)]">{macVendor ?? "—"}</div>
           </div>
-        </section>
+        </OrodjaToolSection>
       ) : null}
 
       {tool === "ipam" ? (
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-          <div className="flex items-center gap-2 text-[var(--vo-fg)]">
-            <Network className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />
-            <h2 className="font-semibold">IPAM (sinhronizacija z bazo)</h2>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2 text-sm">
-            <input placeholder="IP" value={ipamIp} onChange={(e) => setIpamIp(e.target.value)} className="w-40 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 font-mono text-sm" />
-            <input placeholder="Ime" value={ipamName} onChange={(e) => setIpamName(e.target.value)} className="min-w-[200px] flex-1 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm" />
-            <input placeholder="MAC (opcijsko)" value={ipamMac} onChange={(e) => setIpamMac(e.target.value)} className="w-44 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 font-mono text-sm" />
+        <OrodjaToolSection title="IPAM (sinhronizacija z bazo)" icon={Network}>
+          <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 lg:flex lg:flex-wrap">
+            <input
+              placeholder="IP"
+              value={ipamIp}
+              onChange={(e) => setIpamIp(e.target.value)}
+              inputMode="decimal"
+              className="vo-input vo-input-touch font-mono lg:w-40"
+            />
+            <input
+              placeholder="Ime"
+              value={ipamName}
+              onChange={(e) => setIpamName(e.target.value)}
+              className="vo-input vo-input-touch min-w-0 lg:min-w-[200px] lg:flex-1"
+            />
+            <input
+              placeholder="MAC (opcijsko)"
+              value={ipamMac}
+              onChange={(e) => setIpamMac(e.target.value)}
+              autoCapitalize="off"
+              className="vo-input vo-input-touch font-mono lg:w-44"
+            />
             <button
               type="button"
-              className="rounded-lg bg-[var(--vo-accent)] px-4 py-2 text-sm font-semibold text-white"
+              className="vo-touch-btn vo-btn-primary w-full px-4 py-2.5 text-sm font-semibold sm:col-span-2 lg:w-auto"
               onClick={() => {
                 if (!ipamIp.trim() || !ipamName.trim()) return;
                 setIpam((prev) => [{ ip: ipamIp.trim(), name: ipamName.trim(), mac: ipamMac.trim() || undefined }, ...prev]);
@@ -456,8 +471,25 @@ export default function OrodjaPage() {
               + Dodaj
             </button>
           </div>
-          <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--vo-border)]">
-            <table className="min-w-[640px] w-full text-left text-xs">
+          <div className="mt-4 space-y-3 md:hidden">
+            {ipam.map((r, i) => (
+              <article key={`${r.ip}-${i}-m`} className="vo-mobile-card">
+                <p className="font-mono text-base font-semibold">{r.ip}</p>
+                <p className="mt-1 text-sm">{r.name}</p>
+                <p className="mt-1 font-mono text-xs text-[var(--vo-muted)]">{r.mac ?? "—"}</p>
+                <button
+                  type="button"
+                  className="vo-touch-btn mt-3 text-sm font-semibold text-[var(--vo-danger)]"
+                  onClick={() => setIpam((p) => p.filter((_, j) => j !== i))}
+                >
+                  Izbriši
+                </button>
+              </article>
+            ))}
+            {ipam.length === 0 ? <p className="text-center text-sm text-[var(--vo-muted)]">Ni vnosov.</p> : null}
+          </div>
+          <div className="mt-4 hidden overflow-x-auto rounded-lg border border-[var(--vo-border)] md:block">
+            <table className="w-full min-w-[520px] text-left text-xs">
               <thead className="border-b border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-muted)]">
                 <tr>
                   <th className="px-3 py-2">IP</th>
@@ -473,7 +505,7 @@ export default function OrodjaPage() {
                     <td className="px-3 py-2">{r.name}</td>
                     <td className="px-3 py-2 font-mono text-[var(--vo-muted)]">{r.mac ?? "—"}</td>
                     <td className="px-3 py-2 text-right">
-                      <button type="button" className="text-red-500 hover:underline" onClick={() => setIpam((p) => p.filter((_, j) => j !== i))}>
+                      <button type="button" className="text-[var(--vo-danger)] hover:underline" onClick={() => setIpam((p) => p.filter((_, j) => j !== i))}>
                         Izbriši
                       </button>
                     </td>
@@ -489,41 +521,38 @@ export default function OrodjaPage() {
               </tbody>
             </table>
           </div>
-        </section>
+        </OrodjaToolSection>
       ) : null}
 
       {tool === "snapshot" ? (
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-          <div className="flex items-center gap-2 text-[var(--vo-fg)]">
-            <ImageIcon className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />
-            <h2 className="font-semibold">Zadnji snapshot (kamera)</h2>
-          </div>
-          <p className="mt-2 text-sm text-[var(--vo-muted)]">Mock slika — stream/GET thumbnail iz storitve.</p>
-          <div className="mt-4 aspect-video max-w-xl overflow-hidden rounded-lg border border-[var(--vo-border)] bg-gradient-to-br from-slate-800 via-slate-700 to-teal-900">
+        <OrodjaToolSection title="Zadnji snapshot (kamera)" icon={ImageIcon}>
+          <p className="text-sm text-[var(--vo-muted)]">Mock slika — stream/GET thumbnail iz storitve.</p>
+          <div className="mt-4 aspect-video w-full max-w-xl overflow-hidden rounded-lg border border-[var(--vo-border)] bg-gradient-to-br from-slate-800 via-slate-700 to-teal-900">
             <div className="flex h-full items-center justify-center text-sm text-white/80">Snapshot placeholder</div>
           </div>
-        </section>
+        </OrodjaToolSection>
       ) : null}
 
       {tool === "ping" ? (
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-semibold text-[var(--vo-fg)]">Ping watchdog (kamere)</h2>
-            <select
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-              className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-2 py-1.5 text-sm"
-            >
-              <option value="">— izberi stranko —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <p className="mt-2 text-xs text-[var(--vo-muted)]">Osvežitev statusa na 10 sekund.</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <OrodjaToolSection title="Ping watchdog (kamere)" icon={Network}>
+          <label className="sr-only" htmlFor="ping-client-select">
+            Stranka
+          </label>
+          <select
+            id="ping-client-select"
+            value={selectedClientId}
+            onChange={(e) => setSelectedClientId(e.target.value)}
+            className="vo-select vo-input-touch w-full text-sm"
+          >
+            <option value="">— izberi stranko —</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-3 text-xs text-[var(--vo-muted)]">Osvežitev statusa na 10 sekund.</p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {pingCards.map((c) => (
               <div
                 key={c.id}
@@ -552,22 +581,18 @@ export default function OrodjaPage() {
               </div>
             ))}
             {selectedClientId && pingCards.length === 0 ? (
-              <p className="text-sm text-[var(--vo-muted)]">Za to stranko ni kamer.</p>
+              <p className="col-span-full text-sm text-[var(--vo-muted)]">Za to stranko ni kamer.</p>
             ) : null}
           </div>
-        </section>
+        </OrodjaToolSection>
       ) : null}
 
       {["wifi", "nvr", "lpr", "bulk", "qr"].includes(tool) ? (
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
-          <div className="flex items-center gap-2 text-[var(--vo-fg)]">
-            <Wifi className="h-5 w-5 text-[var(--vo-accent)]" aria-hidden />
-            <h2 className="font-semibold">V izdelavi</h2>
-          </div>
-          <p className="mt-2 text-sm text-[var(--vo-muted)]">
+        <OrodjaToolSection title="V izdelavi" icon={Wifi}>
+          <p className="text-sm text-[var(--vo-muted)]">
             To orodje je na seznamu v meniju, UI je pripravljena, backend/logika pa je še v izdelavi.
           </p>
-        </section>
+        </OrodjaToolSection>
       ) : null}
     </div>
   );

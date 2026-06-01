@@ -51,6 +51,8 @@ export interface ClientSummary {
   tags: string[];
   careBoxEnabled?: boolean;
   careSlaTier?: string;
+  /** Prikaz statusa na moj.visionone.si (zelena/rdeča pika v seznamu). */
+  mojPortalEnabled?: boolean;
   preventive: ClientPreventivePlan;
 }
 

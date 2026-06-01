@@ -47,7 +47,7 @@ export async function PUT(request: Request, ctx: Ctx) {
     });
     void sendTelegramNotification(
       `🔁 Opomnik posodobljen\nNaslov: ${updated.title}\nStranka: ${updated.clientName || "-"}\nRok: ${updated.dueDate}\nStatus: ${updated.completed ? "opravljeno" : "odprto"}`,
-      "reminder",
+      "reminder_updated",
     );
     return NextResponse.json({ reminder: updated });
   } catch (e) {

@@ -140,7 +140,7 @@ export function TabVzdrzevanje({ ctx }: { ctx: WorkspaceCtx }) {
                 <input
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1"
+                  className="vo-select px-2 py-1 text-xs"
                 />
               ) : (
                 <span className={r.completed ? "text-[var(--vo-muted)] line-through" : ""}>{r.title}</span>
@@ -151,7 +151,7 @@ export function TabVzdrzevanje({ ctx }: { ctx: WorkspaceCtx }) {
                 type="date"
                 value={editDue}
                 onChange={(e) => setEditDue(e.target.value)}
-                className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1 text-xs"
+                className="vo-select px-2 py-1 text-xs text-xs"
               />
             ) : (
               <span className="text-xs text-[var(--vo-muted)]">{r.dueDate}</span>

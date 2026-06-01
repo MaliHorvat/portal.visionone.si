@@ -29,6 +29,19 @@
   --vo-header-bg: rgba(255, 255, 255, 0.85);
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
+/* Logotip: črna grafika na svetli podlagi → invert za temno temo */
+.vo-brand-on-light {
+  filter: none;
+}
+
+.vo-brand-on-dark {
+  filter: brightness(0) invert(1);
+}
+
 .dark {
   --vo-bg: #060a10;
   --vo-surface: #0f141c;
@@ -245,6 +258,109 @@ h3 {
   background: var(--vo-surface);
 }
 
+/* —— Orodja / kalkulatorji (mobilno) —— */
+.vo-tool-section {
+  border-radius: var(--vo-radius-lg);
+  border: 1px solid var(--vo-border);
+  background: var(--vo-surface);
+  padding: 1rem;
+  box-shadow: var(--vo-card-shadow);
+}
+
+@media (min-width: 640px) {
+  .vo-tool-section {
+    padding: 1.25rem;
+  }
+}
+
+.vo-tool-nav {
+  display: flex;
+  gap: 0.375rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  padding-bottom: 0.25rem;
+  scrollbar-width: none;
+}
+
+.vo-tool-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.vo-tool-nav-item {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+  border: 1px solid var(--vo-border);
+  background: var(--vo-surface);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--vo-muted);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.vo-tool-nav-item-active {
+  border-color: rgba(10, 143, 143, 0.45);
+  background: var(--vo-accent-muted);
+  color: var(--vo-accent);
+}
+
+.vo-touch-btn {
+  min-height: 2.75rem;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vo-mobile-card {
+  border-radius: 0.75rem;
+  border: 1px solid var(--vo-border);
+  background: var(--vo-surface-2);
+  padding: 0.875rem;
+}
+
+.vo-sticky-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  margin-top: 1rem;
+  margin-inline: -0.25rem;
+  padding: 0.75rem 0.25rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--vo-bg) 75%, transparent) 24%,
+    var(--vo-bg) 100%
+  );
+  backdrop-filter: blur(8px);
+}
+
+@media (min-width: 640px) {
+  .vo-sticky-actions {
+    position: static;
+    margin: 1rem 0 0;
+    padding: 0;
+    background: none;
+    backdrop-filter: none;
+  }
+}
+
+/* iOS: font < 16px pri focus povzroči zoom — na dotikih uporabljamo vo-input */
+.vo-input-touch {
+  font-size: 1rem;
+  line-height: 1.4;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.75rem;
+}
+
 .vo-btn-ghost {
   border-radius: 0.5rem;
   border: 1px solid var(--vo-border);
@@ -260,17 +376,130 @@ h3 {
   border-color: rgba(10, 143, 143, 0.35);
 }
 
-.vo-input {
+.vo-input,
+.vo-select,
+.vo-textarea {
   border-radius: 0.5rem;
   border: 1px solid var(--vo-border);
-  background: var(--vo-surface);
+  background-color: var(--vo-surface);
+  color: var(--vo-fg);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.vo-input:focus {
+.vo-input::placeholder,
+.vo-textarea::placeholder,
+.vo-select::placeholder {
+  color: var(--vo-muted);
+  opacity: 1;
+}
+
+.vo-field-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--vo-muted);
+  margin-bottom: 0.25rem;
+}
+
+.vo-input:focus,
+.vo-select:focus,
+.vo-textarea:focus {
   outline: none;
   border-color: var(--vo-accent);
   box-shadow: 0 0 0 3px var(--vo-accent-muted);
+}
+
+.vo-select {
+  color-scheme: light;
+  cursor: pointer;
+}
+
+.dark .vo-select {
+  color-scheme: dark;
+}
+
+.vo-select option {
+  background-color: var(--vo-surface);
+  color: var(--vo-fg);
+}
+
+.dark .vo-select option {
+  background-color: var(--vo-surface-elevated);
+  color: var(--vo-fg);
+}
+
+/* Vsi native form elementi v portalu — prepiše bg-transparent in sistemske barve */
+select,
+textarea,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="hidden"]):not(.sr-only) {
+  background-color: var(--vo-surface) !important;
+  color: var(--vo-fg) !important;
+}
+
+select {
+  color-scheme: light;
+}
+
+.dark select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: var(--vo-surface);
+  color: var(--vo-fg);
+}
+
+.dark select option {
+  background-color: var(--vo-surface-elevated);
+  color: var(--vo-fg);
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill,
+.dark textarea:-webkit-autofill:hover,
+.dark textarea:-webkit-autofill:focus,
+.dark select:-webkit-autofill,
+.dark select:-webkit-autofill:hover,
+.dark select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--vo-surface) inset !important;
+  -webkit-text-fill-color: var(--vo-fg) !important;
+  caret-color: var(--vo-fg);
+}
+
+.dark input[type="date"],
+.dark input[type="datetime-local"],
+.dark input[type="time"] {
+  color-scheme: dark;
+}
+
+/* Opozorilni pasovi — berljivi v obeh načinih */
+.vo-alert-warn {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--vo-warn) 40%, transparent);
+  background: color-mix(in srgb, var(--vo-warn) 12%, var(--vo-surface));
+  color: var(--vo-warn);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+
+.vo-alert-error {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--vo-danger) 40%, transparent);
+  background: var(--vo-danger-muted);
+  color: var(--vo-danger);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+
+.vo-alert-info {
+  border-radius: 0.75rem;
+  border: 1px solid var(--vo-border);
+  background: var(--vo-surface);
+  color: var(--vo-fg);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
 }
 
 .vo-section-label,

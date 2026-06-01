@@ -133,14 +133,14 @@ export function NastavitveUporabniki() {
           onChange={(ev) => setUsername(ev.target.value)}
           placeholder="Uporabniško ime"
           required
-          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+          className="vo-input px-3 py-2 text-sm"
         />
         <input
           value={email}
           onChange={(ev) => setEmail(ev.target.value)}
           placeholder="E-pošta (opcijsko)"
           type="email"
-          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+          className="vo-input px-3 py-2 text-sm"
         />
         <input
           value={password}
@@ -149,7 +149,7 @@ export function NastavitveUporabniki() {
           type="password"
           required
           minLength={8}
-          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+          className="vo-input px-3 py-2 text-sm"
         />
         <select
           value={role}
@@ -158,7 +158,7 @@ export function NastavitveUporabniki() {
             setRole(nextRole);
             setNavPermissions(getDefaultNavPermissions(nextRole));
           }}
-          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+          className="vo-input px-3 py-2 text-sm"
         >
           <option value="viewer">Pregled</option>
           <option value="operator">Operater</option>
@@ -225,7 +225,7 @@ export function NastavitveUporabniki() {
                           getDefaultNavPermissions(ev.target.value as PortalRole),
                         )
                       }
-                      className="rounded-md border border-[var(--vo-border)] bg-transparent px-2 py-1 text-xs"
+                      className="vo-select px-2 py-1 text-xs"
                     >
                       <option value="viewer">Pregled</option>
                       <option value="operator">Operater</option>

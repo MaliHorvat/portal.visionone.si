@@ -67,6 +67,8 @@ export async function PUT(request: Request, ctx: Ctx) {
         email: body?.email,
         health: body?.health === "alarm" ? "alarm" : body?.health === "ok" ? "ok" : undefined,
         packageId: body?.packageId === undefined ? undefined : body.packageId,
+        mojPortalEnabled:
+          body?.mojPortalEnabled === undefined ? undefined : Boolean(body.mojPortalEnabled),
         topologyData: body?.topologyData,
         rackData: body?.rackData,
         tags,

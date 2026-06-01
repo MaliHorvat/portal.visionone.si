@@ -133,7 +133,7 @@ export function ZahtevkiView({ requests, clients, dbConfigured, onRequestsChange
       />
 
       {!dbConfigured ? (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="vo-alert-warn">
           Baza ni nastavljena. Zahtevki so onemogočeni.
         </div>
       ) : null}
@@ -144,12 +144,12 @@ export function ZahtevkiView({ requests, clients, dbConfigured, onRequestsChange
           placeholder="Išči zahtevke…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="min-w-[160px] flex-1 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5"
+          className="vo-input min-w-[160px] flex-1 px-3 py-1.5 text-sm"
         />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-xs"
+          className="vo-select px-2 py-1.5 text-xs"
         >
           <option value="all">Vsi statusi</option>
           {(Object.keys(STATUS_LABEL) as ServiceRequestStatus[]).map((s) => (
@@ -188,9 +188,9 @@ export function ZahtevkiView({ requests, clients, dbConfigured, onRequestsChange
               name="title"
               required
               placeholder="Naslov zahtevka"
-              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
+              className="vo-input px-3 py-2 text-sm md:col-span-2"
             />
-            <select name="clientId" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm">
+            <select name="clientId" className="vo-select px-3 py-2 text-sm">
               <option value="">— brez stranke —</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -201,20 +201,20 @@ export function ZahtevkiView({ requests, clients, dbConfigured, onRequestsChange
             <select
               name="priority"
               defaultValue="medium"
-              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+              className="vo-select px-3 py-2 text-sm"
             >
               <option value="low">Nizka</option>
               <option value="medium">Srednja</option>
               <option value="high">Visoka</option>
               <option value="urgent">Nujna</option>
             </select>
-            <input name="assignee" placeholder="Dodeljeno (ime)" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <input name="dueDate" type="date" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <input name="assignee" placeholder="Dodeljeno (ime)" className="vo-input px-3 py-2 text-sm" />
+            <input name="dueDate" type="date" className="vo-input px-3 py-2 text-sm" />
             <textarea
               name="description"
               rows={3}
               placeholder="Opis zahtevka"
-              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
+              className="vo-textarea px-3 py-2 text-sm md:col-span-2"
             />
           </div>
           <button
@@ -250,7 +250,7 @@ export function ZahtevkiView({ requests, clients, dbConfigured, onRequestsChange
                 <select
                   value={r.status}
                   onChange={(e) => void patchRequest(r.id, { status: e.target.value })}
-                  className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1 text-xs"
+                  className="vo-select px-2 py-1 text-xs"
                 >
                   {Object.entries(STATUS_LABEL).map(([k, v]) => (
                     <option key={k} value={k}>
@@ -261,7 +261,7 @@ export function ZahtevkiView({ requests, clients, dbConfigured, onRequestsChange
                 <select
                   value={r.priority}
                   onChange={(e) => void patchRequest(r.id, { priority: e.target.value })}
-                  className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1 text-xs"
+                  className="vo-select px-2 py-1 text-xs"
                 >
                   {Object.entries(PRIORITY_LABEL).map(([k, v]) => (
                     <option key={k} value={k}>

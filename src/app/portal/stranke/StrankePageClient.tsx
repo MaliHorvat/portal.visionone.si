@@ -30,6 +30,8 @@ export function StrankePageClient() {
           package: c.package,
           health: c.health,
           tags: c.tags ?? [],
+          careBoxEnabled: c.careBoxEnabled,
+          mojPortalEnabled: c.mojPortalEnabled,
           preventive: c.preventive,
         })),
       );

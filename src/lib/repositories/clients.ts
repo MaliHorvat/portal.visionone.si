@@ -113,7 +113,7 @@ function mapClientPreventive(c: DbClient): ClientPreventivePlan {
 }
 
 function mapClientSummary(c: DbClient): ClientSummary {
-  const ext = c as DbClient & { careBoxEnabled?: boolean; careSlaTier?: string };
+  const ext = c as DbClient & { careBoxEnabled?: boolean; careSlaTier?: string; mojPortalEnabled?: boolean };
   return {
     id: c.id,
     slug: c.slug ?? null,
@@ -127,6 +127,7 @@ function mapClientSummary(c: DbClient): ClientSummary {
     tags: parseClientTags((c as { tags?: unknown }).tags),
     careBoxEnabled: Boolean(ext.careBoxEnabled),
     careSlaTier: ext.careSlaTier ?? "",
+    mojPortalEnabled: Boolean(ext.mojPortalEnabled),
     preventive: mapClientPreventive(c),
   };
 }
@@ -258,6 +259,8 @@ export async function listClients(): Promise<ClientSummary[]> {
       package: c.package,
       health: c.health,
       tags: c.tags ?? [],
+      careBoxEnabled: c.careBoxEnabled,
+      mojPortalEnabled: c.mojPortalEnabled,
       preventive: c.preventive,
     }));
   }
@@ -368,6 +371,7 @@ export interface UpsertClientInput {
   email?: string;
   health?: ClientHealth;
   packageId?: string | null;
+  mojPortalEnabled?: boolean;
   /** Oznake stranke */
   tags?: string[];
   topologyData?: Prisma.InputJsonValue;
@@ -392,6 +396,7 @@ export async function createClient(data: UpsertClientInput): Promise<ClientDetai
       health: data.health ?? "ok",
       sortOrder: (max._max.sortOrder ?? 0) + 1,
       packageId: data.packageId ?? null,
+      mojPortalEnabled: Boolean(data.mojPortalEnabled),
       tags: (data.tags ?? []) as unknown as Prisma.InputJsonValue,
     },
     include: {
@@ -426,6 +431,7 @@ export async function createClientForSession(
       health: data.health ?? "ok",
       sortOrder: (max._max.sortOrder ?? 0) + 1,
       packageId: data.packageId ?? null,
+      mojPortalEnabled: Boolean(data.mojPortalEnabled),
       ownerUsername: session?.username?.trim() || "admin",
       tags: (data.tags ?? []) as unknown as Prisma.InputJsonValue,
     },
@@ -481,6 +487,7 @@ export async function updateClient(
       email: data.email,
       health: data.health,
       packageId: data.packageId === undefined ? undefined : data.packageId,
+      mojPortalEnabled: data.mojPortalEnabled === undefined ? undefined : data.mojPortalEnabled,
       topologyData: data.topologyData === undefined ? undefined : data.topologyData,
       rackData: data.rackData === undefined ? undefined : data.rackData,
       tags: data.tags === undefined ? undefined : (data.tags as unknown as Prisma.InputJsonValue),

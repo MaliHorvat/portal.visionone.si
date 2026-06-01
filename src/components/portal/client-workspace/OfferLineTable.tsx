@@ -75,6 +75,7 @@ export function OfferLineTable({ title, section, list, onUpdateRow, onRemoveRow,
                 </td>
                 <td className="px-2 py-1">
                   <DecimalInput
+                    placeholder="Kol."
                     value={l.qty}
                     onChange={(qty) => onUpdateRow(l.key, { qty })}
                     className="w-16 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]"
@@ -82,6 +83,7 @@ export function OfferLineTable({ title, section, list, onUpdateRow, onRemoveRow,
                 </td>
                 <td className="px-2 py-1">
                   <DecimalInput
+                    placeholder="Cena"
                     value={l.unitPrice}
                     onChange={(unitPrice) => onUpdateRow(l.key, { unitPrice })}
                     className="w-20 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]"
@@ -89,6 +91,7 @@ export function OfferLineTable({ title, section, list, onUpdateRow, onRemoveRow,
                 </td>
                 <td className="px-2 py-1">
                   <DecimalInput
+                    placeholder="%"
                     value={l.discountPct}
                     onChange={(discountPct) => onUpdateRow(l.key, { discountPct })}
                     className="w-14 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]"
@@ -96,6 +99,7 @@ export function OfferLineTable({ title, section, list, onUpdateRow, onRemoveRow,
                 </td>
                 <td className="px-2 py-1">
                   <DecimalInput
+                    placeholder="DDV"
                     value={l.lineVatPct}
                     onChange={(lineVatPct) => onUpdateRow(l.key, { lineVatPct })}
                     className="w-14 rounded border border-transparent bg-transparent px-1 hover:border-[var(--vo-border)]"

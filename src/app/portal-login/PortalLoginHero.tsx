@@ -1,4 +1,5 @@
 import { Activity, Camera, LayoutDashboard, RadioTower, Shield } from "lucide-react";
+import { VisionOneLogo } from "@/components/brand/VisionOneLogo";
 
 const features = [
   {
@@ -44,11 +45,7 @@ export function PortalLoginHero() {
 
       <div className="relative z-[1] flex flex-1 flex-col justify-between px-10 py-12 xl:px-14 xl:py-16">
         <div>
-          <img
-            src="/visionone-wordmark.png"
-            alt="VisionOne"
-            className="h-7 w-auto brightness-0 invert opacity-90"
-          />
+          <VisionOneLogo variant="wordmark" tone="on-dark" wordmarkClassName="h-7 w-auto opacity-90" />
           <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-white/90 backdrop-blur-sm">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
             Operativni portal

@@ -834,7 +834,7 @@ export function TabShema({ ctx }: { ctx: WorkspaceCtx }) {
                   planBackgroundDataUrl: e.target.value.trim() ? undefined : t.planBackgroundDataUrl,
                 }))
               }
-              className="min-w-[200px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1 text-[var(--vo-fg)]"
+              className="min-w-[200px] flex-1 vo-select px-2 py-1 text-xs text-[var(--vo-fg)]"
             />
             <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-[var(--vo-border)] px-2 py-1 hover:bg-[var(--vo-surface-2)]">
               Naloži sliko

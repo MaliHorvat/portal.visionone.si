@@ -144,10 +144,10 @@ function RecorderBlock({
     <section className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
       <h3 className="text-sm font-semibold text-[var(--vo-fg)]">Snemalniki</h3>
       <form onSubmit={add} className="flex flex-wrap gap-2 text-xs">
-        <input placeholder="Ime" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <input placeholder="IP" value={f.ip} onChange={(e) => setF({ ...f, ip: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-mono" />
-        <input placeholder="Model" value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <input placeholder="Komentar" value={f.comment} onChange={(e) => setF({ ...f, comment: e.target.value })} className="min-w-[140px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
+        <input placeholder="Ime" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="vo-select px-2 py-1 text-xs.5" />
+        <input placeholder="IP" value={f.ip} onChange={(e) => setF({ ...f, ip: e.target.value })} className="vo-select px-2 py-1 text-xs.5 font-mono" />
+        <input placeholder="Model" value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} className="vo-select px-2 py-1 text-xs.5" />
+        <input placeholder="Komentar" value={f.comment} onChange={(e) => setF({ ...f, comment: e.target.value })} className="min-w-[140px] flex-1 vo-select px-2 py-1 text-xs.5" />
         <button type="submit" disabled={busy || !dbConfigured} className="rounded-lg bg-[var(--vo-fg)] px-3 py-1.5 font-semibold text-[var(--vo-bg)] disabled:opacity-40">+</button>
       </form>
       <div className="overflow-x-auto rounded-lg border border-[var(--vo-border)]">
@@ -310,11 +310,11 @@ function SwitchBlock({
     <section className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
       <h3 className="text-sm font-semibold text-[var(--vo-fg)]">Switchi</h3>
       <form onSubmit={add} className="flex flex-wrap gap-2 text-xs">
-        <input placeholder="Ime" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <input placeholder="IP" value={f.ip} onChange={(e) => setF({ ...f, ip: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5 font-mono" />
-        <input placeholder="Model" value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <input placeholder="Komentar" value={f.comment} onChange={(e) => setF({ ...f, comment: e.target.value })} className="min-w-[140px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <input type="number" placeholder="Ports" value={f.ports || ""} onChange={(e) => setF({ ...f, ports: Number(e.target.value) || 0 })} className="w-20 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
+        <input placeholder="Ime" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="vo-select px-2 py-1 text-xs.5" />
+        <input placeholder="IP" value={f.ip} onChange={(e) => setF({ ...f, ip: e.target.value })} className="vo-select px-2 py-1 text-xs.5 font-mono" />
+        <input placeholder="Model" value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} className="vo-select px-2 py-1 text-xs.5" />
+        <input placeholder="Komentar" value={f.comment} onChange={(e) => setF({ ...f, comment: e.target.value })} className="min-w-[140px] flex-1 vo-select px-2 py-1 text-xs.5" />
+        <input type="number" placeholder="Ports" value={f.ports || ""} onChange={(e) => setF({ ...f, ports: Number(e.target.value) || 0 })} className="w-20 vo-select px-2 py-1 text-xs.5" />
         <button type="submit" disabled={busy || !dbConfigured} className="rounded-lg bg-[var(--vo-fg)] px-3 py-1.5 font-semibold text-[var(--vo-bg)] disabled:opacity-40">+</button>
       </form>
       <div className="overflow-x-auto rounded-lg border border-[var(--vo-border)]">
@@ -360,7 +360,8 @@ function SwitchBlock({
                   <input
                     type="number"
                     min={0}
-                    defaultValue={s.ports ?? 0}
+                    defaultValue={s.ports ? String(s.ports) : ""}
+                    placeholder="Porti"
                     id={`sp-${s.id}`}
                     className="w-16 rounded border border-[var(--vo-border)] bg-transparent px-1 text-center"
                   />
@@ -463,12 +464,12 @@ function DiskBlock({
     <section className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
       <h3 className="text-sm font-semibold text-[var(--vo-fg)]">Diski</h3>
       <form onSubmit={add} className="flex flex-wrap gap-2 text-xs">
-        <input placeholder="Ime" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <input placeholder="Model" value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <input placeholder="Serijska" value={f.serial} onChange={(e) => setF({ ...f, serial: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <DecimalInput placeholder="TB" value={f.sizeTb} onChange={(sizeTb) => setF({ ...f, sizeTb })} className="w-16 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <input placeholder="Montaža (datum)" value={f.installedAt} onChange={(e) => setF({ ...f, installedAt: e.target.value })} className="rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
-        <input placeholder="Komentar" value={f.comment} onChange={(e) => setF({ ...f, comment: e.target.value })} className="min-w-[120px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1.5" />
+        <input placeholder="Ime" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} className="vo-select px-2 py-1 text-xs.5" />
+        <input placeholder="Model" value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} className="vo-select px-2 py-1 text-xs.5" />
+        <input placeholder="Serijska" value={f.serial} onChange={(e) => setF({ ...f, serial: e.target.value })} className="vo-select px-2 py-1 text-xs.5" />
+        <DecimalInput placeholder="TB" value={f.sizeTb} onChange={(sizeTb) => setF({ ...f, sizeTb })} className="w-16 vo-select px-2 py-1 text-xs.5" />
+        <input placeholder="Montaža (datum)" value={f.installedAt} onChange={(e) => setF({ ...f, installedAt: e.target.value })} className="vo-select px-2 py-1 text-xs.5" />
+        <input placeholder="Komentar" value={f.comment} onChange={(e) => setF({ ...f, comment: e.target.value })} className="min-w-[120px] flex-1 vo-select px-2 py-1 text-xs.5" />
         <button type="submit" disabled={busy || !dbConfigured} className="rounded-lg bg-[var(--vo-fg)] px-3 py-1.5 font-semibold text-[var(--vo-bg)] disabled:opacity-40">+</button>
       </form>
       <div className="overflow-x-auto rounded-lg border border-[var(--vo-border)]">

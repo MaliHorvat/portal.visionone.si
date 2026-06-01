@@ -59,6 +59,12 @@ export async function POST(request: Request) {
       `🆕 Nov zahtevek\nNaslov: ${created.title}\nPrioriteta: ${created.priority}\nStranka: ${created.clientName || "-"}\nUstvaril: ${session.username}`,
       "service_request",
     );
+    if (created.priority === "urgent" || created.priority === "high") {
+      void sendTelegramNotification(
+        `⚠️ Nujen zahtevek\nNaslov: ${created.title}\nPrioriteta: ${created.priority}\nStranka: ${created.clientName || "-"}`,
+        "service_request_urgent",
+      );
+    }
     return NextResponse.json({ request: created }, { status: 201 });
   } catch (e) {
     console.error(e);

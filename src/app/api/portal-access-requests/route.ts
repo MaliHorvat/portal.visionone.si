@@ -6,9 +6,12 @@ import { isDbConfigured } from "@/lib/db";
 import { appendAuditLog } from "@/lib/repositories/audit-log";
 import {
   createPortalUserFromRequest,
+  deletePortalAccessRequest,
   listPortalAccessRequests,
   setPortalAccessRequestStatus,
 } from "@/lib/repositories/portal-access-requests";
+
+const ACCESS_STATUSES = ["new", "approved", "rejected", "ignored"] as const;
 
 const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,32}$/;
 
@@ -44,7 +47,7 @@ export async function PATCH(request: Request) {
   };
   const id = String(body.id ?? "");
   const status = body.status;
-  if (!id || !status || !["new", "approved", "rejected"].includes(status)) {
+  if (!id || !status || !ACCESS_STATUSES.includes(status)) {
     return NextResponse.json({ error: "Neveljavni podatki." }, { status: 400 });
   }
   const row = await setPortalAccessRequestStatus(id, status, adminUser, String(body.note ?? ""));
@@ -105,4 +108,32 @@ export async function POST(request: Request) {
   await appendAuditLog(adminUser, "portal_user_create_from_request", `${username}|${target.clerkEmail}`);
 
   return NextResponse.json({ ok: true, user: created?.user });
+}
+
+export async function DELETE(request: Request) {
+  const session = await getPortalSession();
+  if (!isAdmin(session)) {
+    return NextResponse.json({ error: "Prepovedano" }, { status: 403 });
+  }
+  const adminUser = session?.username ?? "admin";
+  if (!isDbConfigured()) {
+    return NextResponse.json({ error: "Baza ni nastavljena." }, { status: 503 });
+  }
+  const q = new URL(request.url).searchParams;
+  const body = (await request.json().catch(() => ({}))) as { id?: string };
+  const id = String(q.get("id") ?? body.id ?? "").trim();
+  if (!id) {
+    return NextResponse.json({ error: "Manjka ID zahtevka." }, { status: 400 });
+  }
+  const requests = await listPortalAccessRequests();
+  const target = requests.find((x) => x.id === id);
+  if (!target) {
+    return NextResponse.json({ error: "Zahtevek ni najden." }, { status: 404 });
+  }
+  const ok = await deletePortalAccessRequest(id);
+  if (!ok) {
+    return NextResponse.json({ error: "Brisanje ni uspelo." }, { status: 500 });
+  }
+  await appendAuditLog(adminUser, "portal_access_request_delete", `${target.clerkEmail}|${id}`);
+  return NextResponse.json({ ok: true });
 }

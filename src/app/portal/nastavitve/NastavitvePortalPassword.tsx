@@ -49,7 +49,7 @@ export function NastavitvePortalPassword() {
             onChange={(ev) => setCurrent(ev.target.value)}
             required
             autoComplete="current-password"
-            className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+            className="mt-1 w-full vo-input px-3 py-2 text-sm"
           />
         </label>
         <label className="text-xs">
@@ -61,7 +61,7 @@ export function NastavitvePortalPassword() {
             required
             minLength={8}
             autoComplete="new-password"
-            className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+            className="mt-1 w-full vo-input px-3 py-2 text-sm"
           />
         </label>
         <label className="text-xs">
@@ -73,7 +73,7 @@ export function NastavitvePortalPassword() {
             required
             minLength={8}
             autoComplete="new-password"
-            className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+            className="mt-1 w-full vo-input px-3 py-2 text-sm"
           />
         </label>
         <button

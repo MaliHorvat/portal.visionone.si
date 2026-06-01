@@ -1,0 +1,26 @@
+Pi že zagnan — ročna namestitev (enkrat)
+========================================
+
+1. Portal → Care Box → prenesi ZIP (ali SCP opt/ + visionone-claim.txt na Pi).
+
+2. Na Pi v Terminalu:
+
+sudo mkdir -p /opt/visionone-agent /etc/visionone /var/lib/visionone-agent
+sudo cp -r /home/visionone/visionone-agent/* /opt/visionone-agent/
+sudo cp /home/visionone/visionone-claim.txt /opt/visionone-agent/
+# ali z boot: sudo cp -r /boot/firmware/opt/visionone-agent/* /opt/visionone-agent/
+#            sudo cp /boot/firmware/visionone-claim.txt /opt/visionone-agent/
+
+sudo chmod +x /opt/visionone-agent/install.sh /opt/visionone-agent/visionone_agent.py
+sudo /opt/visionone-agent/install.sh
+
+sudo nano /etc/visionone/agent.json
+# "request_timeout_seconds": 45
+
+sudo systemctl enable visionone-agent
+sudo systemctl restart visionone-agent
+sudo systemctl status visionone-agent
+
+3. Portal → Care Box → ONLINE. Test: sudo python3 /opt/visionone-agent/visionone_agent.py --once
+
+Log: sudo cat /var/log/visionone-install.log

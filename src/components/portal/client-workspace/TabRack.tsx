@@ -62,10 +62,10 @@ export function TabRack({ ctx }: { ctx: WorkspaceCtx }) {
       <div className="space-y-4 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]">
         <h3 className="text-sm font-semibold text-[var(--vo-fg)]">Urejanje enot</h3>
         <form onSubmit={add} className="flex flex-wrap gap-2 text-xs">
-          <input type="number" min={1} placeholder="U začetek" value={f.uStart || ""} onChange={(e) => setF({ ...f, uStart: Number(e.target.value) || 1 })} className="w-20 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1" />
-          <input type="number" min={1} placeholder="U višina" value={f.uSpan || ""} onChange={(e) => setF({ ...f, uSpan: Number(e.target.value) || 1 })} className="w-20 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1" />
-          <input placeholder="Oznaka" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} className="min-w-[140px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1" />
-          <input placeholder="Tip (switch/nvr/…)" value={f.deviceType} onChange={(e) => setF({ ...f, deviceType: e.target.value })} className="w-28 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1" />
+          <input type="number" min={1} placeholder="U začetek" value={f.uStart || ""} onChange={(e) => setF({ ...f, uStart: Number(e.target.value) || 1 })} className="w-20 vo-select px-2 py-1 text-xs" />
+          <input type="number" min={1} placeholder="U višina" value={f.uSpan || ""} onChange={(e) => setF({ ...f, uSpan: Number(e.target.value) || 1 })} className="w-20 vo-select px-2 py-1 text-xs" />
+          <input placeholder="Oznaka" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} className="min-w-[140px] flex-1 vo-select px-2 py-1 text-xs" />
+          <input placeholder="Tip (switch/nvr/…)" value={f.deviceType} onChange={(e) => setF({ ...f, deviceType: e.target.value })} className="w-28 vo-select px-2 py-1 text-xs" />
           <button type="submit" className="rounded-lg bg-[var(--vo-fg)] px-3 py-1 font-semibold text-[var(--vo-bg)]">+</button>
         </form>
         <ul className="max-h-52 space-y-1 overflow-auto text-xs">

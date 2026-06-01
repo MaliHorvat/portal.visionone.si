@@ -15,7 +15,6 @@ from pathlib import Path
 CONFIG_PATH = Path("/etc/visionone/agent.json")
 SPOOL = Path("/var/lib/visionone-agent/spool.jsonl")
 
-# ANSI barve (Windows Terminal / PowerShell / Linux)
 GREEN = "\033[92m"
 RED = "\033[91m"
 YELLOW = "\033[93m"
@@ -242,7 +241,7 @@ def main() -> None:
     parser.add_argument(
         "--once",
         action="store_true",
-        help="En sam cikel (priporočeno za test v CMD), nato izhod",
+        help="En cikel, nato izhod",
     )
     parser.add_argument(
         "--quiet",

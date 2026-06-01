@@ -15,7 +15,6 @@ const LABELS: Record<string, string> = {
   orodja: "Orodja",
   inventar: "Inventar",
   agents: "Agenti",
-  vms: "VisionOne VMS",
   obvestila: "Obvestila",
   audit: "Audit",
   paketi: "Paketi",

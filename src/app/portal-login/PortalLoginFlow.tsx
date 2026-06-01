@@ -2,6 +2,7 @@
 
 import { Show, SignIn, SignOutButton, useUser } from "@clerk/nextjs";
 import { ArrowRight, Check, Lock, ShieldCheck, Sparkles, User } from "lucide-react";
+import { VisionOneLogo } from "@/components/brand/VisionOneLogo";
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
@@ -108,7 +109,7 @@ export function PortalLoginFlow({ showError, configError, clerkError, lockedErro
 
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--vo-accent-muted)] ring-1 ring-[var(--vo-accent)]/25">
-            <img src="/visionone-mark.png" alt="" className="h-9 w-9 object-contain" />
+            <VisionOneLogo variant="mark" markClassName="h-9 w-9 object-contain" />
           </div>
           <div>
             <p className="vo-eyebrow flex items-center gap-1.5">

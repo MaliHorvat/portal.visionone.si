@@ -128,13 +128,13 @@ export function PaketiView({ packages, dbConfigured, onPackagesChange }: Props) 
           className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]"
         >
           <div className="grid gap-3 md:grid-cols-2">
-            <input name="name" required defaultValue={createSeed.name} placeholder="Ime paketa" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <input name="price" {...decimalTextInputProps} defaultValue={createSeed.price} required placeholder="Cena (€), npr. 29,90" className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <input name="name" required defaultValue={createSeed.name} placeholder="Ime paketa" className="vo-input px-3 py-2 text-sm" />
+            <input name="price" {...decimalTextInputProps} defaultValue={createSeed.price} required placeholder="Cena (€), npr. 29,90" className="vo-input px-3 py-2 text-sm" />
             <textarea
               name="description"
               defaultValue={createSeed.description}
               placeholder="Opis paketa"
-              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
+              className="vo-input px-3 py-2 text-sm md:col-span-2"
               rows={2}
             />
           </div>
@@ -208,13 +208,13 @@ export function PaketiView({ packages, dbConfigured, onPackagesChange }: Props) 
               onSubmit={(e) => handleSaveEdit(e, p.id)}
               className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]"
             >
-              <input name="name" defaultValue={p.name} required className="w-full rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-              <input name="price" {...decimalTextInputProps} defaultValue={p.price} required placeholder="npr. 29,90" className="w-full rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+              <input name="name" defaultValue={p.name} required className="w-full vo-input px-3 py-2 text-sm" />
+              <input name="price" {...decimalTextInputProps} defaultValue={p.price} required placeholder="npr. 29,90" className="w-full vo-input px-3 py-2 text-sm" />
               <textarea
                 name="description"
                 defaultValue={p.description}
                 rows={3}
-                className="w-full rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+                className="w-full vo-input px-3 py-2 text-sm"
               />
               <div className="flex gap-2">
                 <button type="submit" className="rounded-lg bg-[var(--vo-accent)] px-3 py-1.5 text-xs font-semibold text-white">

@@ -124,5 +124,6 @@ export function clearPortalLocalPrefs(): void {
     DASH_FAV_ONLY_KEY,
     CLIENT_NOTES_KEY,
     "vo_nav_section_orders",
+    "vo-portal-dashboard-layout",
   ].forEach((k) => localStorage.removeItem(k));
 }

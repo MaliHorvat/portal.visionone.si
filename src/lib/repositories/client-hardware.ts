@@ -1,4 +1,5 @@
 import { prisma, isDbConfigured } from "@/lib/db";
+import { sendTelegramNotification } from "@/lib/telegram-notify";
 
 function requireDb() {
   if (!isDbConfigured() || !prisma) throw new Error("DB ni nastavljena.");
@@ -217,13 +218,28 @@ export async function runClientReachability(clientId: string) {
   for (const cam of client.cameras) {
     if (!cam.ip?.trim()) continue;
     const port = cam.checkPort && cam.checkPort > 0 ? cam.checkPort : 554;
+    const prevStatus = cam.status;
     tasks.push(
       (async () => {
         const ok = await probeTcpPort(cam.ip, port);
+        const nextStatus = ok ? "online" : "offline";
         await prisma!.clientCamera.update({
           where: { id: cam.id },
-          data: { status: ok ? "online" : "offline" },
+          data: { status: nextStatus },
         });
+        if (nextStatus !== prevStatus) {
+          if (nextStatus === "offline") {
+            void sendTelegramNotification(
+              `📷 Kamera offline\nStranka: ${client.name}\nKamera: ${cam.name}\nIP: ${cam.ip}`,
+              "camera_offline",
+            );
+          } else {
+            void sendTelegramNotification(
+              `📷 Kamera online\nStranka: ${client.name}\nKamera: ${cam.name}\nIP: ${cam.ip}`,
+              "camera_online",
+            );
+          }
+        }
       })(),
     );
   }

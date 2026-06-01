@@ -126,6 +126,12 @@ export async function POST(request: Request) {
           "device_offline",
         );
       }
+      if (status === "online" && previous?.status === "offline") {
+        void sendTelegramNotification(
+          `✅ Naprava spet online\nStranka: ${registered.client?.name || "-"}\nNaprava: ${name}\nIP: ${ip}`,
+          "device_online",
+        );
+      }
 
       accepted += 1;
     }

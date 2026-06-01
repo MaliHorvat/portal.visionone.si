@@ -21,7 +21,7 @@ export async function upsertPortalAccessRequest(input: {
     return { request, isNew: true as const };
   }
   const status: PortalAccessRequestStatus =
-    existing.status === "rejected" ? "new" : existing.status;
+    existing.status === "rejected" || existing.status === "ignored" ? "new" : existing.status;
   const request = await prisma.portalAccessRequest.update({
     where: { id: existing.id },
     data: {
@@ -62,6 +62,16 @@ export async function setPortalAccessRequestStatus(
       note: note ?? "",
     },
   });
+}
+
+export async function deletePortalAccessRequest(id: string) {
+  if (!isDbConfigured() || !prisma) return false;
+  try {
+    await prisma.portalAccessRequest.delete({ where: { id } });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function createPortalUserFromRequest(input: {

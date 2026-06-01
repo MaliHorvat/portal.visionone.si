@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { appendAuditLog } from "@/lib/repositories/audit-log";
 import { upsertPortalAccessRequest } from "@/lib/repositories/portal-access-requests";
 import { logger } from "@/lib/logger";
+import { sendTelegramNotification } from "@/lib/telegram-notify";
 
 export async function POST() {
   const { userId } = await auth();
@@ -39,6 +40,13 @@ export async function POST() {
     requestId: result?.request?.id ?? null,
     isNew: result?.isNew ?? false,
   });
+
+  if (result?.isNew) {
+    void sendTelegramNotification(
+      `🔐 Zahteva za dostop do portala\nIme: ${name}\nE-pošta: ${email || "-"}\nClerk ID: ${userId}`,
+      "portal_access_request",
+    );
+  }
 
   return NextResponse.json({
     ok: true,

@@ -14,7 +14,6 @@ const NAV = [
   { href: "/portal/orodja", label: "Orodja" },
   { href: "/portal/inventar", label: "Inventar" },
   { href: "/portal/care-box", label: "Care Box" },
-  { href: "/portal/vms", label: "VisionOne VMS" },
   { href: "/portal/nastavitve", label: "Nastavitve" },
   { href: "/portal/racun", label: "Moj račun" },
 ];

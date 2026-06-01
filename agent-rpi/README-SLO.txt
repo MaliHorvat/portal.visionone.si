@@ -1,23 +1,19 @@
-VisionOne — Raspberry Pi agent (priprava SD kartice)
-====================================================
+VisionOne Care Box — Raspberry Pi
+=================================
 
-Priporočeno: Raspberry Pi OS 64-bit (Bookworm ali novejši), Lite ali Desktop.
+OS: Raspberry Pi OS 64-bit. Pred vklopom na boot particijo kopirajte vse iz ZIP (boot/ + opt/).
 
-KORAKI (brez ročnega nastavljanja na Pi-ju):
-1. S Raspberry Pi Imager napišite uradni Raspberry Pi OS na microSD.
-2. Pred prvim vklopom odprite particijo boot na računalniku (Windows: pogosto "bootfs").
-3. Iz tega ZIP-a na boot particijo kopirajte:
-   - vse datoteke iz mape "boot"
-   - mapo "opt" (celotno) — na boot particiji mora biti pot opt/visionone-agent/...
-4. Vstavite SD v Raspberry Pi, priključite ethernet/Wi‑Fi in napajanje.
-5. Po 3–10 minutah naj agent v portalu prikaže "Zadnji kontakt".
+NOV SD (prvi boot):
+  1. Pi Imager → OS na microSD.
+  2. Boot particija: kopiraj boot/ in opt/ iz ZIP.
+  3. Ethernet/Wi‑Fi, napajanje → po 5–15 min Care Box ONLINE v portalu.
 
-Podatki tega paketa:
-  Stranka:     {{CLIENT_NAME}}
-  Agent ID:    {{AGENT_ID}}
-  Claim koda:  {{CLAIM_CODE}}
-  Portal:      {{PORTAL_URL}}
+PI ŽE BIL ZAGNAN (ročno, enkrat):
+  Glej NAVODILA-ZE-ZAGNAN-RB-SLO.txt — install.sh + systemctl enable visionone-agent.
 
-Opomba: Claim koda velja do {{CLAIM_EXPIRES}}.
+Stranka: {{CLIENT_NAME}}
+Agent ID: {{AGENT_ID}}
+Claim: {{CLAIM_CODE}} (do {{CLAIM_EXPIRES}})
+Portal: {{PORTAL_URL}}
 
-Če se agent ne poveže, preverite internet na Pi-ju in da je ESP_INGEST_TOKEN nastavljen na Vercelu.
+V portalu vpišite IP-je kamer/NVR. Na Vercelu: ESP_INGEST_TOKEN.

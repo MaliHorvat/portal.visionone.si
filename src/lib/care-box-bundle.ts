@@ -128,7 +128,7 @@ export async function createCareBoxBundleForClient(
   const files: Record<string, Uint8Array> = {};
   const entries = [
     ["README-SLO.txt", "README-SLO.txt"],
-    ["NAVODILA-CARE-BOX-SLO.txt", "NAVODILA-CARE-BOX-SLO.txt"],
+    ["NAVODILA-ZE-ZAGNAN-RB-SLO.txt", "NAVODILA-ZE-ZAGNAN-RB-SLO.txt"],
     ["boot/visionone-claim.txt", "boot/visionone-claim.txt"],
     ["boot/firstrun.sh", "boot/firstrun.sh"],
     ["boot/visionone-agent-install.sh", "boot/visionone-agent-install.sh"],

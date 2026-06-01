@@ -23,6 +23,8 @@ export const metadata: Metadata = {
   description: "Operativni portal VisionOne za upravljanje strank, opomnikov in servisnih nalog.",
 };
 
+const themeBootScript = `(function(){try{var k="vo-portal-theme",t=localStorage.getItem(k),dark;if(t==="light")dark=false;else if(t==="dark")dark=true;else if(t==="system")dark=window.matchMedia("(prefers-color-scheme: dark)").matches;else dark=true;if(dark)document.documentElement.classList.add("dark");else document.documentElement.classList.remove("dark");}catch(e){document.documentElement.classList.add("dark");}})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,6 +32,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="sl" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body className={`${inter.variable} ${display.variable} min-h-screen antialiased`}>
         <ClerkProvider>
           <Providers>{children}</Providers>

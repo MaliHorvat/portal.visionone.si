@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { jsonError, requirePortalSession } from "@/lib/api-guard";
 import { getPortalSession } from "@/lib/get-portal-session";
 import { createClientForSession, listClientsForSession } from "@/lib/repositories/clients";
+import { sendTelegramNotification } from "@/lib/telegram-notify";
 
 export async function GET() {
   const guard = await requirePortalSession();
@@ -36,8 +37,13 @@ export async function POST(request: Request) {
       email: body?.email ?? "",
       health: body?.health === "alarm" ? "alarm" : "ok",
       packageId: body?.packageId ?? null,
+      mojPortalEnabled: Boolean(body?.mojPortalEnabled),
       tags,
     }, session ?? undefined);
+    void sendTelegramNotification(
+      `🏢 Nova stranka\nIme: ${created.name}\nNaslov: ${created.address || "-"}`,
+      "client_new",
+    );
     return NextResponse.json({ client: created }, { status: 201 });
   } catch (e) {
     console.error(e);

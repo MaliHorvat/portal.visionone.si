@@ -31,9 +31,12 @@ function resolveTheme(theme: Theme): Resolved {
   return "light";
 }
 
+/** Privzeta tema, če uporabnik še ni izbral (localStorage prazen). */
+const DEFAULT_THEME: Theme = "dark";
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
-  const [resolved, setResolved] = useState<Resolved>("light");
+  const [theme, setThemeState] = useState<Theme>(DEFAULT_THEME);
+  const [resolved, setResolved] = useState<Resolved>("dark");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -41,6 +44,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
       if (stored === "light" || stored === "dark" || stored === "system") {
         setThemeState(stored);
+      } else {
+        setThemeState(DEFAULT_THEME);
       }
     } catch {
       /* ignore */

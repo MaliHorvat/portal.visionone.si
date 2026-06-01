@@ -33,6 +33,7 @@ import { usePortalRole } from "@/context/PortalRoleContext";
 import type { NavPermissionKey } from "@/lib/nav-permissions";
 import { getSidebarCollapsed, setSidebarCollapsed } from "@/lib/portal-prefs";
 import { roleLabel } from "@/lib/portal-roles";
+import { VisionOneLogo } from "@/components/brand/VisionOneLogo";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { usePortalNavCounts } from "@/lib/use-portal-counts";
 
@@ -64,7 +65,6 @@ const navSections: NavSection[] = [
     items: [
       { href: "/portal/racun", label: "Moj račun", icon: UserCircle, permission: "my-account" },
       { href: "/portal/inventar", label: "Skladišče", icon: Boxes, permission: "inventory", adminOnly: true },
-      { href: "/portal/vms", label: "VisionOne VMS", icon: Video, permission: "vms-admin", adminOnly: true },
       { href: "/portal/obvestila", label: "Obvestila (Telegram)", icon: Bell, permission: "notifications", adminOnly: true },
       { href: "/portal/kamera-definicije", label: "RTSP definicije", icon: Video, permission: "camera-definitions", adminOnly: true },
       { href: "/portal/audit", label: "Audit log", icon: Shield, permission: "audit-log", adminOnly: true },
@@ -274,10 +274,11 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             href="/portal"
             className={`flex min-w-0 items-center gap-2 font-semibold tracking-tight ${sidebarCollapsed ? "mx-auto" : ""}`}
           >
-            <img src="/visionone-mark.png" alt="VisionOne" className="h-9 w-9 shrink-0 rounded object-contain" />
-            {!sidebarCollapsed ? (
-              <img src="/visionone-wordmark.png" alt="VisionOne" className="h-6 w-auto max-w-[140px] object-contain object-left" />
-            ) : null}
+            <VisionOneLogo
+              variant={sidebarCollapsed ? "mark" : "both"}
+              markClassName="h-9 w-9 shrink-0 rounded object-contain"
+              wordmarkClassName="h-6 w-auto max-w-[140px] object-contain object-left"
+            />
           </Link>
           {!sidebarCollapsed ? (
             <button
@@ -385,9 +386,12 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           style={{ background: "var(--vo-header-bg)" }}
         >
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex min-w-0 items-center gap-2 md:hidden">
-              <img src="/visionone-mark.png" alt="VisionOne" className="h-5 w-5 shrink-0 rounded object-contain" />
-              <img src="/visionone-wordmark.png" alt="VisionOne" className="h-4 w-auto shrink-0 object-contain" />
+            <div className="md:hidden">
+              <VisionOneLogo
+                variant="both"
+                markClassName="h-5 w-5 shrink-0 rounded object-contain"
+                wordmarkClassName="h-4 w-auto shrink-0 object-contain object-left"
+              />
             </div>
             <div className="min-w-0">
               <p className="hidden truncate text-sm font-bold tracking-tight text-[var(--vo-fg)] md:block">
@@ -493,7 +497,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Iskanje…"
-              className="min-w-0 flex-1 rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-sm"
+              className="vo-input min-w-0 flex-1 px-2 py-1.5 text-sm"
             />
             <button type="button" onClick={() => setCommandOpen(true)} className="rounded-lg border border-[var(--vo-border)] px-2 py-1.5 text-xs">
               ⌘K

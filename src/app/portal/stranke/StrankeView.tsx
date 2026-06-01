@@ -1,15 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { removeFromList, replaceInList } from "@/lib/portal-list-mutate";
 import { usePortalToast } from "@/context/PortalToastContext";
 import type { ClientDetail } from "@/lib/types";
-import { Star } from "lucide-react";
 import { exportClientsCsv } from "@/lib/portal-export";
-import { getFavoriteClientIds, getRecentClients, toggleFavoriteClient } from "@/lib/portal-prefs";
-import { PortalContextMenu, type ContextMenuItem } from "@/components/portal/PortalContextMenu";
+import { getFavoriteClientIds, toggleFavoriteClient } from "@/lib/portal-prefs";
+import { buildClientContextMenuItems, copyClientContactText } from "@/lib/client-context-menu";
+import { ClientMojStatusDot } from "@/components/portal/ClientMojStatusDot";
+import { PortalContextMenu } from "@/components/portal/PortalContextMenu";
 import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
 import { usePortalRole } from "@/context/PortalRoleContext";
 import { clientProfilePath } from "@/lib/client-url";
@@ -28,6 +28,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
   const { role } = usePortalRole();
   const router = useRouter();
   const { showToast } = usePortalToast();
+  const canAdmin = role === "admin";
   const [showForm, setShowForm] = useState(false);
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -47,8 +48,6 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
   useEffect(() => {
     setFavoriteIds(getFavoriteClientIds());
   }, []);
-
-  const recentClients = useMemo(() => getRecentClients(), []);
 
   const filteredClients = useMemo(() => {
     let list = orderedClients;
@@ -105,6 +104,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
       tags,
       packageId: String(form.get("packageId") ?? "") || null,
       health: String(form.get("health") ?? "ok") === "alarm" ? "alarm" : "ok",
+      mojPortalEnabled: form.get("mojPortalEnabled") === "on",
     };
     const url = editClientId ? `/api/clients/${encodeURIComponent(editClientId)}` : "/api/clients";
     const method = editClientId ? "PUT" : "POST";
@@ -179,10 +179,6 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
     showToast("Stranka izbrisana.");
   }
 
-  function prefetchProfile(client: ClientSummary) {
-    router.prefetch(clientProfilePath(client));
-  }
-
   function openClientMenu(e: React.MouseEvent, clientId: string) {
     e.preventDefault();
     setCtxMenu({ x: e.clientX, y: e.clientY, clientId });
@@ -216,36 +212,75 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
     await persistOrder(next);
   }
 
-  function contextItems(client: ClientSummary): ContextMenuItem[] {
-    return [
-      {
-        id: "open",
-        label: "Odpri profil",
-        onClick: () => router.push(clientProfilePath(client)),
+  async function patchClient(id: string, patch: Record<string, unknown>) {
+    const res = await fetch(`/api/clients/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      showToast("Posodobitev ni uspela.", "err");
+      return;
+    }
+    const j = (await res.json()) as { client?: ClientSummary };
+    if (j.client) {
+      onClientsChange((prev) => replaceInList(prev, j.client!));
+      setOrderedClients((prev) => replaceInList(prev, j.client!));
+    }
+  }
+
+  function openProfile(client: ClientSummary) {
+    router.push(clientProfilePath(client));
+  }
+
+  function contextItems(client: ClientSummary) {
+    return buildClientContextMenuItems(client, {
+      isFavorite: favoriteIds.includes(client.id),
+      dbConfigured,
+      canAdmin,
+      onOpen: () => openProfile(client),
+      onOpenNewTab: () => window.open(clientProfilePath(client), "_blank", "noopener,noreferrer"),
+      onEdit: () => {
+        setError(null);
+        setNotice(null);
+        setEditClientId(client.id);
+        setShowForm(true);
       },
-      {
-        id: "open-new",
-        label: "Odpri v novem zavihku",
-        onClick: () => window.open(clientProfilePath(client), "_blank", "noopener,noreferrer"),
+      onDelete: () => void handleDelete(client.id),
+      onToggleFavorite: () => setFavoriteIds(toggleFavoriteClient(client.id)),
+      onToggleMojPortal: () => void patchClient(client.id, { mojPortalEnabled: !client.mojPortalEnabled }),
+      onMarkOk: () => void patchClient(client.id, { health: "ok" }),
+      onMarkAlarm: () => void patchClient(client.id, { health: "alarm" }),
+      onCopyContact: () => {
+        void navigator.clipboard.writeText(copyClientContactText(client)).then(
+          () => showToast("Kontakt kopiran."),
+          () => showToast("Kopiranje ni uspelo.", "err"),
+        );
       },
-      {
-        id: "edit",
-        label: "Uredi",
-        onClick: () => {
-          setError(null);
-          setNotice(null);
-          setEditClientId(client.id);
-          setShowForm(true);
-        },
-      },
-      {
-        id: "delete",
-        label: "Izbriši",
-        danger: true,
-        disabled: !dbConfigured,
-        onClick: () => void handleDelete(client.id),
-      },
-    ];
+      onOpenTab: (tab) => router.push(`${clientProfilePath(client)}?tab=${encodeURIComponent(tab)}`),
+    });
+  }
+
+  function ClientListStatus({ c }: { c: ClientSummary }) {
+    if (c.mojPortalEnabled) {
+      return (
+        <span className="inline-flex items-center gap-2">
+          <ClientMojStatusDot enabled health={c.health} />
+          <span className="text-xs text-[var(--vo-muted)]">
+            {c.health === "ok" ? "moj — OK" : "moj — napaka"}
+          </span>
+        </span>
+      );
+    }
+    if (c.health === "alarm") {
+      return (
+        <span className="inline-flex items-center gap-2" title="Alarm (brez moj portala)">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--vo-danger)]" />
+          <span className="text-xs text-[var(--vo-danger)]">Alarm</span>
+        </span>
+      );
+    }
+    return <span className="text-xs text-[var(--vo-muted)]">—</span>;
   }
 
   return (
@@ -271,11 +306,11 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
       />
 
       {loadError ? (
-        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900">
+        <div className="vo-alert-error">
           {loadError}
         </div>
       ) : !dbConfigured ? (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="vo-alert-warn">
           Baza ni nastavljena. Nastavite <code>DATABASE_URL</code> v Vercelu in poženite{" "}
           <code>npm run db:push</code>. Trenutno so prikazani demo podatki in dodajanje/brisanje ne bo
           delovalo.
@@ -288,47 +323,9 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
         </div>
       ) : null}
 
-      {(recentClients.length > 0 || favoriteIds.length > 0) && (
-        <section className="grid gap-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 text-sm md:grid-cols-2">
-          {recentClients.length > 0 ? (
-            <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--vo-muted)]">Nedavno odprto</h2>
-              <ul className="mt-2 space-y-1">
-                {recentClients.slice(0, 6).map((r) => {
-                  const c = clients.find((x) => x.id === r.id);
-                  if (!c) return null;
-                  return (
-                    <li key={r.id}>
-                      <Link href={clientProfilePath(c)} className="text-[var(--vo-accent)] hover:underline">
-                        {r.name}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : null}
-          {favoriteIds.length > 0 ? (
-            <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--vo-muted)]">Priljubljene</h2>
-              <ul className="mt-2 space-y-1">
-                {favoriteIds.map((fid) => {
-                  const c = clients.find((x) => x.id === fid);
-                  if (!c) return null;
-                  return (
-                    <li key={fid} className="flex items-center gap-2">
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden />
-                      <Link href={clientProfilePath(c)} className="hover:underline">
-                        {c.name}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : null}
-        </section>
-      )}
+      <p className="text-xs text-[var(--vo-muted)]">
+        Klik na vrstico odpre profil. Desni klik: priljubljene, moj.visionone.si, zavihki, urejanje.
+      </p>
 
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-sm">
         <input
@@ -336,12 +333,12 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
           placeholder="Išči stranke…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="min-w-[180px] flex-1 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5"
+          className="min-w-[180px] flex-1 vo-input px-3 py-1.5 text-sm"
         />
         <select
           value={healthFilter}
           onChange={(e) => setHealthFilter(e.target.value as typeof healthFilter)}
-          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-xs"
+          className="vo-select px-2 py-1.5 text-xs"
         >
           <option value="all">Vsi statusi</option>
           <option value="ok">Samo OK</option>
@@ -350,7 +347,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-          className="rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-xs"
+          className="vo-select px-2 py-1.5 text-xs"
         >
           <option value="name">Ime</option>
           <option value="health">Zdravje</option>
@@ -404,17 +401,17 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
           className="space-y-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-4 shadow-[var(--vo-card-shadow)]"
         >
           <div className="grid gap-3 md:grid-cols-2">
-            <input name="name" required placeholder="Ime stranke" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.name ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <input name="address" placeholder="Naslov" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.address ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <input name="contact" placeholder="Kontaktna oseba" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.contact ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <input name="phone" placeholder="Telefon" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.phone ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
-            <input name="email" type="email" placeholder="E-naslov" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.email ?? "" : ""} className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm" />
+            <input name="name" required placeholder="Ime stranke" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.name ?? "" : ""} className="vo-input px-3 py-2 text-sm" />
+            <input name="address" placeholder="Naslov" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.address ?? "" : ""} className="vo-input px-3 py-2 text-sm" />
+            <input name="contact" placeholder="Kontaktna oseba" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.contact ?? "" : ""} className="vo-input px-3 py-2 text-sm" />
+            <input name="phone" placeholder="Telefon" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.phone ?? "" : ""} className="vo-input px-3 py-2 text-sm" />
+            <input name="email" type="email" placeholder="E-naslov" defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.email ?? "" : ""} className="vo-input px-3 py-2 text-sm" />
             <select
               name="packageId"
               defaultValue={
                 editClientId ? clients.find((c) => c.id === editClientId)?.package?.id ?? "" : ""
               }
-              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+              className="vo-input px-3 py-2 text-sm"
             >
               <option value="">— brez paketa —</option>
               {packages.map((p) => (
@@ -426,7 +423,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
             <select
               name="health"
               defaultValue={editClientId ? clients.find((c) => c.id === editClientId)?.health ?? "ok" : "ok"}
-              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm"
+              className="vo-input px-3 py-2 text-sm"
             >
               <option value="ok">Status: objekt OK</option>
               <option value="alarm">Status: alarm</option>
@@ -437,10 +434,20 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
               defaultValue={
                 editClientId ? (clients.find((c) => c.id === editClientId)?.tags ?? []).join(", ") : ""
               }
-              className="rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-2 text-sm md:col-span-2"
+              className="vo-input px-3 py-2 text-sm md:col-span-2"
             />
+            <label className="flex cursor-pointer items-center gap-2 text-sm md:col-span-2">
+              <input
+                type="checkbox"
+                name="mojPortalEnabled"
+                defaultChecked={editClientId ? Boolean(clients.find((c) => c.id === editClientId)?.mojPortalEnabled) : false}
+              />
+              <span>
+                Stranka uporablja <strong>moj.visionone.si</strong> za spremljanje statusa kamer
+              </span>
+            </label>
           </div>
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
+          {error ? <p className="text-sm text-[var(--vo-danger)]">{error}</p> : null}
           <button
             type="submit"
             disabled={submitting}
@@ -460,23 +467,34 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
         {filteredClients.map((c) => (
           <div
             key={`m-${c.id}`}
-            className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 shadow-[var(--vo-card-shadow)]"
+            role="button"
+            tabIndex={0}
+            className="cursor-pointer rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 shadow-[var(--vo-card-shadow)] transition hover:border-[var(--vo-accent)]/40 hover:bg-[var(--vo-surface-2)]"
+            onClick={() => openProfile(c)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openProfile(c);
+              }
+            }}
             onContextMenu={(e) => openClientMenu(e, c.id)}
           >
             <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-semibold text-[var(--vo-fg)]">{c.name}</p>
-                <p className="text-xs text-[var(--vo-muted)]">{c.address || "—"}</p>
+              <div className="flex min-w-0 items-center gap-2">
+                <ClientMojStatusDot enabled={Boolean(c.mojPortalEnabled)} health={c.health} />
+                <div>
+                  <p className="font-semibold text-[var(--vo-fg)]">
+                    {c.name}
+                    {favoriteIds.includes(c.id) ? (
+                      <span className="ml-1 text-amber-500" aria-hidden>
+                        ★
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="text-xs text-[var(--vo-muted)]">{c.address || "—"}</p>
+                </div>
               </div>
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                  c.health === "ok"
-                    ? "bg-[var(--vo-ok-muted)] text-[var(--vo-ok)]"
-                    : "bg-[var(--vo-danger-muted)] text-[var(--vo-danger)]"
-                }`}
-              >
-                {c.health === "ok" ? "V redu" : "Alarm"}
-              </span>
+              <ClientListStatus c={c} />
             </div>
             <p className="mt-2 text-xs text-[var(--vo-muted)]">
               {c.contact || "—"}
@@ -494,16 +512,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
                 ))}
               </div>
             ) : null}
-            <div className="mt-3 flex items-center justify-end gap-3">
-              <Link
-                href={clientProfilePath(c)}
-                prefetch
-                onMouseEnter={() => prefetchProfile(c)}
-                onTouchStart={() => prefetchProfile(c)}
-                className="rounded-md border border-[var(--vo-border)] px-2 py-1 text-xs font-medium text-[var(--vo-accent)]"
-              >
-                Profil
-              </Link>
+            <div className="mt-3 flex items-center justify-end gap-3" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 className="text-xs font-medium text-[var(--vo-fg)] hover:underline"
@@ -538,8 +547,8 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
               <th className="px-4 py-3 font-medium">Naslov</th>
               <th className="px-4 py-3 font-medium">Kontakt</th>
               <th className="px-4 py-3 font-medium">Paket</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium" />
+              <th className="px-4 py-3 font-medium">Moj / stanje</th>
+              <th className="px-4 py-3 font-medium w-28" />
             </tr>
           </thead>
           <tbody>
@@ -553,7 +562,8 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
             {filteredClients.map((c) => (
               <tr
                 key={c.id}
-                className="border-b border-[var(--vo-border)] last:border-0"
+                className="cursor-pointer border-b border-[var(--vo-border)] last:border-0 hover:bg-[var(--vo-surface-2)]/80"
+                onClick={() => openProfile(c)}
                 onContextMenu={(e) => openClientMenu(e, c.id)}
                 draggable={!reordering}
                 onDragStart={() => setDragId(c.id)}
@@ -567,22 +577,14 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
               >
                 <td className="px-4 py-3 font-medium text-[var(--vo-fg)]">
                   <span className="inline-flex items-center gap-2">
-                    <button
-                      type="button"
-                      title={favoriteIds.includes(c.id) ? "Odstrani iz priljubljenih" : "Dodaj med priljubljene"}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFavoriteIds(toggleFavoriteClient(c.id));
-                      }}
-                      className="text-[var(--vo-muted)] hover:text-amber-400"
-                    >
-                      <Star
-                        className={`h-4 w-4 ${favoriteIds.includes(c.id) ? "fill-amber-400 text-amber-400" : ""}`}
-                        aria-hidden
-                      />
-                    </button>
+                    <ClientMojStatusDot enabled={Boolean(c.mojPortalEnabled)} health={c.health} />
                     <span>
                       {c.name}
+                      {favoriteIds.includes(c.id) ? (
+                        <span className="ml-1 text-amber-500" title="Priljubljena">
+                          ★
+                        </span>
+                      ) : null}
                       {(c.tags ?? []).length > 0 ? (
                         <span className="mt-0.5 flex flex-wrap gap-1">
                           {c.tags.map((t) => (
@@ -616,29 +618,15 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
                 </td>
                 <td className="px-4 py-3 text-[var(--vo-fg)]">{c.package?.name ?? "—"}</td>
                 <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                      c.health === "ok"
-                        ? "bg-[var(--vo-ok-muted)] text-[var(--vo-ok)]"
-                        : "bg-[var(--vo-danger-muted)] text-[var(--vo-danger)]"
-                    }`}
-                  >
-                    {c.health === "ok" ? "V redu" : "Alarm"}
-                  </span>
+                  <ClientListStatus c={c} />
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="mr-3 text-xs text-[var(--vo-muted)]">Povleci za premik</span>
-                  <Link
-                    href={clientProfilePath(c)}
-                    prefetch
-                    onMouseEnter={() => prefetchProfile(c)}
-                    className="font-medium text-[var(--vo-accent)] hover:underline"
-                  >
-                    Profil
-                  </Link>
+                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <span className="mr-2 text-[10px] text-[var(--vo-muted)]" title="Povleci vrstico">
+                    ⋮⋮
+                  </span>
                   <button
                     type="button"
-                    className="ml-3 text-xs font-medium text-[var(--vo-fg)] hover:underline"
+                    className="text-xs font-medium text-[var(--vo-fg)] hover:underline"
                     onClick={() => {
                       setError(null);
                       setNotice(null);
@@ -652,7 +640,7 @@ export function StrankeView({ clients, packages, dbConfigured, loadError = null,
                     <button
                       type="button"
                       onClick={() => handleDelete(c.id)}
-                      className="ml-3 text-xs font-medium text-red-600 hover:underline"
+                      className="ml-2 text-xs font-medium text-red-600 hover:underline"
                     >
                       Izbriši
                     </button>

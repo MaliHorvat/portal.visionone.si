@@ -328,6 +328,7 @@ export function SchemaDeviceInspector({
                   <label className="text-[var(--vo-muted)]">
                     Višina (m)
                     <DecimalInput
+                      placeholder="npr. 3"
                       value={cp?.mountHeightM ?? 0}
                       onChange={(n) => onPatchCameraPlan(n > 0 ? { mountHeightM: n } : { mountHeightM: undefined })}
                       className={inputCls}
@@ -336,6 +337,7 @@ export function SchemaDeviceInspector({
                   <label className="text-[var(--vo-muted)]">
                     Naklon (°)
                     <DecimalInput
+                      placeholder="npr. 15"
                       value={cp?.tiltDeg ?? 0}
                       onChange={(n) => onPatchCameraPlan(n > 0 ? { tiltDeg: n } : { tiltDeg: undefined })}
                       className={inputCls}
@@ -344,6 +346,7 @@ export function SchemaDeviceInspector({
                   <label className="text-[var(--vo-muted)]">
                     FOV (°)
                     <DecimalInput
+                      placeholder="npr. 90"
                       value={cp?.fovDeg ?? 0}
                       onChange={(n) => onPatchCameraPlan(n > 0 ? { fovDeg: n } : { fovDeg: undefined })}
                       className={inputCls}
@@ -352,6 +355,7 @@ export function SchemaDeviceInspector({
                   <label className="text-[var(--vo-muted)]">
                     Doseg (px)
                     <DecimalInput
+                      placeholder="npr. 120"
                       value={cp?.reachPx ?? 0}
                       onChange={(n) => onPatchCameraPlan(n > 0 ? { reachPx: n } : { reachPx: undefined })}
                       className={inputCls}

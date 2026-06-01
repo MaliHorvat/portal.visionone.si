@@ -6,11 +6,9 @@ import {
   Copy,
   ExternalLink,
   FileText,
-  History,
   MapPin,
   Pencil,
   Phone,
-  Printer,
   StickyNote,
   X,
 } from "lucide-react";
@@ -40,15 +38,11 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
     packageId: client.package?.id ?? "",
     health: client.health as ClientHealth,
     tags: (client.tags ?? []).join(", "),
+    mojPortalEnabled: Boolean(client.mojPortalEnabled),
   });
   const [internalNote, setInternalNote] = useState("");
   const [noteMeta, setNoteMeta] = useState<{ updatedBy: string; updatedAt: string | null } | null>(null);
   const [noteBusy, setNoteBusy] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [historyRows, setHistoryRows] = useState<
-    Array<{ id: string; field: string; oldValue: string; newValue: string; username: string; createdAt: string }>
-  >([]);
-  const [historyBusy, setHistoryBusy] = useState(false);
 
   useEffect(() => {
     setForm({
@@ -60,6 +54,7 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
       packageId: client.package?.id ?? "",
       health: client.health,
       tags: (client.tags ?? []).join(", "),
+      mojPortalEnabled: Boolean(client.mojPortalEnabled),
     });
   }, [client]);
 
@@ -105,6 +100,7 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
+        mojPortalEnabled: form.mojPortalEnabled,
       }),
     });
     setBusy(false);
@@ -185,48 +181,6 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
         setNoteMeta({ updatedBy: j.updatedBy ?? "", updatedAt: j.updatedAt ?? null });
       })
       .catch(() => {});
-  }
-
-  async function toggleHistory() {
-    const next = !showHistory;
-    setShowHistory(next);
-    if (!next || !dbConfigured) return;
-    setHistoryBusy(true);
-    const res = await fetch(`/api/clients/${client.id}/profile-history`, { credentials: "include" });
-    setHistoryBusy(false);
-    if (!res.ok) return;
-    const j = (await res.json()) as {
-      changes?: Array<{
-        id: string;
-        field: string;
-        oldValue: string;
-        newValue: string;
-        username: string;
-        createdAt: string;
-      }>;
-    };
-    setHistoryRows(j.changes ?? []);
-  }
-
-  function printProfile() {
-    const w = window.open("", "_blank", "noopener,noreferrer,width=720,height=900");
-    if (!w) return;
-    const esc = (s: string) =>
-      s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>${esc(client.name)}</title>
-      <style>body{font-family:system-ui,sans-serif;padding:32px;color:#111}h1{font-size:20px}p{margin:6px 0;font-size:14px}.muted{color:#555}</style></head><body>
-      <h1>${esc(client.name)}</h1>
-      <p class="muted">VisionOne — kartica stranke</p>
-      <p><b>Naslov:</b> ${esc(client.address || "—")}</p>
-      <p><b>Kontakt:</b> ${esc(client.contact || "—")}</p>
-      <p><b>Telefon:</b> ${esc(client.phone || "—")}</p>
-      <p><b>E-pošta:</b> ${esc(client.email || "—")}</p>
-      <p><b>Paket:</b> ${esc(client.package?.name ?? "—")}</p>
-      <p><b>Status:</b> ${client.health === "ok" ? "OK" : "Alarm"}</p>
-      <p><b>Kamere:</b> ${client.cameras.length} · <b>NVR:</b> ${client.nvrs.length}</p>
-      <script>window.print()</script></body></html>`;
-    w.document.write(html);
-    w.document.close();
   }
 
   const canEdit = role === "admin" && dbConfigured;
@@ -322,6 +276,16 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
               placeholder="VIP, teren"
               className="mt-1 w-full rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm"
             />
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 text-xs sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={form.mojPortalEnabled}
+              onChange={(e) => setForm((f) => ({ ...f, mojPortalEnabled: e.target.checked }))}
+            />
+            <span className="text-[var(--vo-fg)]">
+              Stranka uporablja <strong>moj.visionone.si</strong> za spremljanje statusa kamer
+            </span>
           </label>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -433,33 +397,6 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
           E-pošta
         </a>
       ) : null}
-      <button
-        type="button"
-        onClick={printProfile}
-        className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs hover:bg-[var(--vo-surface-2)]"
-      >
-        <Printer className="h-3.5 w-3.5" />
-        Natisni
-      </button>
-      {dbConfigured ? (
-        <a
-          href={`/api/clients/${client.id}/vcard`}
-          download={`${client.name.replace(/\s+/g, "-")}.vcf`}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs hover:bg-[var(--vo-surface-2)]"
-        >
-          vCard
-        </a>
-      ) : null}
-      {canEdit && dbConfigured ? (
-        <button
-          type="button"
-          onClick={() => void toggleHistory()}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs hover:bg-[var(--vo-surface-2)]"
-        >
-          <History className="h-3.5 w-3.5" />
-          Zgodovina
-        </button>
-      ) : null}
       {onOpenPonudbe ? (
         <button
           type="button"
@@ -471,29 +408,6 @@ export function ClientProfileEditor({ ctx, onOpenPonudbe }: Props) {
         </button>
       ) : null}
     </div>
-    {showHistory && canEdit ? (
-      <div className="max-h-48 overflow-y-auto rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3 text-xs">
-        {historyBusy ? (
-          <p className="text-[var(--vo-muted)]">Nalagam…</p>
-        ) : historyRows.length === 0 ? (
-          <p className="text-[var(--vo-muted)]">Ni zabeleženih sprememb profila.</p>
-        ) : (
-          <ul className="space-y-2">
-            {historyRows.map((h) => (
-              <li key={h.id} className="border-b border-[var(--vo-border)] pb-2 last:border-0">
-                <span className="font-medium text-[var(--vo-fg)]">{h.field}</span>
-                <span className="text-[var(--vo-muted)]">
-                  {" "}
-                  · {h.username} · {new Date(h.createdAt).toLocaleString("sl-SI")}
-                </span>
-                <div className="mt-0.5 text-[var(--vo-muted)] line-through">{h.oldValue || "—"}</div>
-                <div className="text-[var(--vo-fg)]">{h.newValue || "—"}</div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    ) : null}
     {canEdit && dbConfigured ? (
       <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-3">
         <div className="flex items-center gap-2 text-xs font-semibold text-[var(--vo-fg)]">

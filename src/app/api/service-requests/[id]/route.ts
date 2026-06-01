@@ -45,10 +45,17 @@ export async function PUT(request: Request, ctx: Ctx) {
     const updated = await updateServiceRequestForSession(id, session, input);
     if (!updated) return jsonError("Zahtevek ne obstaja.", 404);
     await appendAuditLog(session.username, "service_request_update", `${updated.id}|${updated.status}|${updated.priority}`);
-    void sendTelegramNotification(
-      `🛠️ Posodobljen zahtevek\nNaslov: ${updated.title}\nStatus: ${updated.status}\nPrioriteta: ${updated.priority}\nStranka: ${updated.clientName || "-"}`,
-      "service_request",
-    );
+    if (updated.status === "done") {
+      void sendTelegramNotification(
+        `✅ Zahtevek zaključen\nNaslov: ${updated.title}\nStranka: ${updated.clientName || "-"}`,
+        "service_request_done",
+      );
+    } else {
+      void sendTelegramNotification(
+        `🛠️ Posodobljen zahtevek\nNaslov: ${updated.title}\nStatus: ${updated.status}\nPrioriteta: ${updated.priority}\nStranka: ${updated.clientName || "-"}`,
+        "service_request_update",
+      );
+    }
     return NextResponse.json({ request: updated });
   } catch (e) {
     console.error(e);

@@ -206,7 +206,7 @@ export function StandaloneRackDesigner({ dbConfigured }: { dbConfigured: boolean
                 placeholder="U začetek"
                 value={f.uStart || ""}
                 onChange={(e) => setF({ ...f, uStart: Number(e.target.value) || 1 })}
-                className="w-20 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1"
+                className="w-20 vo-select px-2 py-1 text-xs"
               />
               <input
                 type="number"
@@ -214,19 +214,19 @@ export function StandaloneRackDesigner({ dbConfigured }: { dbConfigured: boolean
                 placeholder="U višina"
                 value={f.uSpan || ""}
                 onChange={(e) => setF({ ...f, uSpan: Number(e.target.value) || 1 })}
-                className="w-20 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1"
+                className="w-20 vo-select px-2 py-1 text-xs"
               />
               <input
                 placeholder="Oznaka"
                 value={f.label}
                 onChange={(e) => setF({ ...f, label: e.target.value })}
-                className="min-w-[140px] flex-1 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1"
+                className="min-w-[140px] flex-1 vo-select px-2 py-1 text-xs"
               />
               <input
                 placeholder="Tip"
                 value={f.deviceType}
                 onChange={(e) => setF({ ...f, deviceType: e.target.value })}
-                className="w-28 rounded border border-[var(--vo-border)] bg-transparent px-2 py-1"
+                className="w-28 vo-select px-2 py-1 text-xs"
               />
               <button type="submit" className="rounded-lg bg-[var(--vo-fg)] px-3 py-1 font-semibold text-[var(--vo-bg)]">
                 +

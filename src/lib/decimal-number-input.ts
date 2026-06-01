@@ -63,6 +63,22 @@ export function formatDecimalInput(n: number, opts?: { maxDecimals?: number }): 
   });
 }
 
+/** Ali je v osnutku uporabnik eksplicitno vnesel ničlo (npr. "0" ali "0,5"). */
+export function isExplicitZeroDraft(raw: string): boolean {
+  const t = raw.trim().replace(/\s/g, "");
+  return /^0([.,]\d*)?$/.test(t);
+}
+
+/** Za prikaz v polju: pri 0 pusti prazno, da je viden placeholder. */
+export function formatDecimalForField(
+  n: number,
+  opts?: { maxDecimals?: number; hideZeroWhenEmpty?: boolean },
+): string {
+  if (!Number.isFinite(n)) return "";
+  if (opts?.hideZeroWhenEmpty !== false && n === 0) return "";
+  return formatDecimalInput(n, { maxDecimals: opts?.maxDecimals });
+}
+
 export function decimalFromFormData(fd: FormData, name: string, fallback = 0): number {
   const n = parseDecimalInput(String(fd.get(name) ?? ""));
   return Number.isFinite(n) ? n : fallback;

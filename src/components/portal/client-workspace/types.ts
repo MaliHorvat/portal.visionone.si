@@ -12,7 +12,8 @@ export type WorkspaceTab =
   | "dokumenti"
   | "timeline"
   | "field"
-  | "rpi";
+  | "rpi"
+  | "preventiva";
 
 const WORKSPACE_TAB_IDS = new Set<WorkspaceTab>([
   "kamere",
@@ -27,6 +28,7 @@ const WORKSPACE_TAB_IDS = new Set<WorkspaceTab>([
   "timeline",
   "field",
   "rpi",
+  "preventiva",
 ]);
 
 export type WorkspaceCtx = {
