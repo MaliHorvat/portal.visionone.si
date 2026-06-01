@@ -84,10 +84,11 @@ export function PortalDashboardView({ initial }: Props) {
 
   return (
     <div className="space-y-8 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--vo-border)] pb-6">
+      <header className="vo-card flex flex-wrap items-start justify-between gap-4 p-5 md:p-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--vo-fg)]">Pregled sistema</h1>
-          <p className="mt-1 text-sm text-[var(--vo-muted)]">
+          <p className="vo-section-label">Nadzorna plošča</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--vo-fg)] md:text-3xl">Pregled sistema</h1>
+          <p className="mt-2 text-sm text-[var(--vo-muted)]">
             Dobrodošli nazaj{role === "admin" ? ", administrator" : ""}.
             {!initial.dbConfigured ? (
               <span className="ml-2 text-amber-600 dark:text-amber-400">
@@ -101,14 +102,14 @@ export function PortalDashboardView({ initial }: Props) {
             type="button"
             onClick={() => void refreshDashboard()}
             disabled={refreshing}
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-2 py-1 text-xs hover:bg-[var(--vo-surface-2)] disabled:opacity-50"
+            className="vo-btn-ghost inline-flex items-center gap-1.5 px-3 py-1.5 text-xs disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} /> Osveži
           </button>
           <button
             type="button"
             onClick={() => exportDashboardCsv({ clients, totals })}
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--vo-border)] px-2 py-1 text-xs hover:bg-[var(--vo-surface-2)]"
+            className="vo-btn-ghost inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
           >
             <Download className="h-3.5 w-3.5" /> CSV
           </button>
@@ -134,11 +135,11 @@ export function PortalDashboardView({ initial }: Props) {
             />
             Kompaktno
           </label>
-          <div className="text-right">
-            <div className="text-2xl font-mono tabular-nums text-[var(--vo-fg)]">
+          <div className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-4 py-2 text-right">
+            <div className="text-2xl font-mono font-bold tabular-nums text-[var(--vo-accent)]">
               {now.toLocaleTimeString("sl-SI", { hour: "2-digit", minute: "2-digit" })}
             </div>
-            <div className="text-xs text-[var(--vo-muted)]">
+            <div className="text-[10px] text-[var(--vo-muted)]">
               Osveženo {lastRefresh.toLocaleTimeString("sl-SI", { hour: "2-digit", minute: "2-digit" })}
             </div>
           </div>
@@ -146,7 +147,7 @@ export function PortalDashboardView({ initial }: Props) {
       </header>
 
       <section>
-        <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--vo-muted)]">
+        <h2 className="vo-section-label mb-3 flex items-center gap-2">
           <LayoutDashboard className="h-4 w-4" aria-hidden />
           Status strank &amp; kamer
         </h2>
@@ -160,7 +161,7 @@ export function PortalDashboardView({ initial }: Props) {
         </div>
       </section>
 
-      <section className={`rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] shadow-[var(--vo-card-shadow)] ${compact ? "p-3" : "p-5"}`}>
+      <section className={`vo-card ${compact ? "p-3" : "p-5"}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Vzdrževanje &amp; opomniki</h2>
           <div className="flex gap-2 text-xs">
@@ -204,14 +205,14 @@ export function PortalDashboardView({ initial }: Props) {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)] xl:col-span-2">
+        <section className="vo-card p-5 xl:col-span-2">
           <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Hiter pregled</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] p-4">
+            <div className="vo-stat-tile p-4">
               <p className="text-xs text-[var(--vo-muted)]">Skupaj objektov</p>
               <p className="mt-1 text-3xl font-bold text-[var(--vo-accent)]">{totals.clients}</p>
             </div>
-            <div className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] p-4">
+            <div className="vo-stat-tile p-4">
               <p className="text-xs text-[var(--vo-muted)]">NVR / Switch</p>
               <p className="mt-1 text-lg font-semibold text-[var(--vo-fg)]">
                 NVR {totals.nvrsOnline}/{totals.nvrsOnline + totals.nvrsOffline}
@@ -219,7 +220,7 @@ export function PortalDashboardView({ initial }: Props) {
                 SW {totals.switchesOnline}/{totals.switchesOnline + totals.switchesOffline}
               </p>
             </div>
-            <div className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] p-4">
+            <div className="vo-stat-tile p-4">
               <p className="text-xs text-[var(--vo-muted)]">Kamere</p>
               <p className="mt-1 text-lg">
                 <span className="font-bold text-[var(--vo-ok)]">{totals.camerasOnline} online</span>
@@ -227,7 +228,7 @@ export function PortalDashboardView({ initial }: Props) {
                 <span className="font-bold text-[var(--vo-danger)]">{totals.camerasOffline} offline</span>
               </p>
             </div>
-            <div className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] p-4">
+            <div className="vo-stat-tile p-4">
               <p className="text-xs text-[var(--vo-muted)]">Diski</p>
               <p className="mt-1 text-lg font-semibold text-[var(--vo-fg)]">
                 OK {totals.disksOk}
@@ -235,7 +236,7 @@ export function PortalDashboardView({ initial }: Props) {
                 <span className="text-[var(--vo-warn)]">{totals.disksWarnFail} opozorilo</span>
               </p>
             </div>
-            <div className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] p-4">
+            <div className="vo-stat-tile p-4">
               <p className="text-xs text-[var(--vo-muted)]">Zahtevki</p>
               <p className="mt-1 text-lg font-semibold text-[var(--vo-fg)]">
                 Odprti {totals.requestsOpen}
@@ -246,7 +247,7 @@ export function PortalDashboardView({ initial }: Props) {
           </div>
         </section>
 
-        <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
+        <section className="vo-card p-5">
           <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Zadnje aktivnosti</h2>
           <ul className="mt-4 max-h-[320px] space-y-3 overflow-y-auto text-sm">
             {initial.activities.length === 0 ? (
@@ -274,7 +275,7 @@ export function PortalDashboardView({ initial }: Props) {
         </section>
       </div>
 
-      <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
+      <section className="vo-card p-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Operativni inbox — zahtevki</h2>
           <Link href="/portal/zahtevki" className="text-xs font-medium text-[var(--vo-accent)] hover:underline">
@@ -286,7 +287,7 @@ export function PortalDashboardView({ initial }: Props) {
         ) : (
           <ul className="mt-3 space-y-2">
             {initial.requests.map((r) => (
-              <li key={r.id} className="rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2 text-sm">
+              <li key={r.id} className="vo-stat-tile px-3 py-2 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-medium text-[var(--vo-fg)]">{r.title}</span>
                   <span className="text-xs text-[var(--vo-muted)]">
@@ -303,7 +304,7 @@ export function PortalDashboardView({ initial }: Props) {
         )}
       </section>
 
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface-2)] px-4 py-3 text-xs">
+      <section className="vo-card flex flex-wrap items-center justify-between gap-3 border-[var(--vo-accent)]/15 bg-[var(--vo-accent-muted)]/30 px-4 py-3 text-xs">
         <div className="flex flex-wrap gap-4 text-[var(--vo-muted)]">
           <span className="flex items-center gap-1">
             <Wifi className="h-3.5 w-3.5 text-[var(--vo-ok)]" aria-hidden /> API povezava
@@ -319,9 +320,7 @@ export function PortalDashboardView({ initial }: Props) {
       <PortalQuickActions />
 
       <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--vo-muted)]">
-          Hitre povezave
-        </h2>
+        <h2 className="vo-section-label mb-3">Hitre povezave</h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <QuickCard
             href="/portal/stranke"
@@ -358,9 +357,11 @@ function QuickCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col gap-2 rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)] transition hover:border-[var(--vo-accent)] hover:bg-[var(--vo-surface-2)]"
+      className="vo-card vo-card-hover group flex flex-col gap-2 p-5"
     >
-      <Icon className="h-8 w-8 text-[var(--vo-accent)] opacity-90 group-hover:opacity-100" aria-hidden />
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--vo-accent-muted)] text-[var(--vo-accent)] transition group-hover:scale-105">
+        <Icon className="h-5 w-5" aria-hidden />
+      </div>
       <span className="font-semibold text-[var(--vo-fg)]">{title}</span>
       <span className="text-xs text-[var(--vo-muted)]">{desc}</span>
       <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-[var(--vo-accent)]">
@@ -376,8 +377,8 @@ function ClientStatusCard({ card }: { card: ClientDashboardCard }) {
   return (
     <Link
       href={href}
-      className={`block min-w-[260px] max-w-[280px] shrink-0 rounded-xl border p-4 shadow-[var(--vo-card-shadow)] transition hover:border-[var(--vo-accent)] ${
-        ok ? "border-[var(--vo-border)] bg-[var(--vo-surface)]" : "border-red-500/40 bg-red-950/10"
+      className={`vo-card vo-card-hover block min-w-[260px] max-w-[280px] shrink-0 p-4 ${
+        ok ? "" : "border-red-400/50 bg-red-50 dark:border-red-500/40 dark:bg-red-950/20"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -409,9 +410,9 @@ function ClientStatusCard({ card }: { card: ClientDashboardCard }) {
         </span>
       </div>
       {!ok && card.issues.length > 0 ? (
-        <div className="mt-3 rounded-lg border border-red-500/30 bg-black/20 px-2 py-2">
-          <p className="text-[10px] font-semibold uppercase text-red-300">Nedavni izpadi</p>
-          <ul className="mt-1 space-y-1 text-[11px] text-red-100/90">
+        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-2 py-2 dark:border-red-500/30 dark:bg-red-950/30">
+          <p className="text-[10px] font-semibold uppercase text-red-700 dark:text-red-300">Nedavni izpadi</p>
+          <ul className="mt-1 space-y-1 text-[11px] text-red-800/90 dark:text-red-100/90">
             {card.issues.map((issue, i) => (
               <li key={i}>• {issue}</li>
             ))}

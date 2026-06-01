@@ -41,7 +41,7 @@ export function PortalQuickActions() {
   const visible = actions.filter((a) => !hidden.includes(a.href));
 
   return (
-    <section className="rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] p-5 shadow-[var(--vo-card-shadow)]">
+    <section className="vo-card p-5">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold text-[var(--vo-fg)]">Hitri dostopi</h2>
@@ -77,7 +77,7 @@ export function PortalQuickActions() {
           <Link
             key={href}
             href={href}
-            className="flex items-center gap-2 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2.5 text-xs font-medium text-[var(--vo-fg)] transition hover:border-[var(--vo-accent)] hover:bg-[var(--vo-surface-2)]"
+            className="vo-card-hover flex items-center gap-2 rounded-lg border border-[var(--vo-border)] bg-[var(--vo-bg)] px-3 py-2.5 text-xs font-medium text-[var(--vo-fg)] hover:bg-[var(--vo-surface-2)]"
           >
             <Icon className="h-4 w-4 shrink-0 text-[var(--vo-accent)]" aria-hidden />
             {label}

@@ -2,43 +2,52 @@
 @import "maplibre-gl/dist/maplibre-gl.css";
 
 :root {
-  --vo-bg: #f4f7fb;
+  --vo-bg: #eef3f8;
   --vo-surface: #ffffff;
-  --vo-surface-2: #eef2f7;
+  --vo-surface-2: #f3f6fa;
   --vo-fg: #0c1222;
   --vo-muted: #5c6578;
-  --vo-border: #d8dee8;
+  --vo-border: #d4dce8;
   --vo-accent: #0d7a7a;
+  --vo-accent-2: #0891b2;
   --vo-accent-hover: #0a6363;
-  --vo-accent-muted: rgba(13, 122, 122, 0.12);
+  --vo-accent-muted: rgba(13, 122, 122, 0.11);
+  --vo-accent-gradient: linear-gradient(135deg, #0d7a7a 0%, #0a6363 55%, #087a8c 100%);
   --vo-danger: #c02626;
-  --vo-danger-muted: rgba(192, 38, 38, 0.12);
+  --vo-danger-muted: rgba(192, 38, 38, 0.1);
   --vo-ok: #15803d;
   --vo-ok-muted: rgba(21, 128, 61, 0.12);
   --vo-warn: #b45309;
-  --vo-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.06);
+  --vo-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 28px rgba(15, 23, 42, 0.07);
+  --vo-glow-sm: 0 0 0 1px rgba(13, 122, 122, 0.1), 0 8px 24px rgba(13, 122, 122, 0.12);
+  --vo-sidebar-bg: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .dark {
-  --vo-bg: #07090d;
-  --vo-surface: #0b0e13;
-  --vo-surface-2: #11161f;
-  --vo-fg: #e5ebf5;
+  --vo-bg: #06090f;
+  --vo-surface: #0c1018;
+  --vo-surface-2: #121820;
+  --vo-fg: #e8edf5;
   --vo-muted: #8b97aa;
-  --vo-border: #1a2230;
-  --vo-accent: #11b38a;
-  --vo-accent-hover: #27d8a9;
-  --vo-accent-muted: rgba(17, 179, 138, 0.14);
-  --vo-danger: #ef5f5f;
-  --vo-danger-muted: rgba(239, 95, 95, 0.16);
-  --vo-ok: #3fd28e;
-  --vo-ok-muted: rgba(63, 210, 142, 0.16);
-  --vo-warn: #f6c65c;
-  --vo-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 40px rgba(0, 0, 0, 0.45);
+  --vo-border: #1e2836;
+  --vo-accent: #2dd4bf;
+  --vo-accent-2: #22d3ee;
+  --vo-accent-hover: #5eead4;
+  --vo-accent-muted: rgba(45, 212, 191, 0.12);
+  --vo-accent-gradient: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 50%, #22d3ee 100%);
+  --vo-danger: #f87171;
+  --vo-danger-muted: rgba(248, 113, 113, 0.14);
+  --vo-ok: #4ade80;
+  --vo-ok-muted: rgba(74, 222, 128, 0.14);
+  --vo-warn: #fbbf24;
+  --vo-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 40px rgba(0, 0, 0, 0.4);
+  --vo-glow-sm: 0 0 0 1px rgba(45, 212, 191, 0.15), 0 8px 28px rgba(0, 0, 0, 0.35);
+  --vo-sidebar-bg: linear-gradient(180deg, #0c1018 0%, #080c12 100%);
 }
 
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
@@ -49,6 +58,154 @@ body {
   background: var(--vo-bg);
   color: var(--vo-fg);
   font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+/* —— Portal (aplikacija) —— */
+.vo-portal-mesh {
+  background-color: var(--vo-bg);
+  background-image:
+    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(13, 122, 122, 0.07), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(8, 145, 178, 0.06), transparent 45%);
+}
+
+.vo-card {
+  border-radius: 0.875rem;
+  border: 1px solid var(--vo-border);
+  background: var(--vo-surface);
+  box-shadow: var(--vo-card-shadow);
+}
+
+.vo-card-hover {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.vo-card-hover:hover {
+  border-color: color-mix(in srgb, var(--vo-accent) 35%, var(--vo-border));
+  box-shadow: var(--vo-glow-sm);
+}
+
+.vo-stat-tile {
+  border-radius: 0.75rem;
+  border: 1px solid var(--vo-border);
+  background: color-mix(in srgb, var(--vo-bg) 60%, var(--vo-surface));
+}
+
+.vo-btn-primary {
+  border-radius: 0.625rem;
+  background: var(--vo-accent-gradient);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(13, 122, 122, 0.25);
+  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vo-btn-primary:hover {
+  opacity: 0.95;
+  box-shadow: 0 6px 20px rgba(13, 122, 122, 0.32);
+}
+
+.vo-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.vo-btn-ghost {
+  border-radius: 0.625rem;
+  border: 1px solid var(--vo-border);
+  background: var(--vo-surface);
+  color: var(--vo-muted);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.vo-btn-ghost:hover {
+  background: var(--vo-surface-2);
+  color: var(--vo-fg);
+  border-color: color-mix(in srgb, var(--vo-accent) 30%, var(--vo-border));
+}
+
+.vo-input {
+  border-radius: 0.625rem;
+  border: 1px solid var(--vo-border);
+  background: var(--vo-surface);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.vo-input:focus {
+  outline: none;
+  border-color: var(--vo-accent);
+  box-shadow: 0 0 0 3px var(--vo-accent-muted);
+}
+
+.vo-section-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--vo-muted);
+}
+
+.vo-nav-link {
+  position: relative;
+  border-radius: 0.625rem;
+  color: var(--vo-muted);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.vo-nav-link:hover {
+  background: var(--vo-surface-2);
+  color: var(--vo-fg);
+}
+
+.vo-nav-link-active {
+  background: var(--vo-accent-muted);
+  color: var(--vo-accent);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 0 var(--vo-accent);
+}
+
+.vo-sidebar-nav::-webkit-scrollbar {
+  width: 5px;
+}
+
+.vo-sidebar-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--vo-muted) 35%, transparent);
+}
+
+.vo-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--vo-surface-2) 0%,
+    color-mix(in srgb, var(--vo-surface) 80%, white) 50%,
+    var(--vo-surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: vo-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes vo-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Clerk modal on dark background */

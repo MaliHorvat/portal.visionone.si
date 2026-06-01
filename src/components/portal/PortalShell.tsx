@@ -251,25 +251,38 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   }, [role]);
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-[var(--vo-bg)]">
+    <div className="vo-portal-app flex h-dvh overflow-hidden bg-[var(--vo-bg)]">
       <aside
-        className={`sticky top-0 hidden h-dvh max-h-dvh shrink-0 flex-col border-r border-[var(--vo-border)] bg-[var(--vo-surface)] transition-[width] md:flex ${
+        className={`sticky top-0 hidden h-dvh max-h-dvh shrink-0 flex-col border-r border-[var(--vo-border)] transition-[width] md:flex ${
           sidebarCollapsed ? "w-[4.5rem]" : "w-64"
         }`}
+        style={{ background: "var(--vo-sidebar-bg)" }}
       >
-        <div className="flex items-center justify-between border-b border-[var(--vo-border)] px-3 py-3">
-          <Link href="/" className={`flex items-center gap-2 ${sidebarCollapsed ? "mx-auto" : ""}`}>
-            <img src="/visionone-mark.png" alt="VisionOne" className="h-9 w-9 rounded object-contain" />
+        <div className="flex items-center justify-between border-b border-[var(--vo-border)]/80 px-3 py-3.5">
+          <Link href="/portal" className={`flex items-center gap-2.5 ${sidebarCollapsed ? "mx-auto" : ""}`}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--vo-accent-muted)] ring-1 ring-[var(--vo-accent)]/15">
+              <img src="/visionone-mark.png" alt="VisionOne" className="h-7 w-7 object-contain" />
+            </div>
             {!sidebarCollapsed ? (
               <img src="/visionone-wordmark.png" alt="VisionOne" className="h-6 w-auto object-contain" />
             ) : null}
           </Link>
           {!sidebarCollapsed ? (
-            <button type="button" onClick={toggleSidebar} className="rounded border border-[var(--vo-border)] p-1 text-[var(--vo-muted)]" title="Skrči">
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className="vo-btn-ghost p-1.5"
+              title="Skrči"
+            >
               <ChevronLeft className="h-4 w-4" />
             </button>
           ) : (
-            <button type="button" onClick={toggleSidebar} className="mx-auto rounded border border-[var(--vo-border)] p-1 text-[var(--vo-muted)]" title="Razširi">
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className="vo-btn-ghost mx-auto p-1.5"
+              title="Razširi"
+            >
               <ChevronRight className="h-4 w-4" />
             </button>
           )}
@@ -278,9 +291,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           {orderedVisible.map((section) => (
             <div key={section.title}>
               {!sidebarCollapsed ? (
-                <div className="px-3 pb-1 text-[10px] font-semibold tracking-[0.11em] text-[var(--vo-muted)]/90">
-                  {section.title}
-                </div>
+                <div className="vo-section-label px-3 pb-1.5">{section.title}</div>
               ) : null}
               <div className="flex flex-col gap-0.5">
                 {section.items.map(({ href, label, icon: Icon }, idx) => {
@@ -293,13 +304,11 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                     <div key={href + label} className="group flex items-center gap-1">
                       <Link
                         href={href}
-                        className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-3 py-1.5 text-[13px] font-medium ${
-                          active
-                            ? "border border-[var(--vo-border)] bg-[var(--vo-surface-2)] text-[var(--vo-fg)]"
-                            : "text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)]"
+                        className={`flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-[13px] ${
+                          active ? "vo-nav-link-active" : "vo-nav-link"
                         }`}
                       >
-                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                        <Icon className={`h-4 w-4 shrink-0 ${active ? "text-[var(--vo-accent)]" : ""}`} aria-hidden />
                         {!sidebarCollapsed ? (
                           <>
                             <span className="truncate">{label}</span>
@@ -340,25 +349,26 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </nav>
-        <div className="border-t border-[var(--vo-border)] p-3">
-          <div className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-center text-[11px] font-medium text-emerald-300">
-            ● System Online
+        <div className="border-t border-[var(--vo-border)]/80 p-3">
+          <div className="flex items-center justify-center gap-2 rounded-lg border border-[var(--vo-ok-muted)] bg-[var(--vo-ok-muted)] px-3 py-2 text-center text-[11px] font-semibold text-[var(--vo-ok)]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--vo-ok)] shadow-[0_0_6px_var(--vo-ok)]" />
+            {sidebarCollapsed ? null : <span>System online</span>}
           </div>
         </div>
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex items-center justify-between gap-3 border-b border-[var(--vo-border)] bg-[var(--vo-surface)] px-4 py-2">
+        <header className="flex items-center justify-between gap-3 border-b border-[var(--vo-border)]/80 bg-[var(--vo-surface)]/90 px-4 py-2.5 backdrop-blur-md">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex min-w-0 items-center gap-2 md:hidden">
               <img src="/visionone-mark.png" alt="VisionOne" className="h-5 w-5 shrink-0 rounded object-contain" />
               <img src="/visionone-wordmark.png" alt="VisionOne" className="h-4 w-auto shrink-0 object-contain" />
             </div>
             <div className="min-w-0">
-              <p className="hidden truncate text-sm font-semibold text-[var(--vo-fg)] md:block">VisionOne portal</p>
+              <p className="hidden truncate text-sm font-bold text-[var(--vo-fg)] md:block">VisionOne portal</p>
               <p className="truncate text-xs text-[var(--vo-muted)]">
-                Pogled:{" "}
-                <span className="font-medium text-[var(--vo-accent)]">
+                Vloga:{" "}
+                <span className="inline-flex rounded-md bg-[var(--vo-accent-muted)] px-1.5 py-0.5 font-semibold text-[var(--vo-accent)]">
                   {roleLabel(role)}
                 </span>
               </p>
@@ -368,7 +378,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => setCommandOpen(true)}
-              className="hidden items-center gap-1 rounded-lg border border-[var(--vo-border)] px-2 py-1.5 text-xs text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] md:inline-flex"
+              className="vo-btn-ghost hidden items-center gap-1.5 px-2.5 py-1.5 text-xs md:inline-flex"
               title="Ctrl+K"
             >
               <Search className="h-3.5 w-3.5" /> Paleta
@@ -376,7 +386,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => setShortcutsOpen(true)}
-              className="hidden rounded-lg border border-[var(--vo-border)] p-1.5 text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] md:block"
+              className="vo-btn-ghost hidden p-2 md:block"
               title="Bližnjice (?)"
             >
               <HelpCircle className="h-4 w-4" />
@@ -389,10 +399,10 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 onFocus={() => setShowResults(true)}
                 onBlur={() => window.setTimeout(() => setShowResults(false), 120)}
                 placeholder="Iskanje (/) …"
-                className="w-72 rounded-lg border border-[var(--vo-border)] bg-transparent px-3 py-1.5 text-sm lg:w-80"
+                className="vo-input w-72 bg-[var(--vo-surface-2)]/80 px-3 py-2 text-sm lg:w-80"
               />
               {showResults && results.length > 0 ? (
-                <div className="absolute right-0 z-20 mt-1 max-h-80 w-80 overflow-auto rounded-lg border border-[var(--vo-border)] bg-[var(--vo-surface)] p-1 shadow-xl">
+                <div className="vo-card absolute right-0 z-20 mt-1.5 max-h-80 w-80 overflow-auto p-1.5">
                   {results.map((r) => (
                     <Link
                       key={r.id}
@@ -411,7 +421,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as "admin" | "operator" | "viewer")}
-                className="hidden rounded-lg border border-[var(--vo-border)] bg-transparent px-2 py-1.5 text-xs text-[var(--vo-muted)] md:block"
+                className="vo-input hidden bg-[var(--vo-surface-2)]/80 px-2 py-1.5 text-xs text-[var(--vo-muted)] md:block"
                 title="Testni preklop vloge (samo UI)"
               >
                 <option value="admin">admin</option>
@@ -422,7 +432,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             {role === "admin" ? (
               <Link
                 href="/portal/nastavitve"
-                className="relative rounded-lg border border-[var(--vo-border)] p-1.5 text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)]"
+                className="vo-btn-ghost relative p-2"
                 title="Novi zahtevki za dostop"
               >
                 <Bell className="h-4 w-4" aria-hidden />
@@ -434,17 +444,14 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               </Link>
             ) : null}
             <form action="/api/portal-logout" method="post">
-              <button
-                type="submit"
-                className="rounded-lg border border-[var(--vo-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--vo-muted)] hover:bg-[var(--vo-surface-2)] hover:text-[var(--vo-fg)]"
-              >
+              <button type="submit" className="vo-btn-ghost px-3 py-1.5 text-xs font-semibold">
                 Odjava
               </button>
             </form>
           </div>
         </header>
 
-        <div className="border-b border-[var(--vo-border)] bg-[var(--vo-surface)] px-2 py-2 md:hidden">
+        <div className="border-b border-[var(--vo-border)]/80 bg-[var(--vo-surface)] px-2 py-2 md:hidden">
           <div className="mb-2 flex gap-2">
             <input
               value={query}
@@ -478,7 +485,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
+        <div className="vo-portal-mesh min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
           <PortalBreadcrumbs />
           {children}
         </div>

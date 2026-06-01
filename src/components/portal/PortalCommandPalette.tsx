@@ -74,14 +74,14 @@ export function PortalCommandPalette({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/60 p-4 pt-[12vh]"
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/50 p-4 pt-[12vh] backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Ukazna paleta"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg overflow-hidden rounded-xl border border-[var(--vo-border)] bg-[var(--vo-surface)] shadow-2xl"
+        className="vo-card w-full max-w-lg overflow-hidden shadow-2xl ring-1 ring-[var(--vo-accent)]/10"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 border-b border-[var(--vo-border)] px-3 py-2">

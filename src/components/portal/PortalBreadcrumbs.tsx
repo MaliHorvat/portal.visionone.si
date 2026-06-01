@@ -46,17 +46,25 @@ export function PortalBreadcrumbs() {
   if (crumbs.length <= 1) return null;
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 flex flex-wrap items-center gap-1 text-xs text-[var(--vo-muted)]">
-      <Link href="/portal" className="inline-flex items-center gap-0.5 hover:text-[var(--vo-accent)]">
+    <nav
+      aria-label="Breadcrumb"
+      className="mb-5 inline-flex max-w-full flex-wrap items-center gap-1 rounded-lg border border-[var(--vo-border)]/80 bg-[var(--vo-surface)]/70 px-2.5 py-1.5 text-xs text-[var(--vo-muted)] backdrop-blur-sm"
+    >
+      <Link
+        href="/portal"
+        className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 transition hover:bg-[var(--vo-accent-muted)] hover:text-[var(--vo-accent)]"
+      >
         <Home className="h-3.5 w-3.5" aria-hidden />
       </Link>
       {crumbs.slice(1).map((c, i) => (
         <span key={c.href} className="inline-flex items-center gap-1">
-          <ChevronRight className="h-3 w-3 opacity-50" aria-hidden />
+          <ChevronRight className="h-3 w-3 opacity-40" aria-hidden />
           {i === crumbs.length - 2 ? (
-            <span className="font-medium text-[var(--vo-fg)]">{c.label}</span>
+            <span className="rounded-md bg-[var(--vo-accent-muted)] px-2 py-0.5 font-semibold text-[var(--vo-accent)]">
+              {c.label}
+            </span>
           ) : (
-            <Link href={c.href} className="hover:text-[var(--vo-accent)]">
+            <Link href={c.href} className="rounded-md px-1.5 py-0.5 transition hover:text-[var(--vo-accent)]">
               {c.label}
             </Link>
           )}
