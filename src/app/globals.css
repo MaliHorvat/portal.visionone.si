@@ -33,24 +33,27 @@ html.dark {
   color-scheme: dark;
 }
 
-/* Logotip — PNG; v .dark invert za svetlo grafiko brez belega kvadrata */
+/* Logotip logo.png + napis.png (prozorno) — svetla črta → temna/svetla glede na temo */
 .vo-brand {
   line-height: 0;
 }
 
-.vo-brand img {
+.vo-brand-img {
   display: block;
   max-width: 100%;
   height: auto;
 }
 
-.vo-brand-wordmark {
-  /* Bela podlaga PNG se na temni strani zlije z invert */
-  mix-blend-mode: normal;
+/* Svetla tema: temen logotip */
+.vo-brand--auto .vo-brand-img,
+.vo-brand--on-light .vo-brand-img {
+  filter: brightness(0);
 }
 
-.dark .vo-brand-wordmark.dark\:block {
-  mix-blend-mode: normal;
+/* Temna tema: svetel logotip */
+.dark .vo-brand--auto .vo-brand-img,
+.vo-brand--on-dark .vo-brand-img {
+  filter: brightness(0) invert(1);
 }
 
 .dark {

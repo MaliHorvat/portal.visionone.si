@@ -1,6 +1,6 @@
 "use client";
 
-import type { VisionOneLogoTone } from "@/lib/brand-assets";
+import { BRAND_LOGO_SRC, BRAND_WORDMARK_SRC, type VisionOneLogoTone } from "@/lib/brand-assets";
 
 type Props = {
   variant?: "mark" | "wordmark" | "both";
@@ -10,55 +10,10 @@ type Props = {
   className?: string;
 };
 
-const MARK_SRC = "/visionone-mark.png";
-const WORDMARK_SRC = "/visionone-wordmark.png";
-
-function BrandImage({
-  src,
-  alt,
-  className,
-  mode,
-}: {
-  src: string;
-  alt: string;
-  className: string;
-  mode: "light" | "dark" | "auto";
-}) {
-  const invertDark = "dark:brightness-0 dark:invert";
-
-  if (mode === "light") {
-    return <img src={src} alt={alt} className={className} decoding="async" />;
-  }
-
-  if (mode === "dark") {
-    return (
-      <img
-        src={src}
-        alt={alt}
-        className={`${className} brightness-0 invert`}
-        decoding="async"
-      />
-    );
-  }
-
-  return (
-    <>
-      <img src={src} alt={alt} className={`${className} dark:hidden`} decoding="async" />
-      <img
-        src={src}
-        alt={alt || undefined}
-        aria-hidden={alt ? true : undefined}
-        className={`${className} hidden dark:block ${invertDark}`}
-        decoding="async"
-      />
-    </>
-  );
-}
-
-function imageMode(tone: VisionOneLogoTone): "light" | "dark" | "auto" {
-  if (tone === "on-dark") return "dark";
-  if (tone === "on-light") return "light";
-  return "auto";
+function toneClass(tone: VisionOneLogoTone): string {
+  if (tone === "on-dark") return "vo-brand--on-dark";
+  if (tone === "on-light") return "vo-brand--on-light";
+  return "vo-brand--auto";
 }
 
 export function VisionOneLogo({
@@ -68,26 +23,30 @@ export function VisionOneLogo({
   wordmarkClassName = "h-6 w-auto max-w-[148px] object-contain object-left",
   className = "",
 }: Props) {
-  const mode = imageMode(tone);
   const showMark = variant === "mark" || variant === "both";
   const showWordmark = variant === "wordmark" || variant === "both";
 
   return (
-    <span className={`vo-brand inline-flex min-w-0 items-center gap-2.5 ${className}`}>
+    <span className={`vo-brand ${toneClass(tone)} inline-flex min-w-0 items-center gap-2.5 ${className}`}>
       {showMark ? (
-        <BrandImage
-          src={MARK_SRC}
+        <img
+          src={BRAND_LOGO_SRC}
           alt=""
-          className={`vo-brand-mark ${markClassName}`}
-          mode={mode}
+          width={36}
+          height={42}
+          decoding="async"
+          aria-hidden={variant === "both"}
+          className={`vo-brand-img vo-brand-mark ${markClassName}`}
         />
       ) : null}
       {showWordmark ? (
-        <BrandImage
-          src={WORDMARK_SRC}
+        <img
+          src={BRAND_WORDMARK_SRC}
           alt="VisionOne"
-          className={`vo-brand-wordmark ${wordmarkClassName}`}
-          mode={mode}
+          width={148}
+          height={24}
+          decoding="async"
+          className={`vo-brand-img vo-brand-wordmark ${wordmarkClassName}`}
         />
       ) : null}
     </span>
