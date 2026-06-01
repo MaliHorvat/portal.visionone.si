@@ -1,11 +1,21 @@
 import { DEFAULT_MARKETING_SITE_CONTENT } from "./default-content";
-import type { MarketingSiteContent } from "./types";
+import { routesFromLegacyContent } from "./legacy-to-routes";
+import type { MarketingRoute, MarketingSiteContent } from "./types";
+
+function mergeRoutes(saved: MarketingRoute[] | undefined, base: MarketingRoute[]): MarketingRoute[] {
+  if (!Array.isArray(saved) || saved.length === 0) return base;
+  return saved.map((r) => ({
+    ...r,
+    blocks: Array.isArray(r.blocks) ? r.blocks : [],
+  }));
+}
 
 /** Združi shranjeno vsebino z privzetimi vrednostmi (manjkajoča polja). */
 export function mergeMarketingContent(partial: unknown): MarketingSiteContent {
   const base = structuredClone(DEFAULT_MARKETING_SITE_CONTENT);
   if (!partial || typeof partial !== "object") return base;
   const p = partial as MarketingSiteContent;
+
   if (p.images && typeof p.images === "object") {
     for (const [k, v] of Object.entries(p.images)) {
       if (v && typeof v === "object" && "src" in v) {
@@ -13,6 +23,7 @@ export function mergeMarketingContent(partial: unknown): MarketingSiteContent {
       }
     }
   }
+
   if (p.pages && typeof p.pages === "object") {
     for (const pageId of Object.keys(base.pages) as (keyof typeof base.pages)[]) {
       const saved = p.pages[pageId];
@@ -30,6 +41,14 @@ export function mergeMarketingContent(partial: unknown): MarketingSiteContent {
       if (saved.contactIntro) base.pages[pageId].contactIntro = saved.contactIntro;
     }
   }
+
+  const legacyRoutes = routesFromLegacyContent(base);
+  base.routes = mergeRoutes(p.routes, legacyRoutes);
+
+  if (p.headerCta && typeof p.headerCta === "object") {
+    base.headerCta = { ...base.headerCta, ...p.headerCta };
+  }
+
   if (typeof p.version === "number") base.version = p.version;
   if (typeof p.updatedAt === "string") base.updatedAt = p.updatedAt;
   return base;
