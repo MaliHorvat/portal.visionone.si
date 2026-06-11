@@ -34,12 +34,17 @@ export function PortalLoginHero() {
     <section className="vo-login-hero relative hidden min-h-screen flex-1 overflow-hidden lg:flex lg:flex-col">
       <div className="vo-login-hero-grid pointer-events-none absolute inset-0" aria-hidden />
       <div
-        className="vo-login-glow-orb pointer-events-none absolute -right-24 top-1/4 h-80 w-80 rounded-full bg-cyan-400/25 blur-3xl"
+        className="vo-login-glow-orb pointer-events-none absolute -right-24 top-1/4 h-80 w-80 rounded-full bg-violet-500/25 blur-3xl"
         aria-hidden
       />
       <div
         className="vo-login-glow-orb pointer-events-none absolute -left-16 bottom-1/4 h-64 w-64 rounded-full bg-teal-300/20 blur-3xl"
         style={{ animationDelay: "-3s" }}
+        aria-hidden
+      />
+      <div
+        className="vo-login-glow-orb pointer-events-none absolute left-1/3 top-2/3 h-52 w-52 rounded-full bg-cyan-400/15 blur-3xl"
+        style={{ animationDelay: "-5s" }}
         aria-hidden
       />
 
@@ -52,7 +57,7 @@ export function PortalLoginHero() {
           </p>
           <h1 className="mt-8 max-w-lg text-4xl font-bold leading-[1.08] tracking-tight text-white xl:text-[2.75rem]">
             Varnost in infrastruktura pod{" "}
-            <span className="bg-gradient-to-r from-teal-200 to-cyan-200 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-teal-200 via-cyan-200 to-violet-300 bg-clip-text text-transparent">
               enim nadzorom
             </span>
           </h1>
