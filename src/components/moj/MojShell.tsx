@@ -49,7 +49,7 @@ export function MojShell({
       >
         <div className="flex min-h-[3.5rem] items-center border-b border-[var(--vo-sidebar-border)] px-4 py-3">
           <Link href="/moj" className="vo-brand-link min-w-0" aria-label="Moj VisionOne">
-            <VisionOneLogo variant="both" tone="on-dark" size="sm" className="w-full min-w-0" />
+            <VisionOneLogo variant="both" size="sm" className="w-full min-w-0" />
           </Link>
         </div>
         <nav className="vo-sidebar-nav flex flex-1 flex-col gap-1 overflow-y-auto px-2.5 py-4">
@@ -77,7 +77,7 @@ export function MojShell({
           <form action="/api/portal-logout" method="post">
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-[var(--vo-sidebar-fg)] transition hover:bg-[var(--vo-sidebar-hover)] hover:text-white"
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-[var(--vo-sidebar-fg)] transition hover:bg-[var(--vo-sidebar-hover)] hover:text-[var(--vo-fg)]"
             >
               <LogOut className="h-3.5 w-3.5" />
               Odjava

@@ -278,7 +278,6 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           >
             <VisionOneLogo
               variant={sidebarCollapsed ? "mark" : "both"}
-              tone="on-dark"
               size="sm"
               className="w-full min-w-0"
             />
@@ -332,7 +331,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                             title="Premakni gor"
                             disabled={idx === 0}
                             onClick={() => moveNavItem(section.title, href, label, -1)}
-                            className="rounded p-0.5 text-[var(--vo-sidebar-muted)] hover:text-white disabled:opacity-30"
+                            className="rounded p-0.5 text-[var(--vo-sidebar-muted)] hover:text-[var(--vo-fg)] disabled:opacity-30"
                           >
                             <ChevronUp className="h-3 w-3" />
                           </button>
@@ -341,7 +340,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                             title="Premakni dol"
                             disabled={idx === section.items.length - 1}
                             onClick={() => moveNavItem(section.title, href, label, 1)}
-                            className="rounded p-0.5 text-[var(--vo-sidebar-muted)] hover:text-white disabled:opacity-30"
+                            className="rounded p-0.5 text-[var(--vo-sidebar-muted)] hover:text-[var(--vo-fg)] disabled:opacity-30"
                           >
                             <ChevronDown className="h-3 w-3" />
                           </button>

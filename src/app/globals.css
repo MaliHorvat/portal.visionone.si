@@ -30,12 +30,12 @@
   --vo-card-shadow: 0 1px 3px rgba(26, 29, 38, 0.04), 0 4px 16px rgba(26, 29, 38, 0.05);
   --vo-glow-sm: 0 0 0 1px rgba(0, 163, 137, 0.1), 0 4px 14px rgba(0, 163, 137, 0.12);
   --vo-glow-md: 0 0 0 1px rgba(0, 163, 137, 0.14), 0 8px 28px rgba(0, 163, 137, 0.16);
-  --vo-sidebar-bg: #1a1d26;
-  --vo-sidebar-fg: #c8cdd6;
-  --vo-sidebar-muted: #8b93a1;
-  --vo-sidebar-border: rgba(255, 255, 255, 0.06);
-  --vo-sidebar-hover: rgba(255, 255, 255, 0.06);
-  --vo-sidebar-active: rgba(0, 163, 137, 0.18);
+  --vo-sidebar-bg: #ffffff;
+  --vo-sidebar-fg: #4b5563;
+  --vo-sidebar-muted: #9ca3af;
+  --vo-sidebar-border: #e5e9f0;
+  --vo-sidebar-hover: #f3f5f9;
+  --vo-sidebar-active: rgba(0, 163, 137, 0.12);
   --vo-header-bg: #ffffff;
 }
 
@@ -673,7 +673,7 @@ select option {
 
 .vo-portal-sidebar .vo-nav-link:hover {
   background: var(--vo-sidebar-hover);
-  color: #ffffff;
+  color: var(--vo-fg);
 }
 
 .vo-portal-sidebar .vo-nav-link-active {
@@ -690,7 +690,7 @@ select option {
 
 .vo-portal-sidebar .vo-btn-ghost:hover {
   background: var(--vo-sidebar-hover);
-  color: #ffffff;
+  color: var(--vo-fg);
   border-color: var(--vo-sidebar-border);
 }
 
@@ -918,7 +918,7 @@ select option {
 
 .vo-sidebar-nav::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--vo-sidebar-muted) 40%, transparent);
 }
 
 .vo-shimmer {
