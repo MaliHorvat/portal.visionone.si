@@ -32,11 +32,11 @@ function resolveTheme(theme: Theme): Resolved {
 }
 
 /** Privzeta tema, če uporabnik še ni izbral (localStorage prazen). */
-const DEFAULT_THEME: Theme = "dark";
+const DEFAULT_THEME: Theme = "light";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(DEFAULT_THEME);
-  const [resolved, setResolved] = useState<Resolved>("dark");
+  const [resolved, setResolved] = useState<Resolved>("light");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

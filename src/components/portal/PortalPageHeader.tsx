@@ -18,15 +18,14 @@ export function PortalPageHeader({
   gradientTitle = false,
 }: Props) {
   return (
-    <header
-      className={`vo-page-header vo-card vo-visual-band relative mb-6 overflow-hidden p-6 md:p-8 ${className}`}
-    >
-      <div className="pointer-events-none absolute inset-0 vo-mesh-bg opacity-50" aria-hidden />
-      <div className="relative flex flex-wrap items-start justify-between gap-4">
+    <header className={`vo-page-header mb-5 ${className}`}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 max-w-3xl">
           {kicker ? <p className="vo-eyebrow">{kicker}</p> : null}
-          <h1 className={`mt-2 vo-page-title ${gradientTitle ? "vo-page-title-gradient" : ""}`}>{title}</h1>
-          {description ? <div className="vo-page-desc mt-3">{description}</div> : null}
+          <h1 className={`vo-page-title ${kicker ? "mt-1" : ""} ${gradientTitle ? "vo-page-title-gradient" : ""}`}>
+            {title}
+          </h1>
+          {description ? <div className="vo-page-desc mt-1.5 text-sm">{description}</div> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
