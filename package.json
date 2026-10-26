@@ -1,53 +1,17 @@
 {
-  "name": "visionone-web",
-  "version": "0.1.0",
+  "name": "visionone-field",
+  "version": "1.1.0",
+  "description": "VisionOne Field – aplikacija za terenskega serviserja (portal.visionone.si)",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev --turbopack",
-    "prisma:generate": "prisma generate",
-    "build": "npm run prisma:generate && next build",
-    "start": "next start",
-    "lint": "eslint",
-    "typecheck": "tsc --noEmit",
-    "test:smoke": "node --import tsx --test tests/**/*.test.ts",
-    "check": "npm run lint && npm run typecheck && npm run test:smoke",
-    "postinstall": "npm run prisma:generate",
-    "db:push": "prisma db push",
-    "db:fix-json": "node scripts/fix-client-json.mjs",
-    "db:seed": "node --import tsx prisma/seed.ts"
+    "start": "node --no-warnings server.js",
+    "dev": "node --no-warnings --watch server.js",
+    "test": "node --no-warnings --test tests/e2e.test.js"
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.3.1",
-    "@prisma/client": "6.19.3",
-    "bcryptjs": "^3.0.3",
-    "dotenv": "^17.4.2",
-    "fflate": "^0.8.3",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1",
-    "jspdf-autotable": "^5.0.7",
-    "lucide-react": "^1.14.0",
-    "maplibre-gl": "^5.24.0",
-    "next": "15.5.15",
-    "nodemailer": "^8.0.7",
-    "pg": "^8.20.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "mysql2": "^3.11.0"
   },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/maplibre-gl": "^1.13.2",
-    "@types/node": "^20.19.39",
-    "@types/nodemailer": "^8.0.0",
-    "@types/pg": "^8.20.0",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.15",
-    "prisma": "6.19.3",
-    "tailwindcss": "^4",
-    "tsx": "^4.21.0",
-    "typescript": "^5"
-  }
+  "engines": { "node": "22.x" },
+  "license": "UNLICENSED"
 }

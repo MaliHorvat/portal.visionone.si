@@ -1,6 +1,55 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
+  "framework": null,
   "installCommand": "npm install",
-  "buildCommand": "npm run build"
+  "buildCommand": "echo \"VisionOne Field – brez gradnje\"",
+  "outputDirectory": "public",
+  "functions": {
+    "api/handler.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/handler?__p=api/:path*"
+    },
+    {
+      "source": "/print/:path*",
+      "destination": "/api/handler?__p=print/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/handler?__p=health"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        }
+      ]
+    }
+  ]
 }
