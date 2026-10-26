@@ -71,17 +71,19 @@ export function parseProducts(html) {
   return [...out.values()];
 }
 
-/** Ena kategorija: pot + vsi izdelki (če jih ima). */
-export async function crawlCategory(slug, { delay = 250 } = {}) {
+/** Ena kategorija: pot + vsi izdelki. Stran kategorije brez piškotkov izdelkov ne prikaže,
+ *  zato seznam vedno beremo iz category.php (vsi izdelki naenkrat). */
+export async function crawlCategory(slug, { delay = 200 } = {}) {
   const html = await fetchText(`${BASE}/${slug}`);
   const path = parseBreadcrumb(html);
   const id = categoryId(html);
   let products = parseProducts(html);
-  if (products.length && id) {
+  if (id) {
     await sleep(delay);
     const all = await fetchText(`${BASE}/category.php?category=${id}&show=table&range=0_5000`);
     const more = parseProducts(all);
     if (more.length >= products.length) products = more;
+    if (!path.length) path.push(...parseBreadcrumb(all));
   }
   return { slug, id, path: path.map(p => p.name), products };
 }

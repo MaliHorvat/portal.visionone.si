@@ -24,16 +24,16 @@ const site = () => ({
     <url><loc>https://digitklik.si/kategorija_IP-kamere-DOME</loc></url><url><loc>https://digitklik.si/kategorija_Vezice1</loc></url>
     <url><loc>https://digitklik.si/izdelek_X</loc></url></urlset>`,
   '/kategorija_Video-nadzor': nav([['kategorija_Video-nadzor', 'Video nadzor']]) + '<a href="category.php?category=2&amp;show=boxes">',
+  '/category.php?category=2&show=table&range=0_5000': nav([['kategorija_Video-nadzor', 'Video nadzor']]), // nadrejena kategorija – brez izdelkov
   '/kategorija_IP-kamere-DOME': nav([['kategorija_Video-nadzor', 'Video nadzor'], ['kategorija_HD-IP', 'HD-IP video nadzor'], ['kategorija_IP-kamere-DOME', 'IP kamere DOME (fiksna leča)']])
-    + '<a href="category.php?category=497&amp;show=table">' + card(16899, 'izdelek_POLICEtech-D4339', 'POLICEtech IPC-D4339V-A-IL VIDEO NADZORNA KAMERA', '51,35', { old: '79,00', stock: '200+', icons: ['4 Megapiksli', 'PoE napajanje'] }),
+    + '<a href="category.php?category=497&amp;show=table">', // brez piškotkov stran kategorije izdelkov ne prikaže
   '/category.php?category=497&show=table&range=0_5000': nav([['kategorija_Video-nadzor', 'Video nadzor'], ['kategorija_IP-kamere-DOME', 'IP kamere DOME (fiksna leča)']])
     + card(16899, 'izdelek_POLICEtech-D4339', 'POLICEtech IPC-D4339V-A-IL VIDEO NADZORNA KAMERA', version === 1 ? '51,35' : '61,00', { old: '79,00', stock: '200+', icons: ['4 Megapiksli', 'PoE napajanje'] })
     + card(16899, 'izdelek_POLICEtech-D4339', 'POLICEtech IPC-D4339V-A-IL VIDEO NADZORNA KAMERA', '51,35')
     + (version === 1 ? card(18472, 'izdelek_HiLook-D140', 'HiLook IPC-D140HA-LUC VIDEO NADZORNA KAMERA', '1.220,00') : '')
     + card(14312, 'izdelek_HIK-PDB', 'HIKVISION DS-PDB-IN-U NOSILEC', null, { stock: '15' })
     + card(99999, 'izdelek_Skrit', 'SKRIT IZDELEK', '10,00', { hidden: true }),
-  '/kategorija_Vezice1': nav([['kategorija_Montazna', 'Montažna oprema'], ['kategorija_Vezice1', 'Vezice']]) + '<a href="category.php?category=1155&amp;show=table">'
-    + card(16229, 'izdelek_V-TAC-VEZICE', 'V-TAC KABELSKE VEZICE 3.5*150mm / SKU11165', '1,50'),
+  '/kategorija_Vezice1': nav([['kategorija_Montazna', 'Montažna oprema'], ['kategorija_Vezice1', 'Vezice']]) + '<a href="category.php?category=1155&amp;show=table">',
   '/category.php?category=1155&show=table&range=0_5000': card(16229, 'izdelek_V-TAC-VEZICE', 'V-TAC KABELSKE VEZICE 3.5*150mm / SKU11165', '1,50'),
 });
 const realFetch = globalThis.fetch;
