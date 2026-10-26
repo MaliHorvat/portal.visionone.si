@@ -1,6 +1,6 @@
 // VisionOne Field – predpomnjenje aplikacije (deluje tudi ob slabem signalu)
-const CACHE = 'v1field-1';
-const SHELL = ['/', '/index.html', '/app.js', '/pages-docs.js', '/pages-more.js', '/plan.js', '/field.css', '/lib/core.js', '/lib/base.css', '/favicon.svg', '/manifest.webmanifest'];
+const CACHE = 'v1field-2';
+const SHELL = ['/', '/index.html', '/app.js', '/pages-docs.js', '/pages-more.js', '/plan.js', '/pages-inquiries.js', '/field.css', '/lib/core.js', '/lib/base.css', '/favicon.svg', '/manifest.webmanifest'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== CACHE).map(x => caches.delete(x)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

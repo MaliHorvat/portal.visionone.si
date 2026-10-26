@@ -4,6 +4,7 @@ import { ready } from './db.js';
 import { HttpError, sendJson, serveStatic } from './http-util.js';
 import { api, identify, printRoute, VERSION } from './api.js';
 import './init.js';
+import { corsFor } from './inquiries.js';
 
 export async function handle(req, res, { webDir } = {}) {
   const url = new URL(req.url, 'http://localhost');
@@ -12,6 +13,10 @@ export async function handle(req, res, { webDir } = {}) {
     if (url.pathname === '/health') {
       await ready();
       return sendJson(res, 200, { ok: true, version: VERSION });
+    }
+    if (req.method === 'OPTIONS' && url.pathname.startsWith('/api/public/')) {
+      corsFor(req, res);
+      res.writeHead(204); return res.end();
     }
     await ready();
     req.user = await identify(req);

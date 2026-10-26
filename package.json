@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node --no-warnings server.js",
     "dev": "node --no-warnings --watch server.js",
-    "test": "node --no-warnings --test tests/e2e.test.js tests/digitklik.test.js"
+    "test": "node --no-warnings --test tests/e2e.test.js tests/digitklik.test.js tests/inquiry.test.js"
   },
   "dependencies": {
     "mysql2": "^3.11.0"

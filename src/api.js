@@ -33,9 +33,9 @@ export async function identify(req) {
   if (!p) return null;
   return await q.get('SELECT id, username, full_name, email, phone, role FROM users WHERE id=? AND enabled=1', p.uid) || null;
 }
-const auth = req => { if (!req.user) throw new HttpError(401, 'Prijava je potrebna'); };
-const admin = req => { auth(req); if (req.user.role !== 'admin') throw new HttpError(403, 'To lahko stori samo skrbnik'); };
-const log = async (req, action, target = '') => insert('activity', { username: req.user?.username || '-', action, target: String(target) });
+export const auth = req => { if (!req.user) throw new HttpError(401, 'Prijava je potrebna'); };
+export const admin = req => { auth(req); if (req.user.role !== 'admin') throw new HttpError(403, 'To lahko stori samo skrbnik'); };
+export const log = async (req, action, target = '') => insert('activity', { username: req.user?.username || '-', action, target: String(target) });
 const attempts = new Map();
 
 api.post('/api/auth/login', async (req, res) => {
@@ -88,6 +88,7 @@ api.get('/api/dashboard', auth, async (req, res) => {
       year: (await q.get(`SELECT COALESCE(SUM(total_net),0) v FROM documents WHERE type='invoice' AND status NOT IN ('draft','cancelled') AND year=?`, y)).v,
       unpaid: (await q.get(`SELECT COALESCE(SUM(total-paid),0) v FROM documents WHERE type='invoice' AND status IN ('issued','partial')`)).v,
     },
+    inquiries: await q.all("SELECT id, created_at, name, company, topic, message FROM inquiries WHERE status='new' ORDER BY created_at DESC LIMIT 10"),
     counts: { customers: (await q.get('SELECT COUNT(*) n FROM customers')).n, sites: (await q.get('SELECT COUNT(*) n FROM sites')).n, equipment: (await q.get('SELECT COUNT(*) n FROM equipment')).n },
     now,
   });

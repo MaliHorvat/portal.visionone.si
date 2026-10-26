@@ -160,8 +160,27 @@ const INDEX_UPGRADES = [
   ['products', 'idx_prod_category', '', '(category)'],
 ];
 
+// Tabele, dodane po prvi objavi (CREATE IF NOT EXISTS ob vsakem zagonu)
+const EXTRA_TABLES = {
+  mysql: [
+    `CREATE TABLE IF NOT EXISTS inquiries (
+      id INT AUTO_INCREMENT PRIMARY KEY, created_at BIGINT, status VARCHAR(20) DEFAULT 'new', source VARCHAR(64), topic VARCHAR(64),
+      name VARCHAR(200), email VARCHAR(320), phone VARCHAR(64), company VARCHAR(200), site_type VARCHAR(64), devices INT, timeline VARCHAR(64),
+      message TEXT, page VARCHAR(500), ip VARCHAR(64), customer_id INT, handled_by VARCHAR(190), handled_at BIGINT,
+      INDEX idx_inq_status (status, created_at), INDEX idx_inq_ip (ip, created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  ],
+  sqlite: [
+    `CREATE TABLE IF NOT EXISTS inquiries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, created_at INTEGER, status TEXT DEFAULT 'new', source TEXT, topic TEXT,
+      name TEXT, email TEXT, phone TEXT, company TEXT, site_type TEXT, devices INTEGER, timeline TEXT,
+      message TEXT, page TEXT, ip TEXT, customer_id INTEGER, handled_by TEXT, handled_at INTEGER)`,
+    'CREATE INDEX IF NOT EXISTS idx_inq_status ON inquiries(status, created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_inq_ip ON inquiries(ip, created_at)',
+  ],
+};
+
 // Tabele, ki imajo stolpec created_at (ali ts) – časovni žig vpiše insert()
-const STAMP = { users: 'created_at', customers: 'created_at', sites: 'created_at', plans: 'created_at', products: 'created_at', equipment: 'created_at', documents: 'created_at', files: 'created_at', activity: 'ts', blobs: 'created_at' };
+const STAMP = { inquiries: 'created_at', users: 'created_at', customers: 'created_at', sites: 'created_at', plans: 'created_at', products: 'created_at', equipment: 'created_at', documents: 'created_at', files: 'created_at', activity: 'ts', blobs: 'created_at' };
 
 // ---------- gonilnik ----------
 const txStore = new AsyncLocalStorage();
@@ -221,6 +240,7 @@ async function openMysql() {
     },
     async migrate() {
       for (const s of MYSQL_SCHEMA) await exec(s);
+      for (const s of EXTRA_TABLES.mysql) await exec(s);
       for (const [t, c, def] of COLUMN_UPGRADES) {
         const r = await exec('SELECT COUNT(*) n FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?', [t, c]);
         if (!r[0].n) await exec(`ALTER TABLE ${t} ADD COLUMN \`${c}\` ${def.mysql}`);
@@ -261,7 +281,8 @@ async function openSqlite() {
     async migrate() {
       db.exec('CREATE TABLE IF NOT EXISTS _migrations (version INTEGER PRIMARY KEY)');
       const cur = db.prepare('SELECT MAX(version) v FROM _migrations').get().v ?? 0;
-      if (cur < 1) { db.exec('BEGIN'); try { db.exec(SQLITE_SCHEMA); db.prepare('INSERT INTO _migrations(version) VALUES (1)').run(); db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; } }
+      for (const s of EXTRA_TABLES.sqlite) if (cur >= 1) db.exec(s);
+      if (cur < 1) { db.exec('BEGIN'); try { db.exec(SQLITE_SCHEMA); for (const x of EXTRA_TABLES.sqlite) db.exec(x); db.prepare('INSERT INTO _migrations(version) VALUES (1)').run(); db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; } }
       for (const [t, c, def] of COLUMN_UPGRADES) {
         if (!db.prepare(`PRAGMA table_info(${t})`).all().some(x => x.name === c)) db.exec(`ALTER TABLE ${t} ADD COLUMN "${c}" ${def.sqlite}`);
       }

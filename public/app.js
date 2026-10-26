@@ -3,6 +3,7 @@ import { h, $, clear, icon, get, post, put, del, toast, toastErr, modal, confirm
 import { pageDocuments, pageDocument, newDocument } from './pages-docs.js';
 import { pageCalendar, pageCatalog, pageSettings, appointmentDialog } from './pages-more.js';
 import { planEditor, networkMap } from './plan.js';
+import { pageInquiries, TOPICS as INQ_TOPICS } from './pages-inquiries.js';
 
 export const F = { me: null, meta: null, company: null };
 export const money = n => `${new Intl.NumberFormat('sl-SI', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n) || 0)} €`;
@@ -13,7 +14,7 @@ export const mapsUrl = (...parts) => `https://www.google.com/maps/search/?api=1&
 export const initials = n => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 export const go = path => { location.hash = `#${path}`; };
 
-const NAV = [['/', 'Danes', 'home'], ['/stranke', 'Stranke', 'users'], ['/dokumenti/racuni', 'Dokumenti', 'list'], ['/koledar', 'Koledar', 'bell'], ['/katalog', 'Katalog', 'disk'], ['/nastavitve', 'Nastavitve', 'settings']];
+const NAV = [['/', 'Danes', 'home'], ['/povprasevanja', 'Povpraševanja', 'bookmark'], ['/stranke', 'Stranke', 'users'], ['/dokumenti/racuni', 'Dokumenti', 'list'], ['/koledar', 'Koledar', 'bell'], ['/katalog', 'Katalog', 'disk'], ['/nastavitve', 'Nastavitve', 'settings']];
 let main;
 
 async function boot() {
@@ -27,7 +28,7 @@ async function boot() {
     h('div', { class: 'f-foot' }, h('span', {}, F.me.full_name || F.me.username),
       h('button', { class: 'btn-icon', title: 'Tema', onclick: () => toggleTheme('v1-theme-field') }, icon('sun')),
       h('button', { class: 'btn-icon', title: 'Odjava', onclick: logout }, icon('logout'))));
-  const bottom = h('nav', { class: 'f-bottom', 'aria-label': 'Meni' }, NAV.filter(n => n[0] !== '/katalog').map(([p, l, i]) => h('a', { href: `#${p}`, 'data-p': p }, icon(i, 22), l)));
+  const bottom = h('nav', { class: 'f-bottom', 'aria-label': 'Meni' }, NAV.filter(n => !['/katalog', '/povprasevanja'].includes(n[0])).map(([p, l, i]) => h('a', { href: `#${p}`, 'data-p': p }, icon(i, 22), l)));
   clear($('#app'), h('div', { class: 'f-app' }, side, main), bottom);
   window.addEventListener('hashchange', route);
   route();
@@ -53,6 +54,8 @@ async function route() {
     else if ((r = m(/^\/dokumenti\/(\w+)$/))) await pageDocuments(page, r[1]);
     else if ((r = m(/^\/dokument\/(\d+)$/))) await pageDocument(page, Number(r[1]));
     else if (path === '/koledar') await pageCalendar(page);
+    else if (path === '/povprasevanja') await pageInquiries(page);
+    else if ((r = m(/^\/povprasevanja\/(\w+)$/))) await pageInquiries(page, r[1]);
     else if (path === '/katalog') await pageCatalog(page);
     else if (path === '/nastavitve') await pageSettings(page);
     else clear(page, emptyState('Stran ne obstaja', '', h('a', { class: 'btn', href: '#/' }, 'Na začetek')));
@@ -85,6 +88,10 @@ async function pageToday(page) {
       h('button', { onclick: () => newDocument('workorder') }, icon('edit', 22), 'Delovni nalog'),
       h('button', { onclick: () => newDocument('quote') }, icon('list', 22), 'Ponudba'),
       h('button', { onclick: () => appointmentDialog() }, icon('bell', 22), 'Termin')),
+    d.inquiries?.length ? h('div', {}, h('div', { class: 'section-title' }, h('h2', {}, 'Nova povpraševanja'), h('span', { class: 'badge info plain' }, d.inquiries.length), h('span', { class: 'spacer' }), h('a', { class: 'btn btn-sm', href: '#/povprasevanja' }, 'Vsa povpraševanja')),
+      h('div', { class: 'list' }, d.inquiries.map(i => h('a', { class: 'list-item', href: '#/povprasevanja' },
+        h('div', { class: 'main' }, h('strong', {}, i.company ? `${i.name} · ${i.company}` : i.name), h('small', {}, String(i.message || '').slice(0, 110))),
+        h('div', { class: 'end' }, INQ_TOPICS[i.topic] || '', h('small', {}, new Date(i.created_at * 1000).toLocaleDateString('sl-SI'))))))) : null,
     h('div', { class: 'section-title' }, h('h2', {}, 'Današnji termini'), h('span', { class: 'spacer' }), h('a', { class: 'btn btn-sm', href: '#/koledar' }, 'Koledar')),
     d.today.length ? h('div', { class: 'list' }, d.today.map(apptRow)) : h('div', { class: 'list' }, h('p', { class: 'muted', style: { padding: '14px', margin: 0 } }, 'Danes ni terminov.')),
     d.upcoming.length ? h('div', {}, h('div', { class: 'section-title' }, h('h2', {}, 'Prihodnji dnevi')), h('div', { class: 'list' }, d.upcoming.map(a => h('a', { class: 'list-item', href: a.customer_id ? `#/stranka/${a.customer_id}` : '#/koledar' },
@@ -123,7 +130,7 @@ async function pageCustomers(page) {
   search.focus();
 }
 
-export function customerDialog(c = null) {
+export function customerDialog(c = null, onCreated = null) {
   const type = select([['company', 'Podjetje'], ['person', 'Fizična oseba']], c?.type || 'company', { name: 'type' });
   const contacts = JSON.parse(c?.contacts_json || '[]');
   const contactBox = h('div');
@@ -145,14 +152,14 @@ export function customerDialog(c = null) {
     (() => { const t = toggle(c?.vat_payer, 'Stranka je zavezanec za DDV'); t.input.name = 'vat_payer'; return t; })(),
     field('Opombe', h('textarea', { name: 'notes' }, c?.notes || '')),
     h('h3', {}, 'Kontaktne osebe'), contactBox);
-  modal(c ? 'Uredi stranko' : 'Nova stranka', f, {
+  modal(c?.id ? 'Uredi stranko' : 'Nova stranka', f, {
     wide: true,
     actions: [{ label: 'Prekliči' }, { label: 'Shrani', kind: 'btn-primary', onClick: async () => {
       const d = formData(f);
       if (!d.name) throw new Error('Vpišite naziv stranke');
       d.contacts_json = JSON.stringify(contacts.filter(x => x.name || x.phone || x.email));
-      if (c) { await put(`/api/customers/${c.id}`, d); toast('Stranka je shranjena'); reload(); }
-      else { const r = await post('/api/customers', d); toast('Stranka je dodana'); go(`/stranka/${r.id}`); }
+      if (c?.id) { await put(`/api/customers/${c.id}`, d); toast('Stranka je shranjena'); reload(); }
+      else { const r = await post('/api/customers', d); await onCreated?.(r.id); toast('Stranka je dodana'); go(`/stranka/${r.id}`); }
     } }],
   });
 }
