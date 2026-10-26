@@ -136,7 +136,7 @@ export async function pageDocument(page, id) {
     locked ? null : h('div', { class: 'btn-row', style: { marginTop: '8px' } },
       h('button', { class: 'btn btn-sm', onclick: () => addLine() }, icon('plus', 14), 'Vrstica'),
       h('button', { class: 'btn btn-sm', onclick: () => addLine({ description: 'Delo serviserja', unit: 'ura', price: F.company.hourly_rate || 35 }) }, '+ Ura dela'),
-      h('button', { class: 'btn btn-sm', onclick: async () => { const km = prompt('Število prevoženih kilometrov'); if (km) { const p = (await get('/api/products?q=PREVOZ'))[0]; addLine({ description: 'Prevozni stroški', unit: 'km', qty: Number(km), price: p?.price ?? 0.5, product_id: p?.id }); } } }, '+ Prevoz')),
+      h('button', { class: 'btn btn-sm', onclick: async () => { const km = prompt('Število prevoženih kilometrov'); if (km) { const found = await get('/api/products?q=PREVOZ&limit=50'); const p = found.find(x => x.sku === 'PREVOZ') || found[0]; addLine({ description: 'Prevozni stroški', unit: 'km', qty: Number(km), price: p?.price ?? 0.5, product_id: p?.id }); } } }, '+ Prevoz')),
     totalsBox);
   renderLines();
 
@@ -235,7 +235,7 @@ function productInput(line, onPick, disabled) {
   const search = debounce(async () => {
     const s = inp.value.trim();
     if (s.length < 2) return close();
-    items = (await get(`/api/products?q=${encodeURIComponent(s)}`)).slice(0, 8);
+    items = (await get(`/api/products?limit=8&q=${encodeURIComponent(s)}`)).slice(0, 8);
     close();
     if (!items.length) return;
     box = h('div', { class: 'ac-list', role: 'listbox' }, items.map((p, i) => h('button', { type: 'button', role: 'option', onmousedown: e => { e.preventDefault(); pick(p); } },

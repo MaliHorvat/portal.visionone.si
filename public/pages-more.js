@@ -74,27 +74,97 @@ export async function appointmentDialog(a = {}) {
 
 // ======================= KATALOG =======================
 export async function pageCatalog(page) {
-  const search = h('input', { type: 'search', placeholder: 'Išči po nazivu, šifri, proizvajalcu', style: { maxWidth: '360px' } });
+  const search = h('input', { type: 'search', placeholder: 'Išči po nazivu, šifri, proizvajalcu, lastnostih', style: { maxWidth: '360px' } });
+  const catSel = h('select', { style: { maxWidth: '320px' }, 'aria-label': 'Kategorija' }, h('option', { value: '' }, 'Vse kategorije'));
+  const info = h('div', { class: 'muted', style: { fontSize: '12.5px', margin: '6px 0 0' } });
   const tbody = h('tbody');
+  const loadCats = async () => {
+    const cats = await get('/api/products/categories').catch(() => []);
+    const cur = catSel.value;
+    clear(catSel, h('option', { value: '' }, 'Vse kategorije'), cats.map(c => h('option', { value: c.category, selected: c.category === cur }, `${c.category} (${c.n})`)));
+  };
   const load = async () => {
-    const rows = await get(`/api/products?all=1&q=${encodeURIComponent(search.value)}`);
+    const rows = await get(`/api/products?all=1&limit=1500&q=${encodeURIComponent(search.value)}&category=${encodeURIComponent(catSel.value)}`);
+    info.textContent = rows.length >= 1500 ? 'Prikazanih je prvih 1500 izdelkov – zožite iskanje ali izberite kategorijo.' : `${rows.length} izdelkov`;
     clear(tbody, rows.map(p => h('tr', { style: { opacity: p.active ? 1 : 0.5 } },
       h('td', { class: 'mono hide-m' }, p.sku || ''),
-      h('td', {}, h('strong', {}, p.name), h('div', { class: 'muted', style: { fontSize: '12.5px' } }, [p.category, p.brand].filter(Boolean).join(' · '))),
+      h('td', {}, h('strong', {}, p.name), h('div', { class: 'muted', style: { fontSize: '12.5px' } },
+        [p.category, p.brand].filter(Boolean).join(' · '),
+        p.supplier === 'digitklik' ? h('span', {}, ' · ', h('a', { href: p.supplier_url, target: '_blank', rel: 'noopener' }, 'digitklik.si'), p.supplier_stock ? ` (zaloga ${p.supplier_stock})` : '') : null)),
       h('td', { class: 'num hide-m' }, money(p.purchase_price)),
       h('td', { class: 'num' }, money(p.price), h('div', { class: 'muted', style: { fontSize: '12px' } }, `/${p.unit}`)),
-      h('td', { class: 'num hide-m' }, p.purchase_price > 0 ? `${Math.round(((p.price - p.purchase_price) / p.price) * 100)} %` : '–'),
+      h('td', { class: 'num hide-m' }, p.purchase_price > 0 && p.price > 0 ? `${Math.round(((p.price - p.purchase_price) / p.price) * 100)} %` : '–'),
       h('td', { class: 'num' }, p.track_stock ? h('span', { style: { color: p.min_stock > 0 && p.stock <= p.min_stock ? 'var(--warn)' : '' } }, `${p.stock}`) : '–'),
       h('td', { class: 'actions' }, h('button', { class: 'btn btn-sm', onclick: () => productDialog(p) }, 'Uredi')))));
   };
-  search.oninput = debounce(load, 200);
+  search.oninput = debounce(load, 250);
+  catSel.onchange = load;
+  const isAdmin = F.me.role === 'admin';
   clear(page,
     head('Katalog izdelkov in storitev', 'Cene in zaloga. Postavke se samodejno ponudijo pri vnosu ponudb, nalogov in računov.',
+      isAdmin ? h('button', { class: 'btn hide-m', onclick: () => digitklikDialog(async () => { await loadCats(); await load(); }) }, icon('download', 16), 'Uvoz iz digitklik.si') : null,
       h('button', { class: 'btn hide-m', onclick: importDialog }, 'Uvoz iz CSV'),
       h('button', { class: 'btn btn-primary', onclick: () => productDialog() }, icon('plus', 16), 'Nov izdelek')),
-    h('div', { style: { marginBottom: '12px' } }, search),
+    h('div', { class: 'row', style: { marginBottom: '12px', gap: '8px', flexWrap: 'wrap' } }, search, catSel),
+    info,
     h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { class: 'hide-m' }, 'Šifra'), h('th', {}, 'Naziv'), h('th', { class: 'num hide-m' }, 'Nabavna'), h('th', { class: 'num' }, 'Prodajna'), h('th', { class: 'num hide-m' }, 'Marža'), h('th', { class: 'num' }, 'Zaloga'), h('th', {}))), tbody)));
+  loadCats();
   load();
+}
+
+// Uvoz celotnega cenika z digitklik.si: kategorije po skupinah, z napredkom
+async function digitklikDialog(onDone) {
+  const st = await get('/api/import/digitklik').catch(() => ({}));
+  const marginIn = h('input', { type: 'number', min: 0, max: 500, step: 1, value: localStorage.getItem('v1f-dk-margin') ?? 25, style: { maxWidth: '120px' } });
+  const upd = toggle(true, 'Posodobi prodajne cene že uvoženih izdelkov');
+  const arch = toggle(true, 'Izdelke, ki jih na digitklik.si ni več, označi kot neaktivne');
+  const bar = h('div', { style: { height: '8px', background: 'var(--panel-3, #e5e7eb)', borderRadius: '4px', overflow: 'hidden', margin: '12px 0 6px' } }, h('div', { style: { height: '100%', width: '0%', background: 'var(--accent)', transition: 'width .2s' } }));
+  const status = h('div', { class: 'muted', style: { fontSize: '13px', minHeight: '1.4em' } },
+    st.last ? `Zadnji uvoz: ${new Date(st.last.at).toLocaleString('sl-SI')} · ${st.count} aktivnih izdelkov` : 'Uvoz še ni bil izveden.');
+  const errBox = h('div', { class: 'muted', style: { fontSize: '12px', maxHeight: '120px', overflow: 'auto', whiteSpace: 'pre-wrap' } });
+  let running = false, cancel = false;
+  const body = h('div', {},
+    h('p', { class: 'muted' }, 'Prenese celoten javni cenik digitklik.si (kamere, snemalnike, domofone, alarme, omrežno opremo, material …). Cene na digitklik.si so z DDV – kot nabavna cena se vpiše cena brez DDV, prodajna pa z vašo maržo. Uvoz traja nekaj minut; okno pustite odprto.'),
+    field('Marža na nabavno ceno (%)', marginIn, 'Prodajna cena = nabavna × (1 + marža). Ceno posameznega izdelka lahko kasneje ročno popravite.'),
+    h('div', { style: { margin: '8px 0' } }, upd), h('div', { style: { margin: '8px 0' } }, arch), bar, status, errBox);
+  const setPct = p => { bar.firstChild.style.width = `${p}%`; };
+  modal('Uvoz iz digitklik.si', body, {
+    wide: true,
+    onClose: () => { cancel = true; },
+    actions: [
+      { label: 'Zapri', onClick: () => { cancel = true; } },
+      { label: 'Začni uvoz', kind: 'btn-primary', close: false, onClick: async () => {
+        if (running) return false;
+        running = true; cancel = false;
+        const margin = Number(marginIn.value) || 0;
+        localStorage.setItem('v1f-dk-margin', margin);
+        status.textContent = 'Berem seznam kategorij …'; errBox.textContent = ''; setPct(1);
+        try {
+          const { categories, started } = await post('/api/import/digitklik/start');
+          const queue = [...categories];
+          const tot = { categories: 0, products: 0, inserted: 0, updated: 0, errors: [] };
+          while (queue.length && !cancel) {
+            const slugs = queue.slice(0, 8);
+            const r = await post('/api/import/digitklik/batch', { slugs, margin, update_prices: upd.input.checked, started });
+            for (const s of r.done || slugs) { const i = queue.indexOf(s); if (i >= 0) queue.splice(i, 1); }
+            if (!(r.done || []).length) queue.splice(0, slugs.length);
+            tot.categories += r.categories; tot.products += r.products; tot.inserted += r.inserted; tot.updated += r.updated; tot.errors.push(...r.errors);
+            setPct(Math.round(((categories.length - queue.length) / categories.length) * 100));
+            status.textContent = `Kategorij ${categories.length - queue.length} / ${categories.length} · novih ${tot.inserted} · posodobljenih ${tot.updated}`;
+            if (r.errors.length) errBox.textContent = tot.errors.slice(-20).join('\n');
+          }
+          if (cancel) { status.textContent += ' · prekinjeno'; return false; }
+          const fin = await post('/api/import/digitklik/finish', { started, margin, archive_missing: arch.input.checked && tot.errors.length === 0, stats: tot });
+          setPct(100);
+          status.textContent = `Končano: ${fin.count} aktivnih izdelkov z digitklik.si (novih ${tot.inserted}, posodobljenih ${tot.updated}${fin.archived ? `, neaktivnih ${fin.archived}` : ''}).`;
+          if (tot.errors.length) status.textContent += ` Napak: ${tot.errors.length} – izdelkov, ki jih ni več, zato nisem označil kot neaktivne.`;
+          toast('Uvoz iz digitklik.si je končan');
+          await onDone?.();
+        } finally { running = false; }
+        return false;
+      } },
+    ],
+  });
 }
 
 function productDialog(p = {}) {

@@ -1,7 +1,8 @@
 // VisionOne Field – REST API
 import crypto from 'node:crypto';
 import { Router, HttpError, readJson, sendJson, sendBuffer, parseCookies, httpRequest, clientIp } from './http-util.js';
-import { q, insert, update, pick, getSetting, setSetting, encrypt, decrypt, SECRET, transaction, putBlob, getBlob, deleteBlob, DIALECT } from './db.js';
+import { q, insert, update, pick, getSetting, setSetting, encrypt, decrypt, SECRET, transaction, putBlob, getBlob, deleteBlob, DIALECT, upsertSupplierProducts } from './db.js';
+import * as digitklik from './suppliers/digitklik.js';
 import { company, calcTotals, nextNumber, reference, DOC_TYPES, STATUS, renderDocument, renderHandover, renderNotice, setDecrypt, EQUIP_TYPES } from './docs.js';
 
 setDecrypt(decrypt);
@@ -303,7 +304,9 @@ const PROD_FIELDS = ['sku', 'name', 'category', 'brand', 'unit', 'purchase_price
 api.get('/api/products', auth, async (req, res) => {
   const u = new URL(req.url, 'http://x').searchParams;
   const s = `%${u.get('q') || ''}%`;
-  sendJson(res, 200, await q.all(`SELECT * FROM products WHERE (name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ?) ${u.get('all') ? '' : 'AND active=1'} ORDER BY category, name LIMIT 1000`, s, s, s, s));
+  const cat = u.get('category');
+  const limit = Math.min(Number(u.get('limit')) || 1000, 2000);
+  sendJson(res, 200, await q.all(`SELECT * FROM products WHERE (name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR description LIKE ?) ${cat ? 'AND category=?' : ''} ${u.get('all') ? '' : 'AND active=1'} ORDER BY category, name LIMIT ${limit}`, s, s, s, s, s, ...(cat ? [cat] : [])));
 });
 api.post('/api/products', auth, async (req, res) => {
   const b = await readJson(req);
@@ -316,6 +319,61 @@ api.put('/api/products/:id', auth, async (req, res) => { await update('products'
 api.delete('/api/products/:id', admin, async (req, res) => {
   if (await q.get('SELECT 1 FROM doc_lines WHERE product_id=?', req.params.id)) { await update('products', req.params.id, { active: 0 }); return sendJson(res, 200, { ok: true, archived: true }); }
   await q.run('DELETE FROM products WHERE id=?', req.params.id); sendJson(res, 200, { ok: true });
+});
+
+// ---------- uvoz cenika dobavitelja digitklik.si ----------
+// Odjemalec najprej dobi seznam kategorij, nato jih pošilja po nekaj naenkrat (vsak klic < 60 s na Vercelu).
+api.get('/api/products/categories', auth, async (req, res) => {
+  sendJson(res, 200, (await q.all("SELECT category, COUNT(*) n FROM products WHERE active=1 AND category IS NOT NULL AND category<>'' GROUP BY category ORDER BY category")));
+});
+api.get('/api/import/digitklik', admin, async (req, res) => {
+  const last = await getSetting('import_digitklik');
+  const count = (await q.get("SELECT COUNT(*) n FROM products WHERE supplier='digitklik' AND active=1")).n;
+  sendJson(res, 200, { last, count });
+});
+api.post('/api/import/digitklik/start', admin, async (req, res) => {
+  let categories;
+  try { categories = await digitklik.listCategories(); } catch (e) { throw new HttpError(502, `digitklik.si ni dosegljiv (${e.message})`); }
+  if (!categories.length) throw new HttpError(502, 'Na digitklik.si ni bilo mogoče najti kategorij');
+  sendJson(res, 200, { categories, started: Math.floor(Date.now() / 1000) });
+});
+api.post('/api/import/digitklik/batch', admin, async (req, res) => {
+  const b = await readJson(req);
+  const slugs = (Array.isArray(b.slugs) ? b.slugs : []).filter(x => /^kategorija_[\w%.-]+$/.test(x)).slice(0, 12);
+  const margin = Math.min(Math.max(Number(b.margin) || 0, 0), 500);
+  const out = { categories: 0, products: 0, inserted: 0, updated: 0, errors: [] };
+  const deadline = Date.now() + 45e3;
+  const done = [];
+  for (const slug of slugs) {
+    if (Date.now() > deadline) break; // preostale pošlje odjemalec znova
+    try {
+      const c = await digitklik.crawlCategory(slug);
+      const rows = c.products.filter(p => p.name).map(p => digitklik.toProduct(p, c.path, { margin }));
+      for (let i = 0; i < rows.length; i += 200) {
+        const r = await upsertSupplierProducts(rows.slice(i, i + 200), { updatePrices: !!b.update_prices, runId: Number(b.started) || null });
+        out.inserted += r.inserted; out.updated += r.updated;
+      }
+      out.products += rows.length;
+      out.categories++;
+    } catch (e) { out.errors.push(`${slug}: ${e.message}`); }
+    done.push(slug);
+  }
+  out.done = done;
+  sendJson(res, 200, out);
+});
+api.post('/api/import/digitklik/finish', admin, async (req, res) => {
+  const b = await readJson(req);
+  let archived = 0;
+  if (b.archive_missing && Number(b.started) > 0) {
+    // supplier_updated hrani oznako uvoza (čas začetka) – kar v tem uvozu ni bilo osveženo, na digitklik.si ni več
+    const r = await q.run("UPDATE products SET active=0 WHERE supplier='digitklik' AND active=1 AND (supplier_updated IS NULL OR supplier_updated <> ?)", Number(b.started));
+    archived = r.changes || 0;
+  }
+  const count = (await q.get("SELECT COUNT(*) n FROM products WHERE supplier='digitklik' AND active=1")).n;
+  const summary = { at: new Date().toISOString(), count, archived, margin: Number(b.margin) || 0, stats: b.stats || null };
+  await setSetting('import_digitklik', summary);
+  await log(req, 'uvoz_digitklik', `${count} izdelkov`);
+  sendJson(res, 200, summary);
 });
 
 // ---------- dokumenti: ponudbe, delovni nalogi, računi ----------

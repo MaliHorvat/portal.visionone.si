@@ -146,6 +146,18 @@ const MYSQL_SCHEMA = [
 // Stolpci, dodani po prvi objavi (doda jih migrate, če manjkajo)
 const COLUMN_UPGRADES = [
   ['documents', 'legacy_id', { mysql: 'VARCHAR(64) NULL, ADD INDEX idx_doc_legacy (legacy_id)', sqlite: 'TEXT' }],
+  // izdelki iz cenikov dobaviteljev (npr. digitklik.si)
+  ['products', 'supplier', { mysql: 'VARCHAR(32) NULL', sqlite: 'TEXT' }],
+  ['products', 'supplier_id', { mysql: 'VARCHAR(64) NULL', sqlite: 'TEXT' }],
+  ['products', 'supplier_url', { mysql: 'TEXT NULL', sqlite: 'TEXT' }],
+  ['products', 'supplier_stock', { mysql: 'VARCHAR(32) NULL', sqlite: 'TEXT' }],
+  ['products', 'supplier_price', { mysql: 'DOUBLE NULL', sqlite: 'REAL' }],
+  ['products', 'supplier_updated', { mysql: 'BIGINT NULL', sqlite: 'INTEGER' }],
+];
+// Indeksi, dodani po prvi objavi
+const INDEX_UPGRADES = [
+  ['products', 'uq_prod_supplier', 'UNIQUE', '(supplier, supplier_id)'],
+  ['products', 'idx_prod_category', '', '(category)'],
 ];
 
 // Tabele, ki imajo stolpec created_at (ali ts) – časovni žig vpiše insert()
@@ -213,6 +225,10 @@ async function openMysql() {
         const r = await exec('SELECT COUNT(*) n FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?', [t, c]);
         if (!r[0].n) await exec(`ALTER TABLE ${t} ADD COLUMN \`${c}\` ${def.mysql}`);
       }
+      for (const [t, name, kind, cols] of INDEX_UPGRADES) {
+        const r = await exec('SELECT COUNT(*) n FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?', [t, name]);
+        if (!r[0].n) await exec(`CREATE ${kind} INDEX ${name} ON ${t} ${cols}`);
+      }
     },
   };
 }
@@ -249,6 +265,7 @@ async function openSqlite() {
       for (const [t, c, def] of COLUMN_UPGRADES) {
         if (!db.prepare(`PRAGMA table_info(${t})`).all().some(x => x.name === c)) db.exec(`ALTER TABLE ${t} ADD COLUMN "${c}" ${def.sqlite}`);
       }
+      for (const [t, name, kind, cols] of INDEX_UPGRADES) db.exec(`CREATE ${kind} INDEX IF NOT EXISTS ${name} ON ${t} ${cols}`);
     },
   };
 }
@@ -363,4 +380,29 @@ export function decrypt(blob) {
     d.setAuthTag(Buffer.from(tag, 'base64'));
     return Buffer.concat([d.update(Buffer.from(data, 'base64')), d.final()]).toString('utf8');
   } catch { return null; }
+}
+
+/**
+ * Hiter vpis izdelkov dobavitelja (en stavek za več vrstic). Obstoječim (supplier, supplier_id) posodobi podatke,
+ * prodajno ceno pa le, če je updatePrices. Vrne { inserted, updated }.
+ */
+const SUPPLIER_COLS = ['sku', 'name', 'category', 'brand', 'unit', 'purchase_price', 'price', 'vat', 'track_stock', 'equipment_type', 'description',
+  'supplier', 'supplier_id', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'created_at'];
+const SUPPLIER_UPDATE = ['name', 'category', 'brand', 'purchase_price', 'description', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active'];
+export async function upsertSupplierProducts(rows, { updatePrices = false, runId = null } = {}) {
+  if (!rows.length) return { inserted: 0, updated: 0 };
+  const supplier = rows[0].supplier;
+  const ids = rows.map(r => r.supplier_id);
+  const existing = new Set((await q.all(`SELECT supplier_id FROM products WHERE supplier=? AND supplier_id IN (${ids.map(() => '?').join(',')})`, supplier, ...ids)).map(r => String(r.supplier_id)));
+  const now = Math.floor(Date.now() / 1000);
+  const vals = [];
+  for (const r of rows) for (const c of SUPPLIER_COLS) vals.push(norm(c === 'supplier_updated' ? (runId || now) : c === 'active' ? 1 : c === 'created_at' ? now : r[c]));
+  const tuple = `(${SUPPLIER_COLS.map(() => '?').join(',')})`;
+  const upd = [...SUPPLIER_UPDATE, ...(updatePrices ? ['price'] : [])];
+  const sql = DIALECT === 'mysql'
+    ? `INSERT INTO products (${SUPPLIER_COLS.map(col).join(',')}) VALUES ${rows.map(() => tuple).join(',')} ON DUPLICATE KEY UPDATE ${upd.map(c => `${col(c)}=VALUES(${col(c)})`).join(',')}`
+    : `INSERT INTO products (${SUPPLIER_COLS.map(col).join(',')}) VALUES ${rows.map(() => tuple).join(',')} ON CONFLICT(supplier, supplier_id) DO UPDATE SET ${upd.map(c => `${col(c)}=excluded.${col(c)}`).join(',')}`;
+  await q.run(sql, ...vals);
+  const updated = rows.filter(r => existing.has(String(r.supplier_id))).length;
+  return { inserted: rows.length - updated, updated };
 }
