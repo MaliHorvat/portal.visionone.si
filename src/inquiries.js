@@ -19,7 +19,7 @@ export function corsFor(req, res) {
   return ok;
 }
 
-const TOPICS = { cctv: 'Videonadzor', alarm: 'Alarm', pozar: 'Požarna signalizacija', domofon: 'Domofonija', mreza: 'Omrežje / Wi-Fi', servis: 'Servis', portal: 'VisionOne portal', anketa: 'Anonimna anketa', general: 'Splošno' };
+const TOPICS = { cctv: 'Videonadzor', alarm: 'Alarm', pozar: 'Požarna signalizacija', domofon: 'Domofonija', mreza: 'Omrežje / Wi-Fi', servis: 'Servis', portal: 'VisionOne portal', anketa: 'Anonimna anketa', razvoj: 'Programska rešitev po meri', general: 'Splošno' };
 const s = (v, max) => String(v ?? '').replace(/\s+$/g, '').trim().slice(0, max);
 
 api.post('/api/public/inquiry', async (req, res) => {

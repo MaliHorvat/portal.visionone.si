@@ -2,7 +2,7 @@
 import { h, clear, icon, get, put, del, toast, confirmDialog, emptyState } from './lib/core.js';
 import { head, reload, customerDialog } from './app.js';
 
-export const TOPICS = { cctv: 'Videonadzor', alarm: 'Alarm', pozar: 'Požarna signalizacija', domofon: 'Domofonija', mreza: 'Omrežje / Wi-Fi', servis: 'Servis', portal: 'VisionOne portal', anketa: 'Anonimna anketa', general: 'Splošno' };
+export const TOPICS = { cctv: 'Videonadzor', alarm: 'Alarm', pozar: 'Požarna signalizacija', domofon: 'Domofonija', mreza: 'Omrežje / Wi-Fi', servis: 'Servis', portal: 'VisionOne portal', anketa: 'Anonimna anketa', razvoj: 'Programska rešitev po meri', general: 'Splošno' };
 const STATUS = { new: ['Novo', 'info'], open: ['V obdelavi', 'warn'], done: ['Zaključeno', 'ok'], spam: ['Neželeno', 'err'] };
 const when = ts => new Date(ts * 1000).toLocaleString('sl-SI', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
