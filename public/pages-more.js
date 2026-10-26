@@ -86,7 +86,7 @@ export async function pageCatalog(page) {
   const load = async () => {
     const rows = await get(`/api/products?all=1&limit=1500&q=${encodeURIComponent(search.value)}&category=${encodeURIComponent(catSel.value)}`);
     info.textContent = rows.length >= 1500 ? 'Prikazanih je prvih 1500 izdelkov – zožite iskanje ali izberite kategorijo.' : `${rows.length} izdelkov`;
-    clear(tbody, rows.map(p => h('tr', { style: { opacity: p.active ? 1 : 0.5 } },
+    clear(tbody, rows.map(p => h('tr', { class: 'tap-row', style: { opacity: p.active ? 1 : 0.5 }, onclick: e => { if (!e.target.closest('a,button') && matchMedia('(max-width: 860px)').matches) productDialog(p); } },
       h('td', { class: 'mono hide-m' }, p.sku || ''),
       h('td', {}, h('strong', {}, p.name), h('div', { class: 'muted', style: { fontSize: '12.5px' } },
         [p.category, p.brand].filter(Boolean).join(' · '),
@@ -95,7 +95,7 @@ export async function pageCatalog(page) {
       h('td', { class: 'num' }, money(p.price), h('div', { class: 'muted', style: { fontSize: '12px' } }, `/${p.unit}`)),
       h('td', { class: 'num hide-m' }, p.purchase_price > 0 && p.price > 0 ? `${Math.round(((p.price - p.purchase_price) / p.price) * 100)} %` : '–'),
       h('td', { class: 'num' }, p.track_stock ? h('span', { style: { color: p.min_stock > 0 && p.stock <= p.min_stock ? 'var(--warn)' : '' } }, `${p.stock}`) : '–'),
-      h('td', { class: 'actions' }, h('button', { class: 'btn btn-sm', onclick: () => productDialog(p) }, 'Uredi')))));
+      h('td', { class: 'actions hide-m' }, h('button', { class: 'btn btn-sm', onclick: () => productDialog(p) }, 'Uredi')))));
   };
   search.oninput = debounce(load, 250);
   catSel.onchange = load;
@@ -107,7 +107,7 @@ export async function pageCatalog(page) {
       h('button', { class: 'btn btn-primary', onclick: () => productDialog() }, icon('plus', 16), 'Nov izdelek')),
     h('div', { class: 'row', style: { marginBottom: '12px', gap: '8px', flexWrap: 'wrap' } }, search, catSel),
     info,
-    h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { class: 'hide-m' }, 'Šifra'), h('th', {}, 'Naziv'), h('th', { class: 'num hide-m' }, 'Nabavna'), h('th', { class: 'num' }, 'Prodajna'), h('th', { class: 'num hide-m' }, 'Marža'), h('th', { class: 'num' }, 'Zaloga'), h('th', {}))), tbody)));
+    h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { class: 'hide-m' }, 'Šifra'), h('th', {}, 'Naziv'), h('th', { class: 'num hide-m' }, 'Nabavna'), h('th', { class: 'num' }, 'Prodajna'), h('th', { class: 'num hide-m' }, 'Marža'), h('th', { class: 'num' }, 'Zaloga'), h('th', { class: 'hide-m' }))), tbody)));
   loadCats();
   load();
 }

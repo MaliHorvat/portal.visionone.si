@@ -138,6 +138,25 @@ h2 { font-size: 12pt; margin: 18px 0 6px; }
 .notice h1 { font-size: 34pt; margin: 6mm 0; letter-spacing: .02em; }
 .notice .cam { width: 70mm; height: 46mm; margin: 0 auto; }
 .notice p { font-size: 12.5pt; margin: 3mm 0; }
+@media screen and (max-width: 640px) {
+  .sheet { margin: 0; padding: 18px 14px 28px; box-shadow: none; }
+  .bar { flex-wrap: wrap; padding: 8px 12px; }
+  .bar span { flex-basis: 100%; font-size: 10pt; }
+  .head { flex-direction: column; gap: 10px; }
+  .co { text-align: left; }
+  .parties { grid-template-columns: 1fr; gap: 14px; }
+  h1 { font-size: 15pt; overflow-wrap: anywhere; }
+  .meta dd { white-space: nowrap; }
+  table.lines { font-size: 9pt; }
+  table.lines th, table.lines td { padding: 5px 3px; }
+  table.lines td:not(.n) { overflow-wrap: anywhere; }
+  .totals { width: 100%; }
+  .pay { flex-direction: column; align-items: flex-start; }
+  .sig { grid-template-columns: 1fr; gap: 30px; }
+  .photos { grid-template-columns: repeat(2, 1fr); }
+  .notice { border-width: 2mm; padding: 8mm 5mm; }
+  .notice h1 { font-size: 22pt; }
+}
 .notice .small { font-size: 10pt; color: #333; margin-top: 8mm; text-align: left; }
 `;
 

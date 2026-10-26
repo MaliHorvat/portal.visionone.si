@@ -119,12 +119,12 @@ export async function pageDocument(page, id) {
       l._totEl = h('span');
       return h('tr', {},
         h('td', { class: 'desc' }, desc),
-        h('td', { class: 'n', style: { width: '90px' } }, inp('qty', { type: 'number', step: 'any', inputmode: 'decimal', 'aria-label': 'Količina' })),
-        h('td', { style: { width: '80px' } }, inp('unit', { 'aria-label': 'Enota', list: 'units' })),
-        h('td', { class: 'n', style: { width: '110px' } }, inp('price', { type: 'number', step: 'any', inputmode: 'decimal', 'aria-label': 'Cena' })),
-        h('td', { class: 'n', style: { width: '80px' } }, inp('discount', { type: 'number', step: 'any', inputmode: 'decimal', 'aria-label': 'Popust %', placeholder: '0' })),
-        vatPayer ? h('td', { style: { width: '90px' } }, select([[22, '22 %'], [9.5, '9,5 %'], [5, '5 %'], [0, '0 %']], l.vat ?? 22, { disabled: locked, 'aria-label': 'DDV', onchange: e => { l.vat = Number(e.target.value); calc(); markDirty(); } })) : null,
-        h('td', { class: 'tot', style: { width: '110px' } }, l._totEl),
+        h('td', { class: 'n', 'data-l': 'Količina', style: { width: '90px' } }, inp('qty', { type: 'number', step: 'any', inputmode: 'decimal', 'aria-label': 'Količina' })),
+        h('td', { 'data-l': 'Enota', style: { width: '80px' } }, inp('unit', { 'aria-label': 'Enota', list: 'units' })),
+        h('td', { class: 'n', 'data-l': 'Cena €', style: { width: '110px' } }, inp('price', { type: 'number', step: 'any', inputmode: 'decimal', 'aria-label': 'Cena' })),
+        h('td', { class: 'n', 'data-l': 'Popust %', style: { width: '80px' } }, inp('discount', { type: 'number', step: 'any', inputmode: 'decimal', 'aria-label': 'Popust %', placeholder: '0' })),
+        vatPayer ? h('td', { 'data-l': 'DDV', style: { width: '90px' } }, select([[22, '22 %'], [9.5, '9,5 %'], [5, '5 %'], [0, '0 %']], l.vat ?? 22, { disabled: locked, 'aria-label': 'DDV', onchange: e => { l.vat = Number(e.target.value); calc(); markDirty(); } })) : null,
+        h('td', { class: 'tot', 'data-l': 'Znesek', style: { width: '110px' } }, l._totEl),
         h('td', { class: 'del', style: { width: '40px' } }, locked ? null : h('button', { class: 'btn-icon', 'aria-label': 'Odstrani vrstico', onclick: () => { lines.splice(i, 1); renderLines(); calc(); markDirty(); } }, icon('x', 16))));
     }));
     calc();
