@@ -40,6 +40,16 @@ test('Field od konca do konca', async () => {
     const cam = s.equipment.find(e => e.name === 'Vhod');
     assert.equal((await call('GET', `/api/equipment/${cam.id}/password`)).data.password, 'Tajno123!');
 
+    const quotes = (await call('GET', '/api/documents?type=quote')).data;
+    assert.equal(quotes.length, 2);
+    const o1 = quotes.find(d => d.number === 'PON-2026-0007');
+    assert.equal(o1.status, 'sent');
+    // (2×129 + 3×35) × 0,9 = 326,70 neto; z DDV 22 % = 398,57
+    assert.equal(o1.total_net, 326.7);
+    assert.equal(o1.total, 398.57);
+    const o2 = quotes.find(d => d.title === 'Servis');
+    assert.equal(o2.total, 60);
+
     const q = await call('POST', '/api/documents', { type: 'quote', customer_id: zl.id, site_id: site.id, lines: [{ description: 'Kamera', qty: 2, price: 100, vat: 22 }] });
     const wo = await call('POST', `/api/documents/${q.data.id}/convert`, { to: 'workorder' });
     const inv = await call('POST', `/api/documents/${wo.data.id}/convert`, { to: 'invoice' });

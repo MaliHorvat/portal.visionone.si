@@ -143,6 +143,11 @@ const MYSQL_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS blobs (name VARCHAR(190) PRIMARY KEY, mime VARCHAR(190), size INT, data LONGBLOB, created_at BIGINT) ${T}`,
 ];
 
+// Stolpci, dodani po prvi objavi (doda jih migrate, če manjkajo)
+const COLUMN_UPGRADES = [
+  ['documents', 'legacy_id', { mysql: 'VARCHAR(64) NULL, ADD INDEX idx_doc_legacy (legacy_id)', sqlite: 'TEXT' }],
+];
+
 // Tabele, ki imajo stolpec created_at (ali ts) – časovni žig vpiše insert()
 const STAMP = { users: 'created_at', customers: 'created_at', sites: 'created_at', plans: 'created_at', products: 'created_at', equipment: 'created_at', documents: 'created_at', files: 'created_at', activity: 'ts', blobs: 'created_at' };
 
@@ -202,7 +207,13 @@ async function openMysql() {
       const r = await exec('SELECT COUNT(*) n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?', [name]);
       return r[0].n > 0;
     },
-    async migrate() { for (const s of MYSQL_SCHEMA) await exec(s); },
+    async migrate() {
+      for (const s of MYSQL_SCHEMA) await exec(s);
+      for (const [t, c, def] of COLUMN_UPGRADES) {
+        const r = await exec('SELECT COUNT(*) n FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?', [t, c]);
+        if (!r[0].n) await exec(`ALTER TABLE ${t} ADD COLUMN \`${c}\` ${def.mysql}`);
+      }
+    },
   };
 }
 
@@ -235,6 +246,9 @@ async function openSqlite() {
       db.exec('CREATE TABLE IF NOT EXISTS _migrations (version INTEGER PRIMARY KEY)');
       const cur = db.prepare('SELECT MAX(version) v FROM _migrations').get().v ?? 0;
       if (cur < 1) { db.exec('BEGIN'); try { db.exec(SQLITE_SCHEMA); db.prepare('INSERT INTO _migrations(version) VALUES (1)').run(); db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; } }
+      for (const [t, c, def] of COLUMN_UPGRADES) {
+        if (!db.prepare(`PRAGMA table_info(${t})`).all().some(x => x.name === c)) db.exec(`ALTER TABLE ${t} ADD COLUMN "${c}" ${def.sqlite}`);
+      }
     },
   };
 }

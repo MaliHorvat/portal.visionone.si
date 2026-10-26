@@ -325,7 +325,7 @@ async function saveLines(docId, lines) {
   for (const [i, l] of (lines || []).entries()) await insert('doc_lines', { document_id: docId, sort: i, product_id: l.product_id || null, description: l.description || '', qty: Number(l.qty) || 0, unit: l.unit || 'kos', price: Number(l.price) || 0, discount: Number(l.discount) || 0, vat: Number(l.vat ?? 22) });
   await recalc(docId);
 }
-async function recalc(docId) {
+export async function recalc(docId) {
   const c = await company();
   const t = calcTotals(await q.all('SELECT * FROM doc_lines WHERE document_id=?', docId), !!c.vat_payer);
   const paid = (await q.get('SELECT COALESCE(SUM(amount),0) s FROM payments WHERE document_id=?', docId)).s;

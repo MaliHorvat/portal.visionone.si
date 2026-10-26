@@ -34,9 +34,10 @@ prejšnjega portala prenese:
 | `ClientCamera`, `ClientRecorder`, `ClientSwitch`, `ClientDisk` | oprema objekta (gesla kamer šifrirana) |
 | `ClientDocument` | datoteke objekta |
 | `MaintenanceReminder` | termini v koledarju (ob 8:00) |
+| `ClientOffer`, `ClientOfferLine` | ponudbe s postavkami (skupni popust združen s popustom postavke, ohranjena številka) |
 
 Tabele prejšnjega portala ostanejo nedotaknjene. Uvoz je enkraten in ne podvaja strank (`customers.legacy_id`).
-Ponovni uvoz: v tabeli `settings` izbrišite vrstico `legacy_import` – uvozijo se le še neprenesene stranke.
+Ponovni uvoz: v tabeli `settings` izbrišite vrstico `legacy_import` (stranke) ali `legacy_offers` (ponudbe) – uvozijo se le še neprenesene.
 
 ## Omejitve na Vercelu
 

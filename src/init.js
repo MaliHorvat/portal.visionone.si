@@ -1,7 +1,8 @@
 // Začetni koraki ob prvem zagonu: skrbnik, začetni katalog in uvoz strank iz prejšnjega portala.
 import crypto from 'node:crypto';
 import { q, insert, onInit, tableExists, getSetting, setSetting, encrypt, putBlob, transaction } from './db.js';
-import { hashPassword } from './api.js';
+import { hashPassword, recalc } from './api.js';
+import { nextNumber } from './docs.js';
 
 onInit(async () => {
   if (!(await q.get('SELECT id FROM users LIMIT 1'))) {
@@ -35,6 +36,9 @@ onInit(async () => {
   }
   if (!(await getSetting('legacy_import'))) {
     try { await importLegacy(); } catch (e) { console.error('[Field] uvoz strank iz prejšnjega portala ni uspel:', e); }
+  }
+  if (!(await getSetting('legacy_offers'))) {
+    try { await importLegacyOffers(); } catch (e) { console.error('[Field] uvoz ponudb iz prejšnjega portala ni uspel:', e); }
   }
 });
 
@@ -123,4 +127,52 @@ export async function importLegacy() {
   await setSetting('legacy_import', { at: new Date().toISOString(), ...stats, total });
   if (stats.customers) console.log('[Field] uvoz iz prejšnjega portala:', stats);
   return stats;
+}
+
+// ---------- ponudbe iz prejšnjega portala (ClientOffer + ClientOfferLine) ----------
+const OFFER_STATUS = { draft: 'draft', sent: 'sent', accepted: 'accepted', rejected: 'rejected' };
+export async function importLegacyOffers() {
+  if (!(await tableExists('ClientOffer'))) { await setSetting('legacy_offers', { at: new Date().toISOString(), offers: 0, note: 'ni tabele ClientOffer' }); return { offers: 0 }; }
+  const done = new Set((await q.all('SELECT legacy_id FROM documents WHERE legacy_id IS NOT NULL')).map(r => r.legacy_id));
+  const offers = (await q.all('SELECT * FROM `ClientOffer` ORDER BY createdAt')).filter(o => !done.has(o.id));
+  const company = (await getSetting('company', {})) || {};
+  let imported = 0, skipped = 0;
+  for (const o of offers) {
+    const cust = await q.get('SELECT id FROM customers WHERE legacy_id=?', o.clientId);
+    if (!cust) { skipped++; continue; }
+    const site = await q.get('SELECT id FROM sites WHERE customer_id=? ORDER BY id LIMIT 1', cust.id);
+    const created = tsOf(o.createdAt);
+    const date = dateOf(o.offerDate) || (created ? new Date(created * 1000).toLocaleDateString('sv-SE') : new Date().toLocaleDateString('sv-SE'));
+    const valid = new Date(`${date}T12:00:00`); valid.setDate(valid.getDate() + (Number(company.quote_valid_days) || 30));
+    const totalDisc = Math.min(Math.max(Number(o.totalDiscountPct) || 0, 0), 100);
+    const vatOn = o.vatEnabled == null ? true : !!Number(o.vatEnabled);
+    await transaction(async () => {
+      const year = Number(date.slice(0, 4));
+      const num = s(o.offerNumber) ? { number: s(o.offerNumber) } : await nextNumber('quote', year);
+      const id = await insert('documents', {
+        type: 'quote', ...num, year, status: OFFER_STATUS[s(o.offerStatus)] || 'draft',
+        customer_id: cust.id, site_id: site?.id || null, date, valid_until: valid.toISOString().slice(0, 10),
+        title: s(o.title) || null,
+        notes: [s(o.notes), s(o.clientAddress) && `Naslov izvedbe: ${s(o.clientAddress)}`].filter(Boolean).join('\n') || null,
+        created_by: 'uvoz', legacy_id: o.id, created_at: created, updated_at: tsOf(o.updatedAt),
+      });
+      const lines = await q.all('SELECT * FROM `ClientOfferLine` WHERE offerId=? ORDER BY sortOrder, id', o.id);
+      for (const [i, l] of lines.entries()) {
+        const lineDisc = Math.min(Math.max(Number(l.discountPct) || 0, 0), 100);
+        // skupni popust ponudbe združimo s popustom postavke
+        const discount = Math.round((1 - (1 - lineDisc / 100) * (1 - totalDisc / 100)) * 10000) / 100;
+        const vat = vatOn ? (Number.isFinite(Number(l.lineVatPct)) ? Number(l.lineVatPct) : Number(o.vatPct) || 22) : 0;
+        await insert('doc_lines', {
+          document_id: id, sort: i, product_id: null,
+          description: [s(l.code), s(l.description)].filter(Boolean).join(' – ') || (l.section === 'service' ? 'Storitev' : 'Material'),
+          qty: Number(l.qty) || 0, unit: s(l.unit) || 'kos', price: Number(l.unitPrice) || 0, discount, vat,
+        });
+      }
+      await recalc(id);
+    });
+    imported++;
+  }
+  await setSetting('legacy_offers', { at: new Date().toISOString(), offers: imported, skipped });
+  if (imported) console.log('[Field] uvoz ponudb iz prejšnjega portala:', { imported, skipped });
+  return { offers: imported, skipped };
 }
