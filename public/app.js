@@ -18,18 +18,19 @@ const NAV = [['/', 'Danes', 'home'], ['/povprasevanja', 'Povpraševanja', 'bookm
 let main;
 
 async function boot() {
-  F.me = await ensureLogin('VisionOne Field', 'Stranke, ponudbe, nalogi in računi');
+  F.me = await ensureLogin('Portal', 'Stranke, objekti, ponudbe, nalogi in računi');
   [F.meta, F.company] = await Promise.all([get('/api/meta'), get('/api/company')]);
-  document.title = `${F.company.name} – Field`;
+  document.title = `VisionOne portal – ${F.company.name}`;
   main = h('main', { class: 'f-main' });
   const side = h('aside', { class: 'f-side' },
-    h('div', { class: 'f-brand' }, h('span', { class: 'mark' }), h('div', {}, h('strong', {}, 'VisionOne Field'), h('span', {}, F.company.name))),
+    h('a', { class: 'f-brand', href: '#/', 'aria-label': 'VisionOne portal – začetna stran' }, h('span', { class: 'v1-logo' }, h('img', { class: 'v1-mark', src: '/brand/mark.png', alt: '' }), h('img', { class: 'v1-word', src: '/brand/wordmark.png', alt: 'VisionOne' })), h('span', { class: 'f-brand-sub' }, 'Portal')),
     h('nav', { class: 'f-nav', 'aria-label': 'Glavni meni' }, NAV.map(([p, l, i]) => h('a', { href: `#${p}`, 'data-p': p }, icon(i), l))),
     h('div', { class: 'f-foot' }, h('span', {}, F.me.full_name || F.me.username),
       h('button', { class: 'btn-icon', title: 'Tema', onclick: () => toggleTheme('v1-theme-field') }, icon('sun')),
       h('button', { class: 'btn-icon', title: 'Odjava', onclick: logout }, icon('logout'))));
   const bottom = h('nav', { class: 'f-bottom', 'aria-label': 'Meni' }, NAV.filter(n => !['/katalog', '/povprasevanja'].includes(n[0])).map(([p, l, i]) => h('a', { href: `#${p}`, 'data-p': p }, icon(i, 22), l)));
-  clear($('#app'), h('div', { class: 'f-app' }, side, main), bottom);
+  const mtop = h('header', { class: 'f-mtop' }, h('a', { href: '#/', 'aria-label': 'VisionOne portal – začetna stran' }, h('span', { class: 'v1-logo' }, h('img', { class: 'v1-mark', src: '/brand/mark.png', alt: '' }), h('img', { class: 'v1-word', src: '/brand/wordmark.png', alt: 'VisionOne' }))), h('span', { class: 'f-brand-sub' }, 'Portal'));
+  clear($('#app'), h('div', { class: 'f-app' }, side, h('div', { class: 'f-col' }, mtop, main)), bottom);
   window.addEventListener('hashchange', route);
   route();
 }

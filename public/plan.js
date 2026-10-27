@@ -6,7 +6,7 @@ import { downscale } from './app.js';
 const NS = 'http://www.w3.org/2000/svg';
 const S = (tag, attrs = {}) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); return e; };
 const SHORT = { camera: 'K', nvr: 'N', disk: 'D', switch: 'S', router: 'R', ups: 'U', intercom: 'I', alarm: 'A', sensor: 'J', access: 'P', monitor: 'M', ap: 'W', other: '•' };
-const COLOR = { camera: '#0f766e', nvr: '#1f6fe0', switch: '#7c3aed', router: '#7c3aed', ups: '#b7791f', intercom: '#c2410c', alarm: '#c8372d', sensor: '#c8372d', access: '#c2410c', ap: '#7c3aed' };
+const COLOR = { camera: '#1a4677', nvr: '#1f6fe0', switch: '#7c3aed', router: '#7c3aed', ups: '#b7791f', intercom: '#c2410c', alarm: '#c8372d', sensor: '#c8372d', access: '#c2410c', ap: '#7c3aed' };
 
 async function uploadPlan(site, done) {
   const name = h('input', { value: 'Pritličje' });

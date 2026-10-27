@@ -104,10 +104,11 @@ body { font: 10.5pt/1.4 "Segoe UI", "DejaVu Sans", Arial, sans-serif; color: #1a
 .sheet { background: #fff; max-width: 210mm; margin: 12px auto; padding: 14mm; box-shadow: 0 4px 20px rgba(0,0,0,.12); }
 @media print { body { background: #fff; } .sheet { box-shadow: none; margin: 0; padding: 0; max-width: none; } .noprint { display: none !important; } }
 .bar { position: sticky; top: 0; background: #1d2733; color: #fff; padding: 10px 16px; display: flex; gap: 10px; align-items: center; z-index: 5; }
-.bar button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 0; background: #0f766e; color: #fff; cursor: pointer; }
+.bar button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 0; background: #1a4677; color: #fff; cursor: pointer; }
 .bar span { flex: 1; }
 .head { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 22px; }
 .head img { max-height: 60px; max-width: 220px; }
+.v1logo { display: inline-flex; align-items: center; gap: 8px; } .v1logo img:first-child { height: 40px; } .v1logo img:last-child { height: 17px; }
 .co { text-align: right; font-size: 9pt; color: #4b5866; }
 .co strong { color: #1a2330; font-size: 11pt; }
 .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
@@ -167,7 +168,7 @@ function shell(title, body, { back = true } = {}) {
 }
 
 function companyHead(c) {
-  return `<div class="head"><div>${c.logo ? `<img src="${esc(c.logo)}" alt="">` : `<strong style="font-size:15pt">${esc(c.name)}</strong>`}</div>
+  return `<div class="head"><div>${c.logo ? `<img src="${esc(c.logo)}" alt="">` : /visionone/i.test(c.name || '') ? `<span class="v1logo"><img src="/brand/mark.png" alt=""><img src="/brand/wordmark.png" alt="VisionOne"></span>` : `<strong style="font-size:15pt">${esc(c.name)}</strong>`}</div>
   <div class="co"><strong>${esc(c.name)}</strong><br>${esc(c.address)}<br>${esc([c.post, c.city].filter(Boolean).join(' '))}<br>
   ${c.tax_id ? `${c.vat_payer ? 'ID za DDV' : 'Davčna št.'}: ${esc(c.vat_payer && !/^SI/i.test(c.tax_id) ? 'SI' + c.tax_id : c.tax_id)}<br>` : ''}${c.reg_no ? `Matična št.: ${esc(c.reg_no)}<br>` : ''}
   ${[c.phone, c.email, c.web].filter(Boolean).map(esc).join(' · ')}</div></div>`;

@@ -241,7 +241,7 @@ export async function ensureLogin(appTitle, subtitle) {
         resolve(await get('/api/auth/me'));
       } catch (ex) { err.textContent = ex.message; }
     } },
-      h('div', { class: 'login-brand' }, h('span', { class: 'brand-mark' }), h('div', {}, h('strong', {}, appTitle), h('span', {}, subtitle))),
+      h('div', { class: 'login-brand v1-login-brand' }, h('span', { class: 'v1-logo' }, h('img', { class: 'v1-mark', src: '/brand/mark.png', alt: '' }), h('img', { class: 'v1-word', src: '/brand/wordmark.png', alt: 'VisionOne' })), h('div', {}, h('strong', {}, appTitle), h('span', {}, subtitle))),
       field('Uporabniško ime', user), field('Geslo', pass), totpField, err,
       h('button', { class: 'btn btn-primary btn-block', type: 'submit' }, 'Prijava'));
     const screen = h('div', { class: 'login-screen' }, form);
