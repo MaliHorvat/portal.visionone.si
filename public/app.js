@@ -4,6 +4,8 @@ import { pageDocuments, pageDocument, newDocument } from './pages-docs.js';
 import { pageCalendar, pageCatalog, pageSettings, appointmentDialog } from './pages-more.js';
 import { planEditor, networkMap } from './plan.js';
 import { pageInquiries, TOPICS as INQ_TOPICS } from './pages-inquiries.js';
+import { initPwa, installHint, loginInstallNote, clearOfflineData } from './pwa.js';
+import { setLoginExtra, setBeforeLogout } from './lib/core.js';
 
 export const F = { me: null, meta: null, company: null };
 export const money = n => `${new Intl.NumberFormat('sl-SI', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n) || 0)} €`;
@@ -18,6 +20,9 @@ const NAV = [['/', 'Danes', 'home'], ['/povprasevanja', 'Povpraševanja', 'bookm
 let main;
 
 async function boot() {
+  initPwa();
+  setLoginExtra(loginInstallNote);
+  setBeforeLogout(clearOfflineData);
   F.me = await ensureLogin('Portal', 'Stranke, objekti, ponudbe, nalogi in računi');
   [F.meta, F.company] = await Promise.all([get('/api/meta'), get('/api/company')]);
   document.title = `VisionOne portal – ${F.company.name}`;
@@ -84,6 +89,7 @@ async function pageToday(page) {
   const alertList = (title, items, render, emptyText) => items.length ? h('div', {}, h('div', { class: 'section-title' }, h('h2', {}, title), h('span', { class: 'badge warn plain' }, items.length)), h('div', { class: 'list' }, items.map(render))) : null;
   clear(page,
     head(`${greet}, ${(F.me.full_name || F.me.username).split(' ')[0]}`, new Date().toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })),
+    installHint(),
     h('div', { class: 'quick' },
       h('button', { onclick: () => customerDialog() }, icon('users', 22), 'Nova stranka'),
       h('button', { onclick: () => newDocument('workorder') }, icon('edit', 22), 'Delovni nalog'),

@@ -4,14 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>VisionOne portal</title>
+  <meta name="description" content="VisionOne portal: stranke, objekti, oprema, ponudbe, delovni nalogi in računi.">
   <meta name="theme-color" content="#0e1b2b">
-  
-  
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="VisionOne">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="VisionOne">
+  <meta name="msapplication-TileColor" content="#0e1b2b">
   <link rel="stylesheet" href="/lib/base.css">
   <link rel="stylesheet" href="/field.css">
   <script>try{var t=localStorage.getItem('v1-theme-field');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
@@ -19,6 +23,5 @@
 <body>
   <div id="app"></div>
   <script type="module" src="/app.js"></script>
-  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function(){});</script>
 </body>
 </html>

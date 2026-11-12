@@ -222,6 +222,9 @@ export function formData(root) {
 }
 
 // ---------- Prijava ----------
+/** Dodatna vsebina pod prijavnim obrazcem (npr. namestitev aplikacije). */
+let loginExtra = null;
+export const setLoginExtra = fn => { loginExtra = fn; };
 export async function ensureLogin(appTitle, subtitle) {
   try { const me = await get('/api/auth/me'); window.__v1ready = true; return me; } catch (e) { if (e.status !== 401) throw e; }
   return new Promise(resolve => {
@@ -244,14 +247,17 @@ export async function ensureLogin(appTitle, subtitle) {
       h('div', { class: 'login-brand v1-login-brand' }, h('span', { class: 'v1-logo' }, h('img', { class: 'v1-mark', src: '/brand/mark.png', alt: '' }), h('img', { class: 'v1-word', src: '/brand/wordmark.png', alt: 'VisionOne' })), h('div', {}, h('strong', {}, appTitle), h('span', {}, subtitle))),
       field('Uporabniško ime', user), field('Geslo', pass), totpField, err,
       h('button', { class: 'btn btn-primary btn-block', type: 'submit' }, 'Prijava'));
-    const screen = h('div', { class: 'login-screen' }, form);
+    const extra = loginExtra ? loginExtra() : null;
+    const screen = h('div', { class: 'login-screen' }, h('div', { class: 'login-wrap' }, form, extra));
     document.body.append(screen);
     user.focus();
   });
 }
 window.addEventListener('v1-unauthorized', () => { if (!document.querySelector('.login-screen')) location.reload(); });
 
-export async function logout() { await post('/api/auth/logout'); location.reload(); }
+let beforeLogout = null;
+export const setBeforeLogout = fn => { beforeLogout = fn; };
+export async function logout() { try { await beforeLogout?.(); } catch { /* */ } await post('/api/auth/logout'); location.reload(); }
 
 // ---------- Dogodki v živo (SSE) ----------
 export function liveEvents(handlers) {

@@ -176,3 +176,25 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .f-app { display: block; }
   body { background: #fff; }
 }
+
+/* ---------- namestljiva aplikacija (PWA) ---------- */
+.login-wrap { display: grid; gap: 12px; width: min(380px, 100%); }
+.login-wrap .login-card { width: 100%; }
+.pwa-login { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 10px 14px; font-size: 13.5px; }
+.pwa-login summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+.pwa-login[open] summary { margin-bottom: 8px; }
+.pwa-steps { margin: 6px 0 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.pwa-steps li::marker { color: var(--accent); font-weight: 600; }
+.pwa-note { font-size: 13px; margin-top: 12px; }
+.pwa-actions p { margin-bottom: 12px; }
+.pwa-hint { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius-lg); padding: 10px 12px; margin-bottom: 16px; }
+.pwa-hint img { border-radius: 9px; flex: none; }
+.pwa-hint-body { flex: 1; min-width: 0; display: grid; }
+.pwa-hint-link { font-size: 13.5px; }
+.pwa-update { position: fixed; z-index: 120; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 10px 12px 10px 16px; width: max-content; max-width: calc(100% - 24px); }
+.pwa-offline { position: fixed; z-index: 110; left: 0; right: 0; top: 0; padding: calc(6px + env(safe-area-inset-top)) 14px 6px; background: var(--warn); color: #fff; font-size: 13px; font-weight: 500; text-align: center; }
+.is-offline .f-mtop { top: 30px; }
+/* nameščena aplikacija: obnaša se kot program, ne kot spletna stran */
+.is-app body { overscroll-behavior-y: none; }
+.is-app .f-nav a, .is-app .f-bottom a, .is-app .btn { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+@media (max-width: 860px) { .pwa-update { bottom: calc(76px + env(safe-area-inset-bottom)); } }

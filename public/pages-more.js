@@ -1,4 +1,5 @@
 // VisionOne Field – koledar, katalog in nastavitve
+import { installPanel } from './pwa.js';
 import { h, clear, icon, get, post, put, del, toast, toastErr, modal, confirmDialog, field, select, toggle, formData, emptyState, debounce } from './lib/core.js';
 import { F, money, dateSl, timeSl, todayIso, head, go, reload, mapsUrl } from './app.js';
 
@@ -255,6 +256,7 @@ export async function pageSettings(page) {
       h('div', { class: 'panel' }, h('h2', {}, 'Moje geslo'), field('Trenutno geslo', oldPw), field('Novo geslo', newPw),
         h('button', { class: 'btn', onclick: async () => { try { await post('/api/auth/password', { old_password: oldPw.value, new_password: newPw.value }); toast('Geslo je spremenjeno'); oldPw.value = newPw.value = ''; } catch (e) { toastErr(e); } } }, 'Spremeni geslo')),
       isAdmin ? h('div', { class: 'panel' }, h('h2', {}, 'Uporabniki'), usersBox) : null,
+      installPanel(),
       h('div', { class: 'panel' }, h('h2', {}, 'Izvoz in varnostna kopija'),
         h('p', { class: 'muted' }, 'Knjigo računov v CSV pošljite računovodji. Varnostna kopija vsebuje celotno bazo (brez fotografij).'),
         h('div', { class: 'btn-row' }, h('a', { class: 'btn', href: `/api/export/invoices.csv?year=${new Date().getFullYear()}` }, 'Računi letos (CSV)'), h('a', { class: 'btn', href: '/api/export/customers.csv' }, 'Stranke (CSV)'),
