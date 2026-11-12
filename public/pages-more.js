@@ -4,39 +4,214 @@ import { h, clear, icon, get, post, put, del, toast, toastErr, modal, confirmDia
 import { F, money, dateSl, timeSl, todayIso, head, go, reload, mapsUrl } from './app.js';
 
 // ======================= KOLEDAR =======================
-let weekOffset = 0;
+// Pravi koledar: mesec (mreža), teden ali dan (časovnica po urah) in seznam prihodnjih terminov.
+const TYPES = { service: 'Servis', install: 'Montaža', survey: 'Ogled', repair: 'Popravilo', meeting: 'Sestanek', other: 'Drugo' };
+const DOW = ['pon', 'tor', 'sre', 'čet', 'pet', 'sob', 'ned'];
+const DAY_S = 86400;
+const cal = { view: null, cursor: null, selected: null };
+const isPhone = () => window.matchMedia('(max-width: 700px)').matches;
+const dayStart = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const mondayOf = d => addDays(dayStart(d), -((new Date(d).getDay() + 6) % 7));
+const sameDay = (a, b) => a.toDateString() === b.toDateString();
+const ts = d => Math.floor(d.getTime() / 1000);
+const fmt = (d, o) => d.toLocaleDateString('sl-SI', o);
+const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+const hm = s => timeSl(s);
+const apptTitle = a => a.title || TYPES[a.type] || 'Termin';
+const newAt = (d, hour = 8, min = 0) => { const x = dayStart(d); x.setHours(hour, min, 0, 0); appointmentDialog({ start: ts(x) }); };
+
 export async function pageCalendar(page) {
-  const start = new Date(); start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7) + weekOffset * 7);
-  const from = Math.floor(start / 1000), to = from + 7 * 86400;
-  const items = await get(`/api/appointments?from=${from}&to=${to}`);
-  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
-  const label = `${days[0].toLocaleDateString('sl-SI', { day: 'numeric', month: 'numeric' })} – ${days[6].toLocaleDateString('sl-SI', { day: 'numeric', month: 'numeric', year: 'numeric' })}`;
-  const TYPES = { service: 'Servis', install: 'Montaža', survey: 'Ogled', repair: 'Popravilo', meeting: 'Sestanek', other: 'Drugo' };
-  clear(page,
-    head('Koledar', label,
-      h('button', { class: 'btn', 'aria-label': 'Prejšnji teden', onclick: () => { weekOffset--; reload(); } }, '‹'),
-      h('button', { class: 'btn', onclick: () => { weekOffset = 0; reload(); } }, 'Ta teden'),
-      h('button', { class: 'btn', 'aria-label': 'Naslednji teden', onclick: () => { weekOffset++; reload(); } }, '›'),
-      h('button', { class: 'btn btn-primary', onclick: () => appointmentDialog() }, icon('plus', 16), 'Termin')),
-    days.map(d => {
-      const dayItems = items.filter(a => a.start >= d / 1000 && a.start < d / 1000 + 86400);
-      const isToday = d.toDateString() === new Date().toDateString();
-      return h('div', { class: `cal-day ${isToday ? 'today' : ''}` },
-        h('h3', {}, d.toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long' }), isToday ? ' · danes' : ''),
-        dayItems.length ? h('div', { class: 'list' }, dayItems.map(a => h('div', { class: `appt ${a.done ? 'done' : ''}` },
-          h('div', { class: 'time' }, timeSl(a.start), a.end ? h('small', {}, `do ${timeSl(a.end)}`) : null),
-          h('div', { style: { minWidth: 0, cursor: 'pointer' }, onclick: () => appointmentDialog(a) },
-            h('strong', {}, a.title || TYPES[a.type] || 'Termin'), ' ', h('span', { class: 'tag' }, TYPES[a.type] || a.type),
-            h('div', { class: 'muted', style: { fontSize: '13.5px' } }, [a.customer_name, a.site_name, a.technician].filter(Boolean).join(' · ')),
-            a.notes ? h('div', { class: 'muted', style: { fontSize: '13px', whiteSpace: 'pre-wrap' } }, a.notes) : null),
-          h('div', { class: 'acts' },
-            a.customer_phone ? h('a', { class: 'btn-icon', href: `tel:${a.customer_phone.replace(/\s/g, '')}`, title: 'Pokliči' }, '☎') : null,
-            a.site_address ? h('a', { class: 'btn-icon', href: mapsUrl(a.site_address, a.site_city), target: '_blank', rel: 'noopener', title: 'Navigacija' }, icon('map')) : null,
-            h('a', { class: 'btn-icon', href: `/api/appointments/${a.id}/ics`, title: 'Dodaj v koledar telefona' }, icon('download')),
-            !a.done ? h('button', { class: 'btn-icon', title: 'Opravljeno', onclick: async () => { await put(`/api/appointments/${a.id}`, { done: 1 }); reload(); } }, icon('check')) : null))))
-          : h('p', { class: 'muted', style: { margin: '0 0 4px', fontSize: '13.5px' } }, 'Ni terminov.'));
-    }));
+  if (!cal.view) { try { cal.view = localStorage.getItem('v1-cal-view') || 'mesec'; } catch { cal.view = 'mesec'; } }
+  if (!cal.cursor) cal.cursor = dayStart(new Date());
+  if (!cal.selected) cal.selected = dayStart(new Date());
+  let view = cal.view;
+  if (view === 'teden' && isPhone()) view = 'dan';
+  if (view === 'dan' && !isPhone()) view = 'teden';
+
+  // obdobje za prikaz
+  let from, to, title;
+  const c = cal.cursor;
+  if (view === 'mesec') {
+    const first = new Date(c.getFullYear(), c.getMonth(), 1);
+    from = mondayOf(first);
+    const last = new Date(c.getFullYear(), c.getMonth() + 1, 0);
+    to = addDays(mondayOf(last), 7);
+    title = cap(fmt(first, { month: 'long', year: 'numeric' }));
+  } else if (view === 'teden') {
+    from = mondayOf(c); to = addDays(from, 7);
+    title = `${fmt(from, { day: 'numeric', month: 'numeric' })} – ${fmt(addDays(to, -1), { day: 'numeric', month: 'numeric', year: 'numeric' })}`;
+  } else if (view === 'dan') {
+    from = dayStart(c); to = addDays(from, 1);
+    title = cap(fmt(from, { weekday: 'long', day: 'numeric', month: 'long' }));
+  } else {
+    from = dayStart(new Date()); to = addDays(from, 90);
+    title = 'Prihodnji termini';
+  }
+  const items = await get(`/api/appointments?from=${ts(from)}&to=${ts(to)}`);
+  const onDay = d => items.filter(a => a.start >= ts(d) && a.start < ts(d) + DAY_S).sort((a, b) => a.start - b.start);
+
+  const step = dir => {
+    if (view === 'mesec') cal.cursor = new Date(c.getFullYear(), c.getMonth() + dir, 1);
+    else if (view === 'teden') cal.cursor = addDays(c, 7 * dir);
+    else if (view === 'dan') { cal.cursor = addDays(c, dir); cal.selected = cal.cursor; }
+    reload();
+  };
+  const setView = v => { cal.view = v; try { localStorage.setItem('v1-cal-view', v); } catch { /* */ } if (v === 'dan' || v === 'teden') cal.cursor = cal.selected || cal.cursor; reload(); };
+  const views = [['mesec', 'Mesec'], [isPhone() ? 'dan' : 'teden', isPhone() ? 'Dan' : 'Teden'], ['seznam', 'Seznam']];
+
+  const toolbar = h('div', { class: 'cal-bar' },
+    h('div', { class: 'cal-nav' },
+      view !== 'seznam' ? [
+        h('button', { class: 'btn', 'aria-label': 'Nazaj', onclick: () => step(-1) }, '‹'),
+        h('button', { class: 'btn', onclick: () => { cal.cursor = dayStart(new Date()); cal.selected = cal.cursor; reload(); } }, 'Danes'),
+        h('button', { class: 'btn', 'aria-label': 'Naprej', onclick: () => step(1) }, '›'),
+      ] : null,
+      h('h2', { class: 'cal-title' }, title)),
+    h('div', { class: 'cal-seg', role: 'tablist', 'aria-label': 'Pogled koledarja' },
+      views.map(([v, l]) => h('button', { role: 'tab', 'aria-selected': String(view === v), onclick: () => setView(v) }, l))),
+    h('button', { class: 'btn btn-primary', onclick: () => newAt(cal.selected || new Date()) }, icon('plus', 16), 'Termin'));
+
+  let body;
+  if (view === 'mesec') body = monthView(from, to, c, onDay);
+  else if (view === 'teden') body = timeGrid(Array.from({ length: 7 }, (_, i) => addDays(from, i)), items);
+  else if (view === 'dan') body = timeGrid([from], items);
+  else body = agenda(items);
+
+  clear(page, h('div', { class: 'f-head' }, h('h1', {}, 'Koledar')), toolbar, body);
+}
+
+function chip(a, compact) {
+  return h('button', { class: `cal-chip t-${a.type || 'other'}${a.done ? ' done' : ''}`, title: `${hm(a.start)} ${apptTitle(a)}${a.customer_name ? ' · ' + a.customer_name : ''}`,
+    onclick: e => { e.stopPropagation(); appointmentDialog(a); } },
+    h('span', { class: 'cal-chip-time' }, hm(a.start)), compact ? null : h('span', { class: 'cal-chip-txt' }, apptTitle(a)));
+}
+
+function monthView(from, to, cursor, onDay) {
+  const today = dayStart(new Date());
+  const cells = [];
+  for (let d = new Date(from); d < to; d = addDays(d, 1)) {
+    const day = new Date(d);
+    const list = onDay(day);
+    const out = day.getMonth() !== cursor.getMonth();
+    const sel = cal.selected && sameDay(day, cal.selected);
+    const max = 3;
+    cells.push(h('div', {
+      class: `cal-cell${out ? ' out' : ''}${sameDay(day, today) ? ' today' : ''}${sel ? ' sel' : ''}${day < today ? ' past' : ''}`,
+      role: 'gridcell', tabindex: 0, 'aria-label': fmt(day, { weekday: 'long', day: 'numeric', month: 'long' }) + (list.length ? `, ${list.length} termin(ov)` : ''),
+      onclick: () => { cal.selected = day; reload(); },
+      ondblclick: () => newAt(day),
+      onkeydown: e => { if (e.key === 'Enter') { cal.selected = day; reload(); } },
+    },
+      h('div', { class: 'cal-cell-head' }, h('span', { class: 'cal-num' }, String(day.getDate())),
+        h('button', { class: 'cal-add', 'aria-label': 'Nov termin', title: 'Nov termin', onclick: e => { e.stopPropagation(); newAt(day); } }, '+')),
+      h('div', { class: 'cal-chips' }, list.slice(0, max).map(a => chip(a, false)),
+        list.length > max ? h('span', { class: 'cal-more' }, `+ še ${list.length - max}`) : null),
+      list.length ? h('div', { class: 'cal-dots', 'aria-hidden': 'true' }, list.slice(0, 4).map(a => h('i', { class: `t-${a.type || 'other'}` }))) : null));
+  }
+  const sel = cal.selected && cal.selected >= from && cal.selected < to ? cal.selected : null;
+  return h('div', { class: 'cal-month-wrap' },
+    h('div', { class: 'cal-month', role: 'grid' },
+      DOW.map(d => h('div', { class: 'cal-dow', role: 'columnheader' }, d)),
+      cells),
+    sel ? dayPanel(sel, onDay(sel)) : null);
+}
+
+function dayPanel(day, list) {
+  return h('section', { class: 'cal-daypanel' },
+    h('div', { class: 'section-title' }, h('h2', {}, cap(fmt(day, { weekday: 'long', day: 'numeric', month: 'long' }))), h('span', { class: 'spacer' }),
+      h('button', { class: 'btn btn-sm', onclick: () => newAt(day) }, icon('plus', 14), 'Termin')),
+    list.length ? h('div', { class: 'list' }, list.map(apptRow)) : h('p', { class: 'muted' }, 'Ta dan ni terminov.'));
+}
+
+function apptRow(a) {
+  return h('div', { class: `appt ${a.done ? 'done' : ''}` },
+    h('div', { class: 'time' }, hm(a.start), a.end ? h('small', {}, `do ${hm(a.end)}`) : null),
+    h('div', { style: { minWidth: 0, cursor: 'pointer' }, onclick: () => appointmentDialog(a) },
+      h('strong', {}, apptTitle(a)), ' ', h('span', { class: `tag t-${a.type || 'other'}` }, TYPES[a.type] || a.type),
+      h('div', { class: 'muted', style: { fontSize: '13.5px' } }, [a.customer_name, a.site_name, a.technician].filter(Boolean).join(' · ')),
+      a.notes ? h('div', { class: 'muted', style: { fontSize: '13px', whiteSpace: 'pre-wrap' } }, a.notes) : null),
+    h('div', { class: 'acts' },
+      a.customer_phone ? h('a', { class: 'btn-icon', href: `tel:${a.customer_phone.replace(/\s/g, '')}`, title: 'Pokliči' }, '☎') : null,
+      a.site_address ? h('a', { class: 'btn-icon', href: mapsUrl(a.site_address, a.site_city), target: '_blank', rel: 'noopener', title: 'Navigacija' }, icon('map')) : null,
+      h('a', { class: 'btn-icon', href: `/api/appointments/${a.id}/ics`, title: 'Dodaj v koledar telefona' }, icon('download')),
+      !a.done ? h('button', { class: 'btn-icon', title: 'Opravljeno', onclick: async () => { await put(`/api/appointments/${a.id}`, { done: 1 }); reload(); } }, icon('check')) : null));
+}
+
+function timeGrid(days, items) {
+  const HOUR = 48; // višina ure v px
+  let first = 7, last = 19;
+  for (const a of items) {
+    const s = new Date(a.start * 1000), e = new Date((a.end || a.start + 3600) * 1000);
+    first = Math.min(first, s.getHours()); last = Math.max(last, e.getHours() + (e.getMinutes() ? 1 : 0));
+  }
+  last = Math.min(24, Math.max(last, first + 8));
+  const hours = Array.from({ length: last - first }, (_, i) => first + i);
+  const today = dayStart(new Date());
+  const now = new Date();
+
+  const cols = days.map(day => {
+    const list = items.filter(a => a.start >= ts(day) && a.start < ts(day) + DAY_S).sort((a, b) => a.start - b.start);
+    // prekrivajoče se termine razporedimo drug ob drugega; ozki so samo tisti, ki se res prekrivajo
+    const placed = [];
+    let cluster = [], lanes = [], clusterEnd = 0;
+    const closeCluster = () => { for (const p of cluster) p.n = lanes.length; cluster = []; lanes = []; };
+    for (const a of list) {
+      const end = a.end || a.start + 3600;
+      if (cluster.length && a.start >= clusterEnd) closeCluster();
+      let lane = lanes.findIndex(l => l <= a.start);
+      if (lane < 0) { lane = lanes.length; lanes.push(end); } else lanes[lane] = end;
+      const p = { a, end, lane, n: 1 };
+      cluster.push(p); placed.push(p);
+      clusterEnd = cluster.length === 1 ? end : Math.max(clusterEnd, end);
+    }
+    closeCluster();
+    const top = s => ((s - ts(day)) / 3600 - first) * HOUR;
+    const col = h('div', { class: `cal-col${sameDay(day, today) ? ' today' : ''}`, style: { height: `${hours.length * HOUR}px` },
+      onclick: e => {
+        if (e.target !== col) return;
+        const y = e.offsetY; const mins = Math.floor((y / HOUR) * 2) * 30;
+        newAt(day, first + Math.floor(mins / 60), mins % 60);
+      } },
+      placed.map(({ a, end, lane, n }) => {
+        const hgt = Math.max(22, ((end - a.start) / 3600) * HOUR - 2);
+        return h('button', {
+          class: `cal-ev t-${a.type || 'other'}${a.done ? ' done' : ''}${hgt < 40 ? ' short' : ''}`,
+          title: `${hm(a.start)}–${hm(end)} ${apptTitle(a)}${a.customer_name ? ' · ' + a.customer_name : ''}`,
+          style: { top: `${Math.max(0, top(a.start))}px`, height: `${hgt}px`, left: `calc(${(lane / n) * 100}% + 2px)`, width: `calc(${100 / n}% - 4px)` },
+          onclick: e => { e.stopPropagation(); appointmentDialog(a); } },
+          hgt < 40 ? h('strong', {}, `${hm(a.start)} ${apptTitle(a)}`)
+            : [h('strong', {}, apptTitle(a)), h('span', {}, `${hm(a.start)}–${hm(end)}${a.customer_name ? ' · ' + a.customer_name : ''}`)]);
+      }),
+      sameDay(day, today) && now.getHours() >= first && now.getHours() < last
+        ? h('div', { class: 'cal-now', style: { top: `${(now.getHours() + now.getMinutes() / 60 - first) * HOUR}px` } }) : null);
+    return col;
+  });
+
+  return h('div', { class: `cal-grid${days.length === 1 ? ' one' : ''}`, style: `--days:${days.length}` },
+    h('div', { class: 'cal-grid-head' }, h('div', {}),
+      days.map(d => h('button', { class: `cal-gh${sameDay(d, today) ? ' today' : ''}`, onclick: () => { cal.selected = d; cal.cursor = d; cal.view = 'mesec'; reload(); }, title: 'Prikaži v mesecu' },
+        h('span', {}, DOW[(d.getDay() + 6) % 7]), h('b', {}, String(d.getDate()))))),
+    h('div', { class: 'cal-grid-body' },
+      h('div', { class: 'cal-hours' }, hours.map(hh => h('div', { style: { height: `${HOUR}px` } }, `${String(hh).padStart(2, '0')}:00`))),
+      cols));
+}
+
+function agenda(items) {
+  const byDay = new Map();
+  for (const a of items.filter(x => !x.done).sort((x, y) => x.start - y.start)) {
+    const k = dayStart(new Date(a.start * 1000)).getTime();
+    if (!byDay.has(k)) byDay.set(k, []);
+    byDay.get(k).push(a);
+  }
+  if (!byDay.size) return emptyState('V naslednjih 90 dneh ni terminov', 'Dodajte termin z gumbom »Termin« ali v pogledu meseca.');
+  const today = dayStart(new Date());
+  return h('div', {}, [...byDay].map(([k, list]) => {
+    const d = new Date(k);
+    return h('div', { class: `cal-day ${sameDay(d, today) ? 'today' : ''}` },
+      h('h3', {}, fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }), sameDay(d, today) ? ' · danes' : ''),
+      h('div', { class: 'list' }, list.map(apptRow)));
+  }));
 }
 
 export async function appointmentDialog(a = {}) {
