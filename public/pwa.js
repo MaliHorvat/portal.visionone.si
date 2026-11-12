@@ -9,6 +9,7 @@ const isEdge = /Edg\//.test(ua);
 const isChromium = /Chrome\//.test(ua) || isEdge;
 const isSafari = /Safari\//.test(ua) && !isChromium && !/CriOS|FxiOS|EdgiOS/.test(ua);
 const isFirefox = /Firefox\//.test(ua);
+const isOpera = /OPR\/|Opera/.test(ua) && !/Mobile|Android/.test(ua);
 const iosOtherBrowser = isIOS && /CriOS|FxiOS|EdgiOS/.test(ua);
 
 let deferredPrompt = null;
@@ -107,6 +108,7 @@ function installContent(compact) {
   if (iosOtherBrowser) steps = ['Portal odprite v brskalniku Safari (portal.visionone.si).', 'Tapnite gumb Deli (kvadrat s puščico navzgor).', 'Izberite »Dodaj na začetni zaslon« in potrdite z »Dodaj«.'];
   else if (isIOS) steps = ['Tapnite gumb Deli (kvadrat s puščico navzgor) v spodnji ali zgornji vrstici Safarija.', 'Izberite »Dodaj na začetni zaslon«.', 'Potrdite z »Dodaj«. Ikona VisionOne se pojavi na začetnem zaslonu.'];
   else if (isMac && isSafari) steps = ['V menijski vrstici izberite Datoteka → Dodaj v Dock (Safari 17 ali novejši).', 'Potrdite ime VisionOne in kliknite Dodaj.', 'Aplikacija se pojavi v Docku in v mapi Aplikacije.'];
+  else if (isOpera) steps = ['Opera na računalniku nameščanja spletnih aplikacij ne podpira.', `Portal odprite v brskalniku ${isMac ? 'Safari, Chrome ali Edge' : 'Microsoft Edge (že nameščen v sistemu Windows)'} in ga namestite od tam. Opero lahko še naprej uporabljate za vse ostalo.`];
   else if (isFirefox) steps = ['Firefox nameščanja spletnih aplikacij ne podpira.', `Portal odprite v brskalniku ${isMac ? 'Safari, Chrome ali Edge' : 'Edge ali Chrome'} in ga namestite od tam.`];
   else if (isChromium) steps = [`V naslovni vrstici kliknite ikono za namestitev (zaslon s puščico) ali odprite meni ${isEdge ? '… → Aplikacije → Namesti to spletno mesto kot aplikacijo' : '⋮ → Shrani in deli → Namesti stran kot aplikacijo'}.`, 'Potrdite z Namesti.'];
   else steps = ['Odprite meni brskalnika in izberite možnost za namestitev aplikacije ali dodajanje na začetni zaslon.'];
@@ -130,7 +132,7 @@ export function installHint() {
   const KEY = 'v1-pwa-hint-hidden';
   let hidden = false;
   try { hidden = localStorage.getItem(KEY) === '1'; } catch { /* zasebni način */ }
-  if (hidden || isInstalled() || (isFirefox && !isIOS)) return null;
+  if (hidden || isInstalled() || ((isFirefox || isOpera) && !isIOS)) return null;
   if (!isIOS && !deferredPrompt && !(isMac && isSafari)) return null;
   const el = h('div', { class: 'pwa-hint' },
     h('img', { src: '/icons/icon-192.png', alt: '', width: 40, height: 40 }),
