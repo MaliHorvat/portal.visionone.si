@@ -151,6 +151,7 @@ api.get('/api/customers/:id', auth, async (req, res) => {
   c.sites = (await q.all(`SELECT s.*, (SELECT COUNT(*) FROM equipment WHERE site_id=s.id) equipment_count FROM sites s WHERE customer_id=? ORDER BY name`, c.id)).map(publicSite);
   c.documents = await q.all('SELECT id, type, number, status, date, due_date, total, paid, title FROM documents WHERE customer_id=? ORDER BY date DESC, id DESC', c.id);
   c.appointments = await q.all('SELECT * FROM appointments WHERE customer_id=? ORDER BY start DESC LIMIT 30', c.id);
+  c.equipment = (await q.all('SELECT e.*, s.name site_name FROM equipment e JOIN sites s ON s.id=e.site_id WHERE s.customer_id=? ORDER BY s.name, e.type, e.name', c.id)).map(publicEquipment);
   sendJson(res, 200, c);
 });
 api.put('/api/customers/:id', auth, async (req, res) => { await update('customers', req.params.id, pick(await readJson(req), CUST_FIELDS)); sendJson(res, 200, { ok: true }); });
@@ -182,7 +183,7 @@ api.get('/api/sites/:id', auth, async (req, res) => {
   if (!s) throw new HttpError(404, 'Objekt ne obstaja');
   const out = publicSite(s);
   out.customer = await q.get('SELECT id, name, phone, email, address, city FROM customers WHERE id=?', s.customer_id);
-  out.equipment = (await q.all('SELECT * FROM equipment WHERE site_id=? ORDER BY type, name', s.id)).map(e => { const x = { ...e, has_password: !!e.password_enc }; delete x.password_enc; return x; });
+  out.equipment = (await q.all('SELECT * FROM equipment WHERE site_id=? ORDER BY type, name', s.id)).map(publicEquipment);
   out.plans = await q.all('SELECT id, name FROM plans WHERE site_id=? ORDER BY id', s.id);
   out.documents = await q.all('SELECT id, type, number, status, date, total, title FROM documents WHERE site_id=? ORDER BY date DESC', s.id);
   out.files = await q.all('SELECT id, name, mime, size, created_at FROM files WHERE site_id=? ORDER BY id DESC', s.id);
@@ -221,7 +222,21 @@ api.get('/api/sites/:id/vms-status', auth, async (req, res) => {
 });
 
 // ---------- oprema ----------
-const EQ_FIELDS = ['site_id', 'type', 'name', 'brand', 'model', 'serial', 'mac', 'ip', 'firmware', 'username', 'location', 'installed_at', 'warranty_until', 'connected_to', 'port', 'product_id', 'notes', 'plan_id', 'plan_x', 'plan_y', 'dir', 'fov', 'range'];
+const EQ_FIELDS = ['site_id', 'specs', 'type', 'name', 'brand', 'model', 'serial', 'mac', 'ip', 'firmware', 'username', 'location', 'installed_at', 'warranty_until', 'connected_to', 'port', 'product_id', 'notes', 'plan_id', 'plan_x', 'plan_y', 'dir', 'fov', 'range'];
+/** Tehnični podatki: ploski objekt kratkih besedil, največ 40 polj. */
+function cleanSpecs(v) {
+  if (v == null || v === '') return null;
+  let o = v;
+  if (typeof v === 'string') { try { o = JSON.parse(v); } catch { throw new HttpError(400, 'Neveljavni tehnični podatki'); } }
+  if (typeof o !== 'object' || Array.isArray(o)) throw new HttpError(400, 'Neveljavni tehnični podatki');
+  const out = {};
+  for (const [k, val] of Object.entries(o).slice(0, 40)) {
+    if (!/^[a-z_]{1,32}$/.test(k) || val == null || val === '') continue;
+    out[k] = String(val).slice(0, 200);
+  }
+  return Object.keys(out).length ? JSON.stringify(out) : null;
+}
+const publicEquipment = e => { const x = { ...e, has_password: !!e.password_enc }; delete x.password_enc; return x; };
 api.post('/api/equipment', auth, async (req, res) => {
   const b = await readJson(req);
   const list = Array.isArray(b.items) ? b.items : [b];
@@ -229,6 +244,7 @@ api.post('/api/equipment', auth, async (req, res) => {
   for (const it of list) {
     if (!it.site_id) throw new HttpError(400, 'Manjka objekt');
     const d = pick(it, EQ_FIELDS);
+    d.specs = cleanSpecs(it.specs);
     if (it.password) d.password_enc = encrypt(it.password);
     ids.push(await insert('equipment', d));
   }
@@ -237,6 +253,7 @@ api.post('/api/equipment', auth, async (req, res) => {
 api.put('/api/equipment/:id', auth, async (req, res) => {
   const b = await readJson(req);
   const d = pick(b, EQ_FIELDS);
+  if (b.specs !== undefined) d.specs = cleanSpecs(b.specs);
   if (b.password !== undefined && b.password !== '') d.password_enc = encrypt(b.password);
   if (b.clear_password) d.password_enc = null;
   await update('equipment', req.params.id, d);

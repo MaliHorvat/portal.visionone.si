@@ -48,6 +48,7 @@ const ICONS = {
   refresh: 'M20 11a8 8 0 10-2 6M20 4v7h-7',
   download: 'M12 4v12M7 11l5 5 5-5M4 20h16',
   logout: 'M15 4h4v16h-4M10 16l-4-4 4-4M6 12h11',
+  copy: 'M9 9h10v10H9zM5 15V5h10',
   full: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
   snap: 'M4 7h4l2-3h4l2 3h4v12H4zM12 17a4 4 0 100-8 4 4 0 000 8z',
   mic: 'M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3zM5 11a7 7 0 0014 0M12 18v3',

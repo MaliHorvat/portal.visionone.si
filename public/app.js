@@ -5,11 +5,13 @@ import { pageCalendar, pageCatalog, pageSettings, appointmentDialog } from './pa
 import { planEditor, networkMap } from './plan.js';
 import { pageInquiries, TOPICS as INQ_TOPICS } from './pages-inquiries.js';
 import { initPwa, installHint, loginInstallNote, clearOfflineData } from './pwa.js';
+import { equipmentDialog, bulkEquipment, equipmentTable, equipmentCounts, customerEquipment } from './equipment.js';
 import { setLoginExtra, setBeforeLogout } from './lib/core.js';
 
 export const F = { me: null, meta: null, company: null };
 export const money = n => `${new Intl.NumberFormat('sl-SI', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n) || 0)} €`;
-export const dateSl = d => (d ? new Date(String(d).length === 10 ? `${d}T12:00:00` : Number(d) * 1000).toLocaleDateString('sl-SI') : '–');
+// datum je lahko »2026-11-13« ali unix čas v sekundah (oba imata 10 znakov, zato ločimo po vezaju)
+export const dateSl = d => (d ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(d)) ? `${d}T12:00:00` : Number(d) * 1000).toLocaleDateString('sl-SI') : '–');
 export const timeSl = ts => new Date(ts * 1000).toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
 export const todayIso = () => new Date().toLocaleDateString('sv-SE');
 export const mapsUrl = (...parts) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.filter(Boolean).join(', '))}`;
@@ -188,6 +190,7 @@ async function pageCustomer(page, id) {
     h('div', { class: 'list' }, c.sites.length ? c.sites.map(s => h('a', { class: 'list-item', href: `#/objekt/${s.id}` },
       h('div', { class: 'main' }, h('strong', {}, s.name), h('small', {}, [s.address, s.city].filter(Boolean).join(', ') || '–')),
       h('div', { class: 'end' }, `${s.equipment_count} naprav`, s.next_service ? h('small', { style: { color: s.next_service < todayIso() ? 'var(--alarm)' : '' } }, `servis ${dateSl(s.next_service)}`) : null))) : h('p', { class: 'muted', style: { padding: '14px', margin: 0 } }, 'Ni objektov.')),
+    customerEquipment(c),
     h('div', { class: 'section-title' }, h('h2', {}, 'Dokumenti'), h('span', { class: 'spacer' }),
       h('button', { class: 'btn btn-sm', onclick: () => newDocument('quote', { customer_id: c.id }) }, 'Ponudba'),
       h('button', { class: 'btn btn-sm', onclick: () => newDocument('workorder', { customer_id: c.id }) }, 'Nalog'),
@@ -290,85 +293,14 @@ async function loadVms(s, el) {
 }
 
 function equipmentTab(s) {
-  const ET = F.meta.equipment_types;
-  const byId = Object.fromEntries(s.equipment.map(e => [e.id, e]));
-  const rows = s.equipment.map(e => h('tr', {},
-    h('td', {}, h('strong', {}, e.name || ET[e.type]), h('div', { class: 'eq-type' }, ET[e.type])),
-    h('td', {}, [e.brand, e.model].filter(Boolean).join(' ') || '–', e.serial ? h('div', { class: 'eq-type' }, `S/N ${e.serial}`) : null),
-    h('td', { class: 'mono' }, e.ip ? h('a', { href: `http://${e.ip}`, target: '_blank', rel: 'noopener' }, e.ip) : '–', e.mac ? h('div', { class: 'eq-type' }, e.mac) : null),
-    h('td', { class: 'hide-m' }, e.location || '–', e.connected_to && byId[e.connected_to] ? h('div', { class: 'eq-type' }, `→ ${byId[e.connected_to].name || ET[byId[e.connected_to].type]}${e.port ? `, vrata ${e.port}` : ''}`) : null),
-    h('td', { class: 'hide-m' }, e.warranty_until ? h('span', { style: { color: e.warranty_until < todayIso() ? 'var(--muted)' : '' } }, dateSl(e.warranty_until)) : '–'),
-    h('td', {}, e.username || '', e.has_password ? h('button', { class: 'btn btn-sm btn-ghost', onclick: async ev => { const r = await get(`/api/equipment/${e.id}/password`); ev.target.replaceWith(h('span', { class: 'pw' }, r.password)); } }, 'geslo') : null),
-    h('td', { class: 'actions' }, h('button', { class: 'btn btn-sm', onclick: () => equipmentDialog(s, e) }, 'Uredi'))));
+  const ctx = { sites: [{ id: s.id, name: s.name }], siteId: s.id, equipment: s.equipment };
   return h('div', {},
     h('div', { class: 'btn-row', style: { marginBottom: '10px' } },
-      h('button', { class: 'btn btn-primary btn-sm', onclick: () => equipmentDialog(s) }, icon('plus', 14), 'Naprava'),
-      h('button', { class: 'btn btn-sm', onclick: () => bulkEquipment(s) }, 'Dodaj več kamer naenkrat')),
-    s.equipment.length ? h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['Naprava', 'Model', 'IP / MAC', 'Lokacija', 'Garancija', 'Dostop', ''].map((t, i) => h('th', { class: [3, 4].includes(i) ? 'hide-m' : '' }, t)))), h('tbody', {}, rows)))
+      h('button', { class: 'btn btn-primary btn-sm', onclick: () => equipmentDialog(ctx) }, icon('plus', 14), 'Naprava'),
+      h('button', { class: 'btn btn-sm', onclick: () => bulkEquipment(ctx) }, 'Dodaj več kamer naenkrat'),
+      s.equipment.length ? h('span', { class: 'muted', style: { fontSize: '13px' } }, equipmentCounts(s.equipment)) : null),
+    s.equipment.length ? equipmentTable(ctx, s.equipment)
       : emptyState('Ni opreme', 'Vpišite kamere, snemalnik, diske in omrežno opremo. Podatki se uporabijo v tlorisu, shemi in zapisniku o predaji.'));
-}
-
-export function equipmentDialog(s, e = {}) {
-  const ET = F.meta.equipment_types;
-  const f = h('form', { autocomplete: 'off' },
-    h('div', { class: 'form-grid' },
-      field('Vrsta', select(Object.entries(ET), e.type || 'camera', { name: 'type' })),
-      field('Naziv', h('input', { name: 'name', value: e.name || '', placeholder: 'npr. Kamera dvorišče' })),
-      field('Proizvajalec', h('input', { name: 'brand', value: e.brand || '', list: 'brands' })),
-      field('Model', h('input', { name: 'model', value: e.model || '' })),
-      field('Serijska številka', h('input', { name: 'serial', value: e.serial || '' })),
-      field('MAC naslov', h('input', { name: 'mac', value: e.mac || '' })),
-      field('IP naslov', h('input', { name: 'ip', value: e.ip || '', inputmode: 'decimal' })),
-      field('Firmware', h('input', { name: 'firmware', value: e.firmware || '' })),
-      field('Uporabniško ime', h('input', { name: 'username', value: e.username || '', autocomplete: 'off' })),
-      field('Geslo (šifrirano)', h('input', { name: 'password', type: 'password', placeholder: e.has_password ? 'shranjeno – vpišite za spremembo' : '', autocomplete: 'new-password' })),
-      field('Lokacija', h('input', { name: 'location', value: e.location || '', placeholder: 'npr. Fasada sever, 3 m' })),
-      field('Priključeno na', select([['', '–'], ...s.equipment.filter(x => x.id !== e.id).map(x => [x.id, x.name || ET[x.type]])], e.connected_to || '', { name: 'connected_to' })),
-      field('Vrata (port)', h('input', { name: 'port', value: e.port || '' })),
-      field('Datum vgradnje', h('input', { name: 'installed_at', type: 'date', value: e.installed_at || todayIso() })),
-      field('Garancija do', h('input', { name: 'warranty_until', type: 'date', value: e.warranty_until || '' }))),
-    h('datalist', { id: 'brands' }, ['Hikvision', 'Dahua', 'Uniview', 'Axis', 'Hanwha', 'Bosch', 'Reolink', 'Ubiquiti', 'TP-Link', 'Mikrotik', 'APC', 'Seagate', 'WD', '2N', 'Ajax', 'Paradox'].map(b => h('option', { value: b }))),
-    field('Opombe', h('textarea', { name: 'notes' }, e.notes || '')));
-  modal(e.id ? 'Uredi napravo' : 'Nova naprava', f, {
-    wide: true,
-    actions: [
-      e.id ? { label: 'Izbriši', kind: 'btn-danger', onClick: async () => { if (await confirmDialog('Izbrišem napravo?', { danger: true, ok: 'Izbriši' })) { await del(`/api/equipment/${e.id}`); reload(); } } } : null,
-      { label: 'Prekliči' },
-      { label: 'Shrani', kind: 'btn-primary', onClick: async () => {
-        const d = formData(f);
-        d.connected_to = d.connected_to ? Number(d.connected_to) : null;
-        if (!d.password) delete d.password;
-        if (e.id) await put(`/api/equipment/${e.id}`, d); else await post('/api/equipment', { ...d, site_id: s.id });
-        toast('Naprava je shranjena'); reload();
-      } }].filter(Boolean),
-  });
-}
-
-function bulkEquipment(s) {
-  const n = h('input', { type: 'number', min: 1, max: 64, value: 4 });
-  const prefix = h('input', { value: 'Kamera' });
-  const brand = h('input', { value: '' });
-  const model = h('input', { value: '' });
-  const ip = h('input', { placeholder: '192.168.1.64', inputmode: 'decimal' });
-  const user = h('input', { value: 'admin', autocomplete: 'off' });
-  const pw = h('input', { type: 'password', autocomplete: 'new-password' });
-  const nvr = select([['', '–'], ...s.equipment.filter(x => ['nvr', 'switch'].includes(x.type)).map(x => [x.id, x.name || x.type])], '');
-  const warranty = h('input', { type: 'date' });
-  modal('Dodaj več kamer', h('div', {}, h('p', { class: 'muted' }, 'Kamere se oštevilčijo (Kamera 1, Kamera 2 …). Če vpišete začetni IP, se zadnja številka povečuje.'),
-    h('div', { class: 'form-grid' }, field('Število', n), field('Ime (predpona)', prefix), field('Proizvajalec', brand), field('Model', model), field('Začetni IP', ip), field('Priključeno na', nvr), field('Uporabnik', user), field('Geslo', pw), field('Garancija do', warranty))), {
-    wide: true,
-    actions: [{ label: 'Prekliči' }, { label: 'Dodaj', kind: 'btn-primary', onClick: async () => {
-      const count = Math.min(64, Number(n.value) || 1);
-      const base = ip.value.split('.');
-      const items = Array.from({ length: count }, (_, i) => ({
-        site_id: s.id, type: 'camera', name: `${prefix.value} ${i + 1}`, brand: brand.value, model: model.value,
-        ip: base.length === 4 ? [...base.slice(0, 3), Number(base[3]) + i].join('.') : null,
-        username: user.value, password: pw.value || undefined, connected_to: nvr.value ? Number(nvr.value) : null, port: nvr.value ? String(i + 1) : null,
-        installed_at: todayIso(), warranty_until: warranty.value || null,
-      }));
-      await post('/api/equipment', { items }); toast(`Dodanih ${count} kamer`); reload();
-    } }],
-  });
 }
 
 function filesTab(s) {

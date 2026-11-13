@@ -237,6 +237,10 @@ export async function renderDocument(id) {
 
 // ---------- Zapisnik o predaji sistema ----------
 export const EQUIP_TYPES = { camera: 'Kamera', nvr: 'Snemalnik (NVR/DVR)', disk: 'Trdi disk', switch: 'Stikalo (PoE)', router: 'Usmerjevalnik', ups: 'UPS', intercom: 'Domofon', alarm: 'Alarmna centrala', sensor: 'Senzor / javljalnik', access: 'Kontrola pristopa', monitor: 'Monitor', ap: 'Dostopna točka (Wi-Fi)', other: 'Drugo' };
+/** Tehnični podatki naprave v eni vrstici za zapisnik (brez gesel – ta niso v specs). */
+function specsText(e) {
+  try { const o = e.specs ? JSON.parse(e.specs) : {}; return Object.values(o).filter(Boolean).join(' · '); } catch { return ''; }
+}
 export async function renderHandover(siteId, { passwords = false } = {}) {
   const s = await q.get('SELECT * FROM sites WHERE id=?', siteId);
   if (!s) return null;
@@ -249,7 +253,7 @@ export async function renderHandover(siteId, { passwords = false } = {}) {
   body += `<h2>Vgrajena oprema</h2><table class="lines"><thead><tr><th>#</th><th>Vrsta</th><th>Naziv / model</th><th>Serijska št.</th><th>IP</th><th>Lokacija</th><th>Garancija do</th>${passwords ? '<th>Uporabnik / geslo</th>' : ''}</tr></thead><tbody>`;
   eq.forEach((e, i) => {
     const pw = passwords ? (() => { try { return decryptLazy(e.password_enc); } catch { return ''; } })() : '';
-    body += `<tr><td>${i + 1}</td><td>${esc(EQUIP_TYPES[e.type] || e.type)}</td><td>${esc([e.name, e.brand, e.model].filter(Boolean).join(' · '))}</td><td>${esc(e.serial)}</td><td>${esc(e.ip)}</td><td>${esc(e.location)}</td><td>${esc(dateSl(e.warranty_until))}</td>${passwords ? `<td>${esc(e.username || '')}${pw ? ` / ${esc(pw)}` : ''}</td>` : ''}</tr>`;
+    body += `<tr><td>${i + 1}</td><td>${esc(EQUIP_TYPES[e.type] || e.type)}</td><td>${esc([e.name, e.brand, e.model].filter(Boolean).join(' · '))}${specsText(e) ? `<div style="color:#4b5866;font-size:8.5pt">${esc(specsText(e))}</div>` : ''}</td><td>${esc(e.serial)}</td><td>${esc(e.ip)}</td><td>${esc(e.location)}</td><td>${esc(dateSl(e.warranty_until))}</td>${passwords ? `<td>${esc(e.username || '')}${pw ? ` / ${esc(pw)}` : ''}</td>` : ''}</tr>`;
   });
   body += '</tbody></table>';
   body += `<h2>Izjava</h2><div class="note" style="margin-top:0">Naročnik potrjuje, da je bil sistem predan v delovanju, da je bil seznanjen z uporabo (živa slika, pregled posnetkov, izvoz) in da je prejel dostopne podatke. Naročnik je seznanjen, da je kot upravljavec videonadzornega sistema dolžan zagotoviti skladnost z ZVOP-2 in GDPR (obvestilo o videonadzoru, evidenca dejavnosti obdelave, rok hrambe posnetkov).${passwords ? '\n\nZapisnik vsebuje gesla – hranite ga na varnem.' : ''}</div>`;

@@ -153,6 +153,8 @@ const COLUMN_UPGRADES = [
   ['products', 'supplier_stock', { mysql: 'VARCHAR(32) NULL', sqlite: 'TEXT' }],
   ['products', 'supplier_price', { mysql: 'DOUBLE NULL', sqlite: 'REAL' }],
   ['products', 'supplier_updated', { mysql: 'BIGINT NULL', sqlite: 'INTEGER' }],
+  // tehnični podatki naprave glede na vrsto (ločljivost, objektiv, kanali, vrata …) kot JSON
+  ['equipment', 'specs', { mysql: 'TEXT NULL', sqlite: 'TEXT' }],
 ];
 // Indeksi, dodani po prvi objavi
 const INDEX_UPGRADES = [
