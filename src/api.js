@@ -432,18 +432,20 @@ api.post('/api/import/digitklik/prices', admin, async (req, res) => {
   const missing = "supplier='digitklik' AND active=1 AND (supplier_price IS NULL OR supplier_price=0) AND (supplier_price_checked IS NULL OR supplier_price_checked <> ?)";
   const rows = await q.all(`SELECT id, supplier_url, price, purchase_price FROM products WHERE ${missing} ORDER BY id LIMIT 40`, run);
   const deadline = Date.now() + 40e3;
-  let fixed = 0, checked = 0;
+  const d_geo = [];
+  let fixed = 0, checked = 0, slovenianOnly = 0;
   const diags = [];
   for (const r of rows) {
     if (Date.now() > deadline) break;
     checked++;
     let pr = { price: null, oldPrice: null };
     try { pr = await digitklik.fetchProductPrice(r.supplier_url); } catch (e) { pr.diag = `napaka pri branju: ${e.message}`; }
-    if (pr.price == null && diags.length < 3) diags.push(`${r.supplier_url.replace(/^https:\/\/digitklik\.si\//, '')}: ${pr.diag || 'cena ni najdena'}`);
+    if (pr.slovenianOnly) { slovenianOnly++; d_geo.push(r.id); }
+    else if (pr.price == null && diags.length < 3) diags.push(`${r.supplier_url.replace(/^https:\/\/digitklik\.si\//, '')}: ${pr.diag || 'cena ni najdena'}`);
     const d = { supplier_price_checked: run };
     if (pr.price != null) {
       const net = Math.round((pr.price / 1.22) * 100) / 100;
-      Object.assign(d, { supplier_price: pr.price, supplier_old_price: pr.oldPrice || null, purchase_price: net });
+      Object.assign(d, { supplier_price: pr.price, supplier_old_price: pr.oldPrice || null, purchase_price: net, supplier_price_note: null });
       if (b.update_prices || !(Number(r.price) > 0)) d.price = Math.round(net * (1 + margin / 100) * 100) / 100;
       fixed++;
     }
@@ -451,7 +453,8 @@ api.post('/api/import/digitklik/prices', admin, async (req, res) => {
     await new Promise(ok => setTimeout(ok, 120));
   }
   const remaining = (await q.get(`SELECT COUNT(*) n FROM products WHERE ${missing}`, run)).n;
-  sendJson(res, 200, { checked, fixed, remaining, diags });
+  if (d_geo.length) await q.run(`UPDATE products SET supplier_price_note='si-only' WHERE id IN (${d_geo.map(() => '?').join(',')})`, ...d_geo);
+  sendJson(res, 200, { checked, fixed, remaining, diags, slovenian_only: slovenianOnly });
 });
 api.post('/api/import/digitklik/finish', admin, async (req, res) => {
   const b = await readJson(req);

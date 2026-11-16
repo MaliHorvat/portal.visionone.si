@@ -163,7 +163,9 @@ export async function fetchProductPrice(url) {
   if (!/^https:\/\/(www\.)?digitklik\.si\/izdelek_/.test(url || '')) return { price: null, oldPrice: null, diag: 'neveljaven naslov izdelka' };
   const html = await fetchText(url);
   const r = parseProductPrice(html);
-  if (r.price == null) r.diag = describePage(html);
+  // nekatere znamke (Dahua, Hikvision) imajo ceno vidno samo obiskovalcem iz Slovenije
+  r.slovenianOnly = r.price == null && /prices for slovenian only/i.test(html);
+  if (r.price == null) r.diag = r.slovenianOnly ? 'cena je vidna samo obiskovalcem iz Slovenije' : describePage(html);
   return r;
 }
 

@@ -284,6 +284,7 @@ const EXTRA_SORTS = { discount: { key: 'discount', get: p => (p.supplier_old_pri
 /** Cena pri dobavitelju (z DDV): ob akciji prečrtana redna cena in znižana cena. */
 function supplierPriceCell(p) {
   if (!p.supplier) return '–';
+  if (!(p.supplier_price > 0) && p.supplier_price_note === 'si-only') return h('a', { href: p.supplier_url, target: '_blank', rel: 'noopener', class: 'muted', title: 'Dobavitelj to ceno prikaže samo obiskovalcem iz Slovenije – preverite jo na digitklik.si in jo vpišite v Uredi' }, 'samo v SI ↗');
   if (!(p.supplier_price > 0)) return h('span', { class: 'muted', title: 'Cena še ni prebrana – zaženite uvoz ali »Samo dopolni manjkajoče cene«' }, 'ni cene');
   return h('div', { class: 'sup-price' },
     p.supplier_old_price > p.supplier_price ? h('del', {}, money(p.supplier_old_price)) : null,
@@ -402,12 +403,14 @@ async function digitklikDialog(onDone) {
   const setPct = p => { bar.firstChild.style.width = `${p}%`; };
   // artikli, pri katerih cene v seznamu ni bilo: preberemo jo s strani izdelka
   const fillPrices = async opts => {
-    let fixed = 0, total = null;
+    let fixed = 0, total = null, siOnly = 0;
     for (;;) {
       if (cancel) break;
       const r = await post('/api/import/digitklik/prices', opts);
       fixed += r.fixed;
-      if (r.diags?.length) errBox.textContent = `Cene ni bilo mogoče prebrati (podrobnosti za podporo):\n${r.diags.join('\n')}`;
+      siOnly += r.slovenian_only || 0;
+      if (siOnly) errBox.textContent = `${siOnly} artiklov (predvsem Dahua in Hikvision) ima ceno vidno samo obiskovalcem iz Slovenije, strežnik portala pa je v tujini. V katalogu so označeni »samo v SI«.`;
+      if (r.diags?.length) errBox.textContent += `${siOnly ? '\n' : ''}Cene ni bilo mogoče prebrati (podrobnosti za podporo):\n${r.diags.join('\n')}`;
       if (total == null) total = r.remaining + r.checked;
       setPct(Math.min(99, Math.round(((total - r.remaining) / Math.max(total, 1)) * 100)));
       status.textContent = `Dopolnjujem cene s strani izdelkov: ${total - r.remaining} / ${total}`;

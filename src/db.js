@@ -162,6 +162,8 @@ const COLUMN_UPGRADES = [
   // redna cena pri akciji (z DDV) in zadnje preverjanje cene na strani izdelka
   ['products', 'supplier_old_price', { mysql: 'DOUBLE NULL', sqlite: 'REAL' }],
   ['products', 'supplier_price_checked', { mysql: 'BIGINT NULL', sqlite: 'INTEGER' }],
+  // npr. 'si-only': dobavitelj ceno prikaže samo obiskovalcem iz Slovenije
+  ['products', 'supplier_price_note', { mysql: 'VARCHAR(32) NULL', sqlite: 'TEXT' }],
 ];
 // Indeksi, dodani po prvi objavi
 const INDEX_UPGRADES = [
