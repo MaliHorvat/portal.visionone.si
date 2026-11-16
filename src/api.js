@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { Router, HttpError, readJson, sendJson, sendBuffer, parseCookies, httpRequest, clientIp } from './http-util.js';
 import { q, insert, update, pick, getSetting, setSetting, encrypt, decrypt, SECRET, transaction, putBlob, getBlob, deleteBlob, DIALECT, upsertSupplierProducts } from './db.js';
 import * as digitklik from './suppliers/digitklik.js';
+import { classify } from './suppliers/categories.js';
 import { company, calcTotals, nextNumber, reference, DOC_TYPES, STATUS, renderDocument, renderHandover, renderNotice, setDecrypt, EQUIP_TYPES } from './docs.js';
 
 setDecrypt(decrypt);
@@ -324,7 +325,9 @@ api.get('/api/products', auth, async (req, res) => {
   const s = `%${u.get('q') || ''}%`;
   const cat = u.get('category');
   const limit = Math.min(Number(u.get('limit')) || 1000, 2000);
-  sendJson(res, 200, await q.all(`SELECT * FROM products WHERE (name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR description LIKE ?) ${cat ? 'AND category=?' : ''} ${u.get('all') ? '' : 'AND active=1'} ORDER BY category, name LIMIT ${limit}`, s, s, s, s, s, ...(cat ? [cat] : [])));
+  // izbrana skupina (npr. »Alarmi«) zajame tudi vse podskupine (»Alarmi › Brezžični sistemi« …)
+  const catEsc = cat ? cat.replace(/[!%_]/g, m => `!${m}`) : null;
+  sendJson(res, 200, await q.all(`SELECT * FROM products WHERE (name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR supplier_category LIKE ? OR description LIKE ?) ${cat ? "AND (category=? OR category LIKE ? ESCAPE '!')" : ''} ${u.get('all') ? '' : 'AND active=1'} ORDER BY category, name LIMIT ${limit}`, s, s, s, s, s, s, ...(cat ? [cat, `${catEsc} › %`] : [])));
 });
 // Slika izdelka prek našega strežnika – rezerva, če dobavitelj ne dovoli prikaza slike na drugi strani.
 api.get('/api/products/:id/image', auth, async (req, res) => {
@@ -359,7 +362,29 @@ api.delete('/api/products/:id', admin, async (req, res) => {
 
 // ---------- uvoz cenika dobavitelja digitklik.si ----------
 // Odjemalec najprej dobi seznam kategorij, nato jih pošilja po nekaj naenkrat (vsak klic < 60 s na Vercelu).
+/** Enkratna prerazvrstitev že uvoženih artiklov v pregledne skupine (Skupina › Podskupina). */
+let schemeChecked = false;
+async function ensureCategoryScheme() {
+  if (schemeChecked) return;
+  if ((await getSetting('category_scheme')) === 1) { schemeChecked = true; return; }
+  const cats = await q.all("SELECT category, COUNT(*) n FROM products WHERE supplier='digitklik' AND supplier_category IS NULL AND category IS NOT NULL GROUP BY category");
+  const probes = ['', 'komplet kit', 'brezžični 868', 'sirena', 'notranja enota monitor', 'zunanja enota panel'];
+  for (const { category } of cats) {
+    const path = String(category).split(' › ');
+    const results = new Set(probes.map(pn => classify(path, pn)));
+    if (results.size === 1) {
+      await q.run("UPDATE products SET supplier_category=category, category=? WHERE supplier='digitklik' AND supplier_category IS NULL AND category=?", [...results][0], category);
+    } else {
+      for (const r of await q.all("SELECT id, name FROM products WHERE supplier='digitklik' AND supplier_category IS NULL AND category=?", category)) {
+        await q.run('UPDATE products SET supplier_category=category, category=? WHERE id=?', classify(path, r.name), r.id);
+      }
+    }
+  }
+  await setSetting('category_scheme', 1);
+  schemeChecked = true;
+}
 api.get('/api/products/categories', auth, async (req, res) => {
+  await ensureCategoryScheme();
   sendJson(res, 200, (await q.all("SELECT category, COUNT(*) n FROM products WHERE active=1 AND category IS NOT NULL AND category<>'' GROUP BY category ORDER BY category")));
 });
 api.get('/api/import/digitklik', admin, async (req, res) => {

@@ -80,7 +80,8 @@ test('uvoz cenika digitklik.si', async () => {
     assert.equal(a.tot.inserted, 4); // 3 kamere/nosilec + vezice; skrit izdelek in podvojena kartica izpuščena
     let prods = (await call('GET', '/api/products?all=1&q=digitklik')).data;
     const cam = prods.find(p => p.sku === 'DK-16899');
-    assert.equal(cam.category, 'Video nadzor › IP kamere DOME (fiksna leča)');
+    assert.equal(cam.category, 'Videonadzor › IP kamere'); // naša razvrstitev
+    assert.equal(cam.supplier_category, 'Video nadzor › HD-IP video nadzor › IP kamere DOME (fiksna leča)');
     assert.equal(cam.brand, 'POLICEtech');
     assert.equal(cam.equipment_type, 'camera');
     assert.equal(cam.purchase_price, 42.09); // 51,35 / 1,22
@@ -107,7 +108,12 @@ test('uvoz cenika digitklik.si', async () => {
     assert.equal(prods.find(p => p.sku === 'DK-18472').active, 0);
 
     const cats = (await call('GET', '/api/products/categories')).data.map(c => c.category);
-    assert.ok(cats.includes('Montažna oprema › Vezice'));
+    assert.ok(cats.includes('Drugo › Vezice'));
+    // izbira skupine zajame vse podskupine
+    const inGroup = (await call('GET', `/api/products?all=1&category=${encodeURIComponent('Videonadzor')}`)).data;
+    assert.ok(inGroup.length >= 1 && inGroup.every(p => p.category.startsWith('Videonadzor › ')));
+    const exact = (await call('GET', `/api/products?all=1&category=${encodeURIComponent('Drugo › Vezice')}`)).data;
+    assert.ok(exact.length >= 1 && exact.every(p => p.category === 'Drugo › Vezice'));
     const st = (await call('GET', '/api/import/digitklik')).data;
     assert.equal(st.count, 3);
   } finally { srv.close(); }

@@ -157,6 +157,8 @@ const COLUMN_UPGRADES = [
   ['equipment', 'specs', { mysql: 'TEXT NULL', sqlite: 'TEXT' }],
   // slika izdelka (naslov pri dobavitelju ali lastni URL)
   ['products', 'image_url', { mysql: 'VARCHAR(500) NULL', sqlite: 'TEXT' }],
+  // izvirna pot kategorij pri dobavitelju (za prikaz); category je naša razvrstitev »Skupina › Podskupina«
+  ['products', 'supplier_category', { mysql: 'VARCHAR(255) NULL', sqlite: 'TEXT' }],
 ];
 // Indeksi, dodani po prvi objavi
 const INDEX_UPGRADES = [
@@ -412,8 +414,8 @@ export function decrypt(blob) {
  * prodajno ceno pa le, če je updatePrices. Vrne { inserted, updated }.
  */
 const SUPPLIER_COLS = ['sku', 'name', 'category', 'brand', 'unit', 'purchase_price', 'price', 'vat', 'track_stock', 'equipment_type', 'description',
-  'supplier', 'supplier_id', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'created_at', 'image_url'];
-const SUPPLIER_UPDATE = ['name', 'category', 'brand', 'purchase_price', 'description', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'image_url'];
+  'supplier', 'supplier_id', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'created_at', 'image_url', 'supplier_category'];
+const SUPPLIER_UPDATE = ['name', 'category', 'brand', 'purchase_price', 'description', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'image_url', 'supplier_category'];
 export async function upsertSupplierProducts(rows, { updatePrices = false, runId = null } = {}) {
   if (!rows.length) return { inserted: 0, updated: 0 };
   const supplier = rows[0].supplier;

@@ -249,29 +249,104 @@ export async function appointmentDialog(a = {}) {
 }
 
 // ======================= KATALOG =======================
+// skupine v vrstnem redu, kot jih uporabljamo pri delu; ostale abecedno, »Drugo« na koncu
+const GROUP_ORDER = ['Videonadzor', 'Alarmi', 'Domofoni', 'Kontrola pristopa', 'Omrežje'];
+const groupRank = g => { const i = GROUP_ORDER.indexOf(g); return i >= 0 ? i : g === 'Drugo' ? 999 : 100; };
+/** Kategorije »Skupina › Podskupina« kot izbirnik s skupinami: najprej vsa skupina, nato podskupine. */
+export function groupedCategoryOptions(cats, cur) {
+  const groups = new Map();
+  for (const c of cats) {
+    const [g, ...sub] = String(c.category).split(' › ');
+    if (!groups.has(g)) groups.set(g, { n: 0, subs: [] });
+    const G = groups.get(g); G.n += c.n;
+    if (sub.length) G.subs.push({ value: c.category, label: sub.join(' › '), n: c.n });
+  }
+  return [...groups].sort((a, b) => groupRank(a[0]) - groupRank(b[0]) || a[0].localeCompare(b[0], 'sl')).map(([g, G]) =>
+    h('optgroup', { label: g },
+      h('option', { value: g, selected: g === cur }, `${g} – vse (${G.n})`),
+      G.subs.sort((a, b) => a.label.localeCompare(b.label, 'sl')).map(sub => h('option', { value: sub.value, selected: sub.value === cur }, `\u2003${sub.label} (${sub.n})`))));
+}
+
+// stolpci kataloga in razvrščanje (klik na glavo stolpca; ponovni klik obrne smer)
+const marginOf = p => (p.purchase_price > 0 && p.price > 0 ? (p.price - p.purchase_price) / p.price : null);
+const CAT_COLS = [
+  { key: 'sku', label: 'Šifra', cls: 'hide-m', get: p => p.sku || '' },
+  { key: 'name', label: 'Naziv', get: p => p.name || '' },
+  { key: 'brand', label: 'Znamka', cls: 'hide-m', get: p => p.brand || '' },
+  { key: 'purchase_price', label: 'Nabavna', cls: 'num hide-m', get: p => Number(p.purchase_price) || 0 },
+  { key: 'price', label: 'Prodajna', cls: 'num', get: p => Number(p.price) || 0 },
+  { key: 'margin', label: 'Marža', cls: 'num hide-m', get: marginOf },
+  { key: 'stock', label: 'Zaloga', cls: 'num', get: p => (p.track_stock ? Number(p.stock) || 0 : null) },
+];
+const SORT_KEY = 'v1-catalog-sort';
+const loadSort = () => { try { return JSON.parse(localStorage.getItem(SORT_KEY)) || { key: 'category', dir: 1 }; } catch { return { key: 'category', dir: 1 }; } };
+const coll = new Intl.Collator('sl', { numeric: true, sensitivity: 'base' });
+
 export async function pageCatalog(page) {
   const search = h('input', { type: 'search', placeholder: 'Išči po nazivu, šifri, proizvajalcu, lastnostih', style: { maxWidth: '360px' } });
   const catSel = h('select', { style: { maxWidth: '320px' }, 'aria-label': 'Kategorija' }, h('option', { value: '' }, 'Vse kategorije'));
   const info = h('div', { class: 'muted', style: { fontSize: '12.5px', margin: '6px 0 0' } });
   const tbody = h('tbody');
+  const theadRow = h('tr');
+  let rows = [];
+  let sort = loadSort();
+  const sortSel = select([['category', 'Razvrsti: po kategorijah'], ['name', 'Naziv A–Ž'], ['-name', 'Naziv Ž–A'], ['brand', 'Znamka'], ['price', 'Cena: najnižja'], ['-price', 'Cena: najvišja'], ['purchase_price', 'Nabavna: najnižja'], ['-margin', 'Marža: najvišja'], ['-stock', 'Zaloga: največja'], ['sku', 'Šifra']],
+    `${sort.dir < 0 ? '-' : ''}${sort.key}`, { 'aria-label': 'Razvrščanje', class: 'cat-sort' });
+  sortSel.onchange = () => { const v = sortSel.value; setSort(v.replace(/^-/, ''), v.startsWith('-') ? -1 : 1); };
+
+  const setSort = (key, dir) => {
+    sort = { key, dir };
+    try { localStorage.setItem(SORT_KEY, JSON.stringify(sort)); } catch { /* */ }
+    const v = `${dir < 0 ? '-' : ''}${key}`;
+    if ([...sortSel.options].some(o => o.value === v)) sortSel.value = v;
+    render();
+  };
+  const renderHead = () => {
+    clear(theadRow, CAT_COLS.map(c => {
+      const active = sort.key === c.key;
+      return h('th', { class: `${c.cls || ''} sortable${active ? ' sorted' : ''}`, 'aria-sort': active ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none' },
+        h('button', { type: 'button', title: `Razvrsti po stolpcu ${c.label}`, onclick: () => setSort(c.key, active ? -sort.dir : (c.cls || '').includes('num') ? -1 : 1) },
+          c.label, h('span', { class: 'sort-ind', 'aria-hidden': 'true' }, active ? (sort.dir > 0 ? '▲' : '▼') : '↕')));
+    }), h('th', { class: 'hide-m' }, sort.key !== 'category' ? h('button', { type: 'button', class: 'sort-reset', onclick: () => setSort('category', 1), title: 'Nazaj na razvrstitev po kategorijah' }, 'Po kategorijah') : null));
+  };
+  const sorted = () => {
+    if (sort.key === 'category') return rows; // strežnik vrne urejeno po kategoriji in nazivu
+    const col = CAT_COLS.find(c => c.key === sort.key) || CAT_COLS[1];
+    return [...rows].sort((a, b) => {
+      const x = col.get(a), y = col.get(b);
+      // prazne vrednosti vedno na konec
+      if (x == null || x === '') return (y == null || y === '') ? 0 : 1;
+      if (y == null || y === '') return -1;
+      const r = typeof x === 'number' && typeof y === 'number' ? x - y : coll.compare(String(x), String(y));
+      return r * sort.dir || coll.compare(a.name || '', b.name || '');
+    });
+  };
+  const render = () => {
+    renderHead();
+    let lastGroup = null;
+    const grouped = sort.key === 'category';
+    const groupRow = p => { if (!grouped) return null; const g = p.category || 'Brez kategorije'; if (g === lastGroup) return null; lastGroup = g; return h('tr', { class: 'cat-group' }, h('td', { colspan: 9 }, g.replace(' › ', '  ›  '))); };
+    clear(tbody, sorted().map(p => [groupRow(p), h('tr', { class: 'tap-row', style: { opacity: p.active ? 1 : 0.5 }, onclick: e => { if (!e.target.closest('a,button,img') && matchMedia('(max-width: 860px)').matches) productDialog(p); } },
+      h('td', { class: 'mono hide-m' }, p.sku || ''),
+      h('td', {}, h('div', { class: 'prod-cell' }, productThumb(p), h('div', { class: 'prod-txt' }, h('strong', {}, p.name), h('div', { class: 'muted', style: { fontSize: '12.5px' } },
+        [grouped ? null : p.category, p.supplier_category ? `pri dobavitelju: ${p.supplier_category}` : null].filter(Boolean).join(' · '),
+        p.supplier === 'digitklik' ? h('span', {}, ' · ', h('a', { href: p.supplier_url, target: '_blank', rel: 'noopener' }, 'digitklik.si'), p.supplier_stock ? ` (zaloga ${p.supplier_stock})` : '') : null)))),
+      h('td', { class: 'hide-m' }, p.brand || '–'),
+      h('td', { class: 'num hide-m' }, money(p.purchase_price)),
+      h('td', { class: 'num' }, money(p.price), h('div', { class: 'muted', style: { fontSize: '12px' } }, `/${p.unit}`)),
+      h('td', { class: 'num hide-m' }, marginOf(p) != null ? `${Math.round(marginOf(p) * 100)} %` : '–'),
+      h('td', { class: 'num' }, p.track_stock ? h('span', { style: { color: p.min_stock > 0 && p.stock <= p.min_stock ? 'var(--warn)' : '' } }, `${p.stock}`) : '–'),
+      h('td', { class: 'actions hide-m' }, h('button', { class: 'btn btn-sm', onclick: () => productDialog(p) }, 'Uredi')))]).flat().filter(Boolean));
+  };
   const loadCats = async () => {
     const cats = await get('/api/products/categories').catch(() => []);
     const cur = catSel.value;
-    clear(catSel, h('option', { value: '' }, 'Vse kategorije'), cats.map(c => h('option', { value: c.category, selected: c.category === cur }, `${c.category} (${c.n})`)));
+    clear(catSel, h('option', { value: '' }, 'Vse kategorije'), groupedCategoryOptions(cats, cur));
   };
   const load = async () => {
-    const rows = await get(`/api/products?all=1&limit=1500&q=${encodeURIComponent(search.value)}&category=${encodeURIComponent(catSel.value)}`);
+    rows = await get(`/api/products?all=1&limit=1500&q=${encodeURIComponent(search.value)}&category=${encodeURIComponent(catSel.value)}`);
     info.textContent = rows.length >= 1500 ? 'Prikazanih je prvih 1500 izdelkov – zožite iskanje ali izberite kategorijo.' : `${rows.length} izdelkov`;
-    clear(tbody, rows.map(p => h('tr', { class: 'tap-row', style: { opacity: p.active ? 1 : 0.5 }, onclick: e => { if (!e.target.closest('a,button') && matchMedia('(max-width: 860px)').matches) productDialog(p); } },
-      h('td', { class: 'mono hide-m' }, p.sku || ''),
-      h('td', {}, h('div', { class: 'prod-cell' }, productThumb(p), h('div', { class: 'prod-txt' }, h('strong', {}, p.name), h('div', { class: 'muted', style: { fontSize: '12.5px' } },
-        [p.category, p.brand].filter(Boolean).join(' · '),
-        p.supplier === 'digitklik' ? h('span', {}, ' · ', h('a', { href: p.supplier_url, target: '_blank', rel: 'noopener' }, 'digitklik.si'), p.supplier_stock ? ` (zaloga ${p.supplier_stock})` : '') : null)))),
-      h('td', { class: 'num hide-m' }, money(p.purchase_price)),
-      h('td', { class: 'num' }, money(p.price), h('div', { class: 'muted', style: { fontSize: '12px' } }, `/${p.unit}`)),
-      h('td', { class: 'num hide-m' }, p.purchase_price > 0 && p.price > 0 ? `${Math.round(((p.price - p.purchase_price) / p.price) * 100)} %` : '–'),
-      h('td', { class: 'num' }, p.track_stock ? h('span', { style: { color: p.min_stock > 0 && p.stock <= p.min_stock ? 'var(--warn)' : '' } }, `${p.stock}`) : '–'),
-      h('td', { class: 'actions hide-m' }, h('button', { class: 'btn btn-sm', onclick: () => productDialog(p) }, 'Uredi')))));
+    render();
   };
   search.oninput = debounce(load, 250);
   catSel.onchange = load;
@@ -281,9 +356,10 @@ export async function pageCatalog(page) {
       isAdmin ? h('button', { class: 'btn hide-m', onclick: () => digitklikDialog(async () => { await loadCats(); await load(); }) }, icon('download', 16), 'Uvoz iz digitklik.si') : null,
       h('button', { class: 'btn hide-m', onclick: importDialog }, 'Uvoz iz CSV'),
       h('button', { class: 'btn btn-primary', onclick: () => productDialog() }, icon('plus', 16), 'Nov izdelek')),
-    h('div', { class: 'row', style: { marginBottom: '12px', gap: '8px', flexWrap: 'wrap' } }, search, catSel),
+    h('div', { class: 'row cat-filters', style: { marginBottom: '12px', gap: '8px', flexWrap: 'wrap' } }, search, catSel, sortSel),
     info,
-    h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', { class: 'hide-m' }, 'Šifra'), h('th', {}, 'Naziv'), h('th', { class: 'num hide-m' }, 'Nabavna'), h('th', { class: 'num' }, 'Prodajna'), h('th', { class: 'num hide-m' }, 'Marža'), h('th', { class: 'num' }, 'Zaloga'), h('th', { class: 'hide-m' }))), tbody)));
+    h('div', { class: 'table-wrap' }, h('table', { class: 'cat-table' }, h('thead', {}, theadRow), tbody)));
+  renderHead();
   loadCats();
   load();
 }
