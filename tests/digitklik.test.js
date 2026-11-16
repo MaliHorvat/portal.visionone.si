@@ -123,6 +123,9 @@ test('cena s strani izdelka (redna in akcijska)', async () => {
   const { parseProductPrice, parseProducts, toProduct } = await import('../src/suppliers/digitklik.js');
   const normal = '<div class="category_text"> <div class="price_old_new"> <p>1,00 € <i style="font-style:normal; font-size:12px;">(z DDV)</i></p> <p class="list-price">Zaloga : 2000+</p>';
   assert.deepEqual(parseProductPrice(normal), { price: 1, oldPrice: null, onRequest: false });
+  // razred se pojavi že v CSS pred pravim elementom (tako je na digitklik.si)
+  const withCss = '<style>.price_old_new .old_price { float: left; } .x{}</style><p>Brezplačna dostava nad 600,00 €</p>' + normal;
+  assert.equal(parseProductPrice(withCss).price, 1);
   const sale = '<div class="price_old_new"> <p class="old_price list-price margin-r8" style="margin-left: 0px; border:none;"><del> 296,00 € </del></p> <p>183,20 € <i style="font-style:normal;">(z DDV)</i></p>';
   assert.deepEqual(parseProductPrice(sale), { price: 183.2, oldPrice: 296, onRequest: false });
   // kartica brez prebrane cene (in brez »na povpraševanje«) ne postane 0 €

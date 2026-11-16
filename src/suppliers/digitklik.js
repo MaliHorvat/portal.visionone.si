@@ -146,9 +146,13 @@ export function guessType(path, name) {
 /** Kategorija za katalog: glavna skupina › zadnja podskupina (npr. »Video nadzor › IP kamere DOME (fiksna leča)«). */
 /** Cena s strani izdelka: <div class="price_old_new"> z neobvezno <del>redno ceno</del> in <p>ceno (z DDV)</p>. */
 export function parseProductPrice(html) {
-  const i = String(html).indexOf('price_old_new');
-  if (i < 0) return { price: null, oldPrice: null, onRequest: /cena na povpra[sš]evanje/i.test(html) };
-  const block = html.slice(i, i + 1500);
+  // pozor: ime razreda se pojavi že prej v CSS (<style>), zato iščemo element <div class="price_old_new">;
+  // če ga ni, vzamemo okolico prvega »(z DDV)«
+  const src = String(html).replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<script[\s\S]*?<\/script>/gi, '');
+  let i = src.search(/<div[^>]*class="[^"]*\bprice_old_new\b/);
+  if (i < 0) { const z = src.indexOf('(z DDV)'); i = z >= 0 ? Math.max(0, z - 600) : -1; }
+  if (i < 0) return { price: null, oldPrice: null, onRequest: /cena na povpra[sš]evanje/i.test(src) };
+  const block = src.slice(i, i + 1500);
   const old = priceOf((/<del>([\s\S]*?)<\/del>/.exec(block) || [])[1]);
   const after = block.replace(/<del>[\s\S]*?<\/del>/, '');
   const price = priceOf((/<p(?:\s[^>]*)?>([\s\S]*?)\(z DDV\)/.exec(after) || [])[1]) ?? priceOf(after);
@@ -167,10 +171,12 @@ export async function fetchProductPrice(url) {
 export function describePage(html) {
   const s = String(html);
   const title = text((/<title>([\s\S]*?)<\/title>/i.exec(s) || [])[1]).slice(0, 90);
-  const i = s.indexOf('price_old_new');
-  const around = i >= 0 ? text(s.slice(i, i + 600)).slice(0, 160) : '';
-  const euro = (text(s).match(/\d[\d.]*,\d{2}\s*€/g) || []).slice(0, 3).join(', ');
-  return `${s.length} B · naslov »${title}« · cenovni blok: ${i >= 0 ? `da (${around})` : 'ne'} · zneski na strani: ${euro || 'ni'}`;
+  const body = s.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<script[\s\S]*?<\/script>/gi, '');
+  const i = body.search(/<div[^>]*class="[^"]*\bprice_old_new\b/);
+  const around = i >= 0 ? text(body.slice(i, i + 600)).slice(0, 160) : '';
+  const zDdv = (body.match(/\(z DDV\)/g) || []).length;
+  const euro = (text(body).match(/\d[\d.]*,\d{2}\s*€/g) || []).slice(0, 3).join(', ');
+  return `${s.length} B · naslov »${title}« · cenovni blok: ${i >= 0 ? `da (${around})` : 'ne'} · »(z DDV)«: ${zDdv}× · zneski na strani: ${euro || 'ni'}`;
 }
 
 export const categoryLabel = path => (path.length <= 1 ? path[0] || 'Digitklik' : `${path[0]} › ${path[path.length - 1]}`);
