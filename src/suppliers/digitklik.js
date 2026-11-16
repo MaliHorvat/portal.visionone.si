@@ -91,7 +91,8 @@ export function parseProducts(html) {
     const flags = [];
     if (/class="over over_sale"/.test(card)) flags.push('akcija');
     if (/class="over over_new"/.test(card)) flags.push('novo');
-    out.set(id, { id, slug, url: `${BASE}/${slug}`, name: text(nameHtml), image, price: now, oldPrice: old && now && old > now ? old : null, stock, features, flags });
+    const onRequest = now == null && /povpra[sš]evanj/i.test(text(priceBlock));
+    out.set(id, { id, slug, url: `${BASE}/${slug}`, name: text(nameHtml), image, price: now, oldPrice: old && now && old > now ? old : null, onRequest, stock, features, flags });
   }
   return [...out.values()];
 }
@@ -143,12 +144,31 @@ export function guessType(path, name) {
 }
 
 /** Kategorija za katalog: glavna skupina › zadnja podskupina (npr. »Video nadzor › IP kamere DOME (fiksna leča)«). */
+/** Cena s strani izdelka: <div class="price_old_new"> z neobvezno <del>redno ceno</del> in <p>ceno (z DDV)</p>. */
+export function parseProductPrice(html) {
+  const i = String(html).indexOf('price_old_new');
+  if (i < 0) return { price: null, oldPrice: null, onRequest: /cena na povpra[sš]evanje/i.test(html) };
+  const block = html.slice(i, i + 1500);
+  const old = priceOf((/<del>([\s\S]*?)<\/del>/.exec(block) || [])[1]);
+  const after = block.replace(/<del>[\s\S]*?<\/del>/, '');
+  const price = priceOf((/<p(?:\s[^>]*)?>([\s\S]*?)\(z DDV\)/.exec(after) || [])[1]) ?? priceOf(after);
+  return { price, oldPrice: old && price && old > price ? old : null, onRequest: price == null && /povpra[sš]evanj/i.test(text(block)) };
+}
+
+export async function fetchProductPrice(url) {
+  if (!/^https:\/\/(www\.)?digitklik\.si\/izdelek_/.test(url || '')) return { price: null, oldPrice: null };
+  return parseProductPrice(await fetchText(url));
+}
+
 export const categoryLabel = path => (path.length <= 1 ? path[0] || 'Digitklik' : `${path[0]} › ${path[path.length - 1]}`);
 
 export function toProduct(p, path, { margin = 0, vat = 22 } = {}) {
-  const onRequest = p.price == null;
-  const net = onRequest ? 0 : Math.round((p.price / (1 + vat / 100)) * 100) / 100;
-  const sell = Math.round(net * (1 + (Number(margin) || 0) / 100) * 100) / 100;
+  // brez cene v seznamu: »na povpraševanje« (cena 0) ali pa cena ni bila prebrana – takrat ostane null,
+  // obstoječa cena se ne prepiše, manjkajočo pa uvoz kasneje prebere s strani izdelka
+  const onRequest = p.price == null && p.onRequest !== false;
+  const known = p.price != null;
+  const net = known ? Math.round((p.price / (1 + vat / 100)) * 100) / 100 : onRequest ? 0 : null;
+  const sell = net == null ? null : Math.round(net * (1 + (Number(margin) || 0) / 100) * 100) / 100;
   const desc = [
     p.features.length ? p.features.join(' · ') : '',
     `Dobavitelj: digitklik.si${onRequest ? ' · cena na povpraševanje' : ''}${p.stock ? ` · zaloga ${p.stock}` : ''}${p.oldPrice ? ` · akcija (redno ${p.oldPrice.toFixed(2).replace('.', ',')} € z DDV)` : ''}`,
@@ -158,5 +178,6 @@ export function toProduct(p, path, { margin = 0, vat = 22 } = {}) {
     sku: `DK-${p.id}`, name: p.name.slice(0, 480), category: classify(path, p.name).slice(0, 180), supplier_category: path.join(' › ').slice(0, 250), brand: guessBrand(p.name),
     unit: 'kos', purchase_price: net, price: sell, vat, track_stock: 0, equipment_type: guessType(path, p.name), description: desc,
     supplier: 'digitklik', supplier_id: String(p.id), supplier_url: p.url, image_url: p.image || null, supplier_stock: p.stock || null, supplier_price: p.price,
+    supplier_old_price: known && p.oldPrice ? p.oldPrice : null,
   };
 }

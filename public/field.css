@@ -346,3 +346,14 @@ th.sorted .sort-ind { opacity: 1; color: var(--accent); }
 .sort-reset:hover { text-decoration: underline; }
 .cat-sort { max-width: 230px; }
 @media (min-width: 861px) { .cat-sort { display: none; } }
+/* cene dobavitelja in akcije */
+.sup-price { display: grid; justify-items: end; line-height: 1.25; }
+.sup-price del { color: var(--muted); font-size: 12.5px; }
+.sup-price .sale { color: var(--alarm); font-weight: 600; }
+.sup-price small { font-size: 11px; }
+.sale-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 3px; font-size: 12.5px; }
+.sale-badge { color: var(--alarm); background: color-mix(in srgb, var(--alarm) 12%, transparent); }
+.sale-badge::before { display: none; }
+.sale-m del { color: var(--muted); }
+@media (min-width: 861px) { .sale-m { display: none; } }
+.cat-table td.num { white-space: nowrap; }

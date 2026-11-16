@@ -424,6 +424,33 @@ api.post('/api/import/digitklik/batch', admin, async (req, res) => {
   out.done = done;
   sendJson(res, 200, out);
 });
+// Artikli brez cene iz seznama: ceno preberemo s strani izdelka (po nekaj naenkrat, odjemalec kliče, dokler ostajajo).
+api.post('/api/import/digitklik/prices', admin, async (req, res) => {
+  const b = await readJson(req);
+  const margin = Math.min(Math.max(Number(b.margin) || 0, 0), 500);
+  const run = Number(b.started) || Math.floor(Date.now() / 1000);
+  const missing = "supplier='digitklik' AND active=1 AND (supplier_price IS NULL OR supplier_price=0) AND (supplier_price_checked IS NULL OR supplier_price_checked <> ?)";
+  const rows = await q.all(`SELECT id, supplier_url, price, purchase_price FROM products WHERE ${missing} ORDER BY id LIMIT 40`, run);
+  const deadline = Date.now() + 40e3;
+  let fixed = 0, checked = 0;
+  for (const r of rows) {
+    if (Date.now() > deadline) break;
+    checked++;
+    let pr = { price: null, oldPrice: null };
+    try { pr = await digitklik.fetchProductPrice(r.supplier_url); } catch { /* stran ni dosegljiva – poskusimo ob naslednjem uvozu */ }
+    const d = { supplier_price_checked: run };
+    if (pr.price != null) {
+      const net = Math.round((pr.price / 1.22) * 100) / 100;
+      Object.assign(d, { supplier_price: pr.price, supplier_old_price: pr.oldPrice || null, purchase_price: net });
+      if (b.update_prices || !(Number(r.price) > 0)) d.price = Math.round(net * (1 + margin / 100) * 100) / 100;
+      fixed++;
+    }
+    await update('products', r.id, d);
+    await new Promise(ok => setTimeout(ok, 120));
+  }
+  const remaining = (await q.get(`SELECT COUNT(*) n FROM products WHERE ${missing}`, run)).n;
+  sendJson(res, 200, { checked, fixed, remaining });
+});
 api.post('/api/import/digitklik/finish', admin, async (req, res) => {
   const b = await readJson(req);
   let archived = 0;

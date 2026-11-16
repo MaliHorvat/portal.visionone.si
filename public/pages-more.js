@@ -273,11 +273,29 @@ const CAT_COLS = [
   { key: 'sku', label: 'Šifra', cls: 'hide-m', get: p => p.sku || '' },
   { key: 'name', label: 'Naziv', get: p => p.name || '' },
   { key: 'brand', label: 'Znamka', cls: 'hide-m', get: p => p.brand || '' },
+  { key: 'supplier_price', label: 'Cena dobavitelja', cls: 'num hide-m', get: p => (p.supplier ? Number(p.supplier_price) || null : null) },
   { key: 'purchase_price', label: 'Nabavna', cls: 'num hide-m', get: p => Number(p.purchase_price) || 0 },
   { key: 'price', label: 'Prodajna', cls: 'num', get: p => Number(p.price) || 0 },
   { key: 'margin', label: 'Marža', cls: 'num hide-m', get: marginOf },
   { key: 'stock', label: 'Zaloga', cls: 'num', get: p => (p.track_stock ? Number(p.stock) || 0 : null) },
 ];
+// razvrščanje po popustu je samo v izbirniku (brez lastnega stolpca)
+const EXTRA_SORTS = { discount: { key: 'discount', get: p => (p.supplier_old_price > p.supplier_price && p.supplier_price > 0 ? 1 - p.supplier_price / p.supplier_old_price : null) } };
+/** Cena pri dobavitelju (z DDV): ob akciji prečrtana redna cena in znižana cena. */
+function supplierPriceCell(p) {
+  if (!p.supplier) return '–';
+  if (!(p.supplier_price > 0)) return h('span', { class: 'muted', title: 'Cena še ni prebrana – zaženite uvoz ali »Samo dopolni manjkajoče cene«' }, 'ni cene');
+  return h('div', { class: 'sup-price' },
+    p.supplier_old_price > p.supplier_price ? h('del', {}, money(p.supplier_old_price)) : null,
+    h('span', { class: p.supplier_old_price > p.supplier_price ? 'sale' : '' }, money(p.supplier_price)),
+    h('small', { class: 'muted' }, 'z DDV'));
+}
+function saleBadge(p) {
+  if (!(p.supplier_old_price > p.supplier_price && p.supplier_price > 0)) return null;
+  const pct = Math.round((1 - p.supplier_price / p.supplier_old_price) * 100);
+  return h('div', { class: 'sale-line' }, h('span', { class: 'badge sale-badge' }, `akcija −${pct} %`),
+    h('span', { class: 'sale-m' }, h('del', {}, money(p.supplier_old_price)), ' ', money(p.supplier_price), ' z DDV'));
+}
 const SORT_KEY = 'v1-catalog-sort';
 const loadSort = () => { try { return JSON.parse(localStorage.getItem(SORT_KEY)) || { key: 'category', dir: 1 }; } catch { return { key: 'category', dir: 1 }; } };
 const coll = new Intl.Collator('sl', { numeric: true, sensitivity: 'base' });
@@ -290,7 +308,7 @@ export async function pageCatalog(page) {
   const theadRow = h('tr');
   let rows = [];
   let sort = loadSort();
-  const sortSel = select([['category', 'Razvrsti: po kategorijah'], ['name', 'Naziv A–Ž'], ['-name', 'Naziv Ž–A'], ['brand', 'Znamka'], ['price', 'Cena: najnižja'], ['-price', 'Cena: najvišja'], ['purchase_price', 'Nabavna: najnižja'], ['-margin', 'Marža: najvišja'], ['-stock', 'Zaloga: največja'], ['sku', 'Šifra']],
+  const sortSel = select([['category', 'Razvrsti: po kategorijah'], ['name', 'Naziv A–Ž'], ['-name', 'Naziv Ž–A'], ['brand', 'Znamka'], ['price', 'Cena: najnižja'], ['-price', 'Cena: najvišja'], ['purchase_price', 'Nabavna: najnižja'], ['-discount', 'Akcije najprej'], ['-margin', 'Marža: najvišja'], ['-stock', 'Zaloga: največja'], ['sku', 'Šifra']],
     `${sort.dir < 0 ? '-' : ''}${sort.key}`, { 'aria-label': 'Razvrščanje', class: 'cat-sort' });
   sortSel.onchange = () => { const v = sortSel.value; setSort(v.replace(/^-/, ''), v.startsWith('-') ? -1 : 1); };
 
@@ -311,7 +329,7 @@ export async function pageCatalog(page) {
   };
   const sorted = () => {
     if (sort.key === 'category') return rows; // strežnik vrne urejeno po kategoriji in nazivu
-    const col = CAT_COLS.find(c => c.key === sort.key) || CAT_COLS[1];
+    const col = CAT_COLS.find(c => c.key === sort.key) || EXTRA_SORTS[sort.key] || CAT_COLS[1];
     return [...rows].sort((a, b) => {
       const x = col.get(a), y = col.get(b);
       // prazne vrednosti vedno na konec
@@ -325,13 +343,15 @@ export async function pageCatalog(page) {
     renderHead();
     let lastGroup = null;
     const grouped = sort.key === 'category';
-    const groupRow = p => { if (!grouped) return null; const g = p.category || 'Brez kategorije'; if (g === lastGroup) return null; lastGroup = g; return h('tr', { class: 'cat-group' }, h('td', { colspan: 9 }, g.replace(' › ', '  ›  '))); };
+    const groupRow = p => { if (!grouped) return null; const g = p.category || 'Brez kategorije'; if (g === lastGroup) return null; lastGroup = g; return h('tr', { class: 'cat-group' }, h('td', { colspan: 10 }, g.replace(' › ', '  ›  '))); };
     clear(tbody, sorted().map(p => [groupRow(p), h('tr', { class: 'tap-row', style: { opacity: p.active ? 1 : 0.5 }, onclick: e => { if (!e.target.closest('a,button,img') && matchMedia('(max-width: 860px)').matches) productDialog(p); } },
       h('td', { class: 'mono hide-m' }, p.sku || ''),
       h('td', {}, h('div', { class: 'prod-cell' }, productThumb(p), h('div', { class: 'prod-txt' }, h('strong', {}, p.name), h('div', { class: 'muted', style: { fontSize: '12.5px' } },
         [grouped ? null : p.category, p.supplier_category ? `pri dobavitelju: ${p.supplier_category}` : null].filter(Boolean).join(' · '),
-        p.supplier === 'digitklik' ? h('span', {}, ' · ', h('a', { href: p.supplier_url, target: '_blank', rel: 'noopener' }, 'digitklik.si'), p.supplier_stock ? ` (zaloga ${p.supplier_stock})` : '') : null)))),
+        p.supplier === 'digitklik' ? h('span', {}, (grouped ? null : p.category) || p.supplier_category ? ' · ' : '', h('a', { href: p.supplier_url, target: '_blank', rel: 'noopener' }, 'digitklik.si'), p.supplier_stock ? ` (zaloga ${p.supplier_stock})` : '') : null),
+        saleBadge(p)))),
       h('td', { class: 'hide-m' }, p.brand || '–'),
+      h('td', { class: 'num hide-m' }, supplierPriceCell(p)),
       h('td', { class: 'num hide-m' }, money(p.purchase_price)),
       h('td', { class: 'num' }, money(p.price), h('div', { class: 'muted', style: { fontSize: '12px' } }, `/${p.unit}`)),
       h('td', { class: 'num hide-m' }, marginOf(p) != null ? `${Math.round(marginOf(p) * 100)} %` : '–'),
@@ -380,11 +400,34 @@ async function digitklikDialog(onDone) {
     field('Marža na nabavno ceno (%)', marginIn, 'Prodajna cena = nabavna × (1 + marža). Ceno posameznega izdelka lahko kasneje ročno popravite.'),
     h('div', { style: { margin: '8px 0' } }, upd), h('div', { style: { margin: '8px 0' } }, arch), bar, status, errBox);
   const setPct = p => { bar.firstChild.style.width = `${p}%`; };
+  // artikli, pri katerih cene v seznamu ni bilo: preberemo jo s strani izdelka
+  const fillPrices = async opts => {
+    let fixed = 0, total = null;
+    for (;;) {
+      if (cancel) break;
+      const r = await post('/api/import/digitklik/prices', opts);
+      fixed += r.fixed;
+      if (total == null) total = r.remaining + r.checked;
+      setPct(Math.min(99, Math.round(((total - r.remaining) / Math.max(total, 1)) * 100)));
+      status.textContent = `Dopolnjujem cene s strani izdelkov: ${total - r.remaining} / ${total}`;
+      if (!r.checked || !r.remaining) break;
+    }
+    return fixed;
+  };
   modal('Uvoz iz digitklik.si', body, {
     wide: true,
     onClose: () => { cancel = true; },
     actions: [
       { label: 'Zapri', onClick: () => { cancel = true; } },
+      { label: 'Samo dopolni manjkajoče cene', close: false, onClick: async () => {
+        if (running) return false;
+        running = true; cancel = false;
+        try {
+          const n = await fillPrices({ margin: Number(marginIn.value) || 0, update_prices: upd.input.checked, started: Math.floor(Date.now() / 1000) });
+          status.textContent = `Dopolnjenih cen: ${n}.`; toast('Cene so dopolnjene'); await onDone?.();
+        } finally { running = false; }
+        return false;
+      } },
       { label: 'Začni uvoz', kind: 'btn-primary', close: false, onClick: async () => {
         if (running) return false;
         running = true; cancel = false;
@@ -406,9 +449,11 @@ async function digitklikDialog(onDone) {
             if (r.errors.length) errBox.textContent = tot.errors.slice(-20).join('\n');
           }
           if (cancel) { status.textContent += ' · prekinjeno'; return false; }
+          const priced = await fillPrices({ margin, update_prices: upd.input.checked, started });
+          if (cancel) { status.textContent += ' · prekinjeno'; return false; }
           const fin = await post('/api/import/digitklik/finish', { started, margin, archive_missing: arch.input.checked && tot.errors.length === 0, stats: tot });
           setPct(100);
-          status.textContent = `Končano: ${fin.count} aktivnih izdelkov z digitklik.si (novih ${tot.inserted}, posodobljenih ${tot.updated}${fin.archived ? `, neaktivnih ${fin.archived}` : ''}).`;
+          status.textContent = `Končano: ${fin.count} aktivnih izdelkov z digitklik.si (novih ${tot.inserted}, posodobljenih ${tot.updated}${priced ? `, cen dopolnjenih s strani izdelka ${priced}` : ''}${fin.archived ? `, neaktivnih ${fin.archived}` : ''}).`;
           if (tot.errors.length) status.textContent += ` Napak: ${tot.errors.length} – izdelkov, ki jih ni več, zato nisem označil kot neaktivne.`;
           toast('Uvoz iz digitklik.si je končan');
           await onDone?.();

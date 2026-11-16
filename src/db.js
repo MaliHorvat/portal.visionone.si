@@ -159,6 +159,9 @@ const COLUMN_UPGRADES = [
   ['products', 'image_url', { mysql: 'VARCHAR(500) NULL', sqlite: 'TEXT' }],
   // izvirna pot kategorij pri dobavitelju (za prikaz); category je naša razvrstitev »Skupina › Podskupina«
   ['products', 'supplier_category', { mysql: 'VARCHAR(255) NULL', sqlite: 'TEXT' }],
+  // redna cena pri akciji (z DDV) in zadnje preverjanje cene na strani izdelka
+  ['products', 'supplier_old_price', { mysql: 'DOUBLE NULL', sqlite: 'REAL' }],
+  ['products', 'supplier_price_checked', { mysql: 'BIGINT NULL', sqlite: 'INTEGER' }],
 ];
 // Indeksi, dodani po prvi objavi
 const INDEX_UPGRADES = [
@@ -414,8 +417,10 @@ export function decrypt(blob) {
  * prodajno ceno pa le, če je updatePrices. Vrne { inserted, updated }.
  */
 const SUPPLIER_COLS = ['sku', 'name', 'category', 'brand', 'unit', 'purchase_price', 'price', 'vat', 'track_stock', 'equipment_type', 'description',
-  'supplier', 'supplier_id', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'created_at', 'image_url', 'supplier_category'];
-const SUPPLIER_UPDATE = ['name', 'category', 'brand', 'purchase_price', 'description', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'image_url', 'supplier_category'];
+  'supplier', 'supplier_id', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'created_at', 'image_url', 'supplier_category', 'supplier_old_price'];
+const SUPPLIER_UPDATE = ['name', 'category', 'brand', 'purchase_price', 'description', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'image_url', 'supplier_category', 'supplier_old_price'];
+// cene ne prepišemo, če je v tem seznamu ni bilo mogoče prebrati (ostane zadnja znana)
+const PRICE_COLS = ['purchase_price', 'price', 'supplier_price', 'supplier_old_price'];
 export async function upsertSupplierProducts(rows, { updatePrices = false, runId = null } = {}) {
   if (!rows.length) return { inserted: 0, updated: 0 };
   const supplier = rows[0].supplier;
@@ -427,8 +432,8 @@ export async function upsertSupplierProducts(rows, { updatePrices = false, runId
   const tuple = `(${SUPPLIER_COLS.map(() => '?').join(',')})`;
   const upd = [...SUPPLIER_UPDATE, ...(updatePrices ? ['price'] : [])];
   const sql = DIALECT === 'mysql'
-    ? `INSERT INTO products (${SUPPLIER_COLS.map(col).join(',')}) VALUES ${rows.map(() => tuple).join(',')} ON DUPLICATE KEY UPDATE ${upd.map(c => c === 'image_url' ? `${col(c)}=COALESCE(VALUES(${col(c)}), ${col(c)})` : `${col(c)}=VALUES(${col(c)})`).join(',')}`
-    : `INSERT INTO products (${SUPPLIER_COLS.map(col).join(',')}) VALUES ${rows.map(() => tuple).join(',')} ON CONFLICT(supplier, supplier_id) DO UPDATE SET ${upd.map(c => c === 'image_url' ? `${col(c)}=COALESCE(excluded.${col(c)}, products.${col(c)})` : `${col(c)}=excluded.${col(c)}`).join(',')}`;
+    ? `INSERT INTO products (${SUPPLIER_COLS.map(col).join(',')}) VALUES ${rows.map(() => tuple).join(',')} ON DUPLICATE KEY UPDATE ${upd.map(c => c === 'image_url' ? `${col(c)}=COALESCE(VALUES(${col(c)}), ${col(c)})` : PRICE_COLS.includes(c) ? `${col(c)}=CASE WHEN VALUES(supplier_price) IS NULL AND VALUES(purchase_price) IS NULL THEN ${col(c)} ELSE VALUES(${col(c)}) END` : `${col(c)}=VALUES(${col(c)})`).join(',')}`
+    : `INSERT INTO products (${SUPPLIER_COLS.map(col).join(',')}) VALUES ${rows.map(() => tuple).join(',')} ON CONFLICT(supplier, supplier_id) DO UPDATE SET ${upd.map(c => c === 'image_url' ? `${col(c)}=COALESCE(excluded.${col(c)}, products.${col(c)})` : PRICE_COLS.includes(c) ? `${col(c)}=CASE WHEN excluded.supplier_price IS NULL AND excluded.purchase_price IS NULL THEN products.${col(c)} ELSE excluded.${col(c)} END` : `${col(c)}=excluded.${col(c)}`).join(',')}`;
   await q.run(sql, ...vals);
   const updated = rows.filter(r => existing.has(String(r.supplier_id))).length;
   return { inserted: rows.length - updated, updated };
