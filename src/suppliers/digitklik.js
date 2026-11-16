@@ -48,12 +48,15 @@ export const categoryId = html => (/category\.php\?category=(\d+)/.exec(html) ||
 
 /** Naslov slike izdelka iz kartice (src ali leni data-src); vrne absolutni https naslov ali null. */
 export function imageOf(card) {
-  const block = (/<div class="product_img">([\s\S]*?)<\/a>/.exec(card) || [])[1] || card;
-  for (const tag of block.match(/<img\b[^>]*>/gi) || []) {
-    if (!/p-image/.test(tag) && /gallery_icons|icon/i.test(tag)) continue;
+  // V kartici je pred sliko izdelka še logotip proizvajalca (/imgs/trademarks/…), zato iščemo sliko z razredom
+  // p-image oziroma iz mape /imgs/products/; logotipov in ikon lastnosti ne jemljemo.
+  const tags = card.match(/<img\b[^>]*>/gi) || [];
+  const ordered = [...tags.filter(t => /class="[^"]*\bp-image\b/.test(t)), ...tags.filter(t => /\/imgs\/products\//i.test(t))];
+  for (const tag of ordered) {
+    if (/\/imgs\/trademarks\//i.test(tag)) continue;
     for (const attr of ['data-src', 'data-original', 'data-lazy', 'src']) {
-      const v = (new RegExp(`\\b${attr}="([^"]+)"`, 'i').exec(tag) || [])[1];
-      if (!v || /^data:|loading|placeholder|blank\.(gif|png)/i.test(v)) continue;
+      const v = (new RegExp(`\\s${attr}="([^"]+)"`, 'i').exec(tag) || [])[1];
+      if (!v || /^data:|loading|placeholder|blank\.(gif|png)|\/imgs\/trademarks\//i.test(v)) continue;
       try {
         const u = new URL(decode(v).trim(), `${BASE}/`);
         if (!/^https?:$/.test(u.protocol)) continue;

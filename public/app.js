@@ -18,17 +18,55 @@ export const mapsUrl = (...parts) => `https://www.google.com/maps/search/?api=1&
 export const initials = n => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 export const go = path => { location.hash = `#${path}`; };
 
-/** Sličica izdelka: najprej neposredno z dobaviteljeve strani, ob napaki prek našega strežnika, sicer prazen okvir. */
+/** Sličica izdelka: najprej neposredno z dobaviteljeve strani, ob napaki prek našega strežnika, sicer prazen okvir.
+ *  Ob premiku miške nad sličico se pokaže povečava, klik (ali tap na telefonu) odpre sliko čez cel zaslon. */
 export function productThumb(p, cls = 'pthumb') {
   if (!p?.image_url) return h('span', { class: `${cls} noimg`, 'aria-hidden': 'true' });
   let viaProxy = false;
-  const img = h('img', { class: cls, src: p.image_url, alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer',
+  const img = h('img', { class: `${cls} zoomable`, src: p.image_url, alt: p.name ? `Slika: ${p.name}` : '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer',
     onerror: () => {
       if (!viaProxy && p.id) { viaProxy = true; img.src = `/api/products/${p.id}/image`; return; }
       img.replaceWith(h('span', { class: `${cls} noimg`, 'aria-hidden': 'true' }));
-    } });
+    },
+    onmouseenter: () => { if (window.matchMedia('(hover: hover)').matches) showZoom(img, p); },
+    onmouseleave: hideZoom,
+    // v predlogih pri vnosu postavke klik izbere artikel, zato tam samo povečava ob miški
+    onclick: cls === 'pthumb-sm' ? null : e => { e.stopPropagation(); e.preventDefault(); hideZoom(); openLightbox(img, p); },
+    onmousedown: cls === 'pthumb-sm' ? null : e => e.stopPropagation(),
+  });
   return img;
 }
+
+/** Večja različica slike (digitklik zna sliko pripraviti v želeni velikosti). */
+const largeSrc = (img, size) => {
+  const src = img.currentSrc || img.src;
+  return /digitklik\.si\/imgs\//i.test(src) ? src.replace(/([?&])w=\d+/, `$1w=${size}`).replace(/([?&])h=\d+/, `$1h=${size}`) : src;
+};
+let zoomEl = null;
+function hideZoom() { zoomEl?.remove(); zoomEl = null; }
+function showZoom(thumb, p) {
+  hideZoom();
+  const r = thumb.getBoundingClientRect();
+  const size = Math.min(340, window.innerHeight - 24);
+  const big = h('img', { src: largeSrc(thumb, 600), alt: '', referrerpolicy: 'no-referrer', onerror: () => { big.src = thumb.currentSrc || thumb.src; } });
+  zoomEl = h('div', { class: 'pzoom', 'aria-hidden': 'true' }, big, p.name ? h('span', {}, p.name) : null);
+  const left = r.right + 14 + size < window.innerWidth ? r.right + 14 : Math.max(8, r.left - 14 - size);
+  const top = Math.min(Math.max(8, r.top + r.height / 2 - size / 2), window.innerHeight - size - 8);
+  Object.assign(zoomEl.style, { left: `${left}px`, top: `${top}px`, width: `${size}px` });
+  document.body.append(zoomEl);
+}
+function openLightbox(thumb, p) {
+  const close = () => { box.remove(); document.removeEventListener('keydown', esc); };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  const big = h('img', { src: largeSrc(thumb, 1000), alt: p.name || '', referrerpolicy: 'no-referrer', onerror: () => { big.src = thumb.currentSrc || thumb.src; } });
+  const box = h('div', { class: 'plightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': p.name || 'Slika izdelka', onclick: close },
+    h('figure', {}, big, p.name ? h('figcaption', {}, p.name) : null),
+    h('button', { class: 'btn-icon plightbox-x', 'aria-label': 'Zapri', onclick: close }, icon('x')));
+  document.body.append(box);
+  document.addEventListener('keydown', esc);
+}
+window.addEventListener('scroll', hideZoom, { passive: true, capture: true });
+window.addEventListener('hashchange', hideZoom);
 
 const NAV = [['/', 'Danes', 'home'], ['/povprasevanja', 'Povpraševanja', 'bookmark'], ['/stranke', 'Stranke', 'users'], ['/dokumenti/racuni', 'Dokumenti', 'list'], ['/koledar', 'Koledar', 'bell'], ['/katalog', 'Katalog', 'disk'], ['/nastavitve', 'Nastavitve', 'settings']];
 let main;

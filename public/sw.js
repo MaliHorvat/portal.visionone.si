@@ -1,7 +1,7 @@
 // VisionOne portal – service worker (namestljiva aplikacija za iPhone, Windows in macOS)
 // Lupina aplikacije je shranjena na napravi, zato se portal odpre takoj in tudi brez povezave.
 // Podatki (API) gredo vedno najprej na strežnik; ob izpadu povezave se prikažejo zadnji shranjeni.
-const VERSION = 'v1portal-10';
+const VERSION = 'v1portal-11';
 const SHELL_CACHE = `${VERSION}-shell`;
 const API_CACHE = 'v1portal-api';
 const SHELL = [

@@ -371,6 +371,8 @@ api.post('/api/import/digitklik/start', admin, async (req, res) => {
   let categories;
   try { categories = await digitklik.listCategories(); } catch (e) { throw new HttpError(502, `digitklik.si ni dosegljiv (${e.message})`); }
   if (!categories.length) throw new HttpError(502, 'Na digitklik.si ni bilo mogoče najti kategorij');
+  // prejšnja različica uvoza je ponekod shranila logotip proizvajalca namesto slike izdelka
+  await q.run("UPDATE products SET image_url=NULL WHERE supplier='digitklik' AND image_url LIKE '%/imgs/trademarks/%'");
   sendJson(res, 200, { categories, started: Math.floor(Date.now() / 1000) });
 });
 api.post('/api/import/digitklik/batch', admin, async (req, res) => {

@@ -10,7 +10,7 @@ import http from 'node:http';
 const card = (id, slug, name, price, opts = {}) => (opts.hidden ? `<!-- ${rawCard(id, slug, name, price, opts).replace(/<!--[\s\S]*?-->/g, '')} -->` : rawCard(id, slug, name, price, opts));
 const rawCard = (id, slug, name, price, { old, stock = '5', icons = [] } = {}) => `
 <div class="col-lg-4"><!--SINGLE-FEATURED-PRODUCT START--><div class="single-featured-product"><div class="product_img">
-<div class="info-holder"><p class="stock-style" >Zaloga : ${stock}</p></div><a href="${slug}"><img src="/imgs/x.png" alt="${name}" class="p-image"/></a>
+<div class="info-holder"><div style="float:left;"><img style="width:auto;" src="/imgs/trademarks/105.png?w=100&h=33&no_fill=true"></div><p class="stock-style" >Zaloga : ${stock}</p></div><a href="${slug}"><img src="/imgs/products/${slug}_im1.png?w=250&amp;h=250" alt="${name}" class="p-image"/></a>
 <div class="add-cart-area"><div class="fet-price"><!-- --->${old ? `<span class="addcart-text-del" style="x">\n${old} €</span>` : ''}
 <span class="addcart-text" style="x">${price == null ? '<a style="color:#fff;">Cena na povpraševanje</a>' : `\n\t\t${price} €\t\t`}</span></div>
 <div class="wish"><a href="javascript:void(0);" onclick="ajaxcart.addItem(${id}, 1, 0)"></a><a href='javascript:updateCompareBox(${id}, "x");'></a></div></div></div>
@@ -87,7 +87,7 @@ test('uvoz cenika digitklik.si', async () => {
     assert.equal(cam.price, 52.61); // + 25 %
     assert.match(cam.description, /4 Megapiksli · PoE napajanje/);
     assert.match(cam.description, /zaloga 200\+/);
-    assert.equal(cam.image_url, 'https://digitklik.si/imgs/x.png'); // relativni naslov slike → absolutni
+    assert.match(cam.image_url, /^https:\/\/digitklik\.si\/imgs\/products\/izdelek_[^?]+_im1\.png\?w=250&h=250$/); // slika izdelka, ne logotip proizvajalca
     assert.equal(prods.find(p => p.sku === 'DK-18472').purchase_price, 1000); // 1.220,00 z DDV
     assert.match(prods.find(p => p.sku === 'DK-14312').description, /cena na povpraševanje/);
     assert.ok(!prods.some(p => p.sku === 'DK-99999'));
