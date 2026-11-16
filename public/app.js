@@ -18,6 +18,18 @@ export const mapsUrl = (...parts) => `https://www.google.com/maps/search/?api=1&
 export const initials = n => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 export const go = path => { location.hash = `#${path}`; };
 
+/** Sličica izdelka: najprej neposredno z dobaviteljeve strani, ob napaki prek našega strežnika, sicer prazen okvir. */
+export function productThumb(p, cls = 'pthumb') {
+  if (!p?.image_url) return h('span', { class: `${cls} noimg`, 'aria-hidden': 'true' });
+  let viaProxy = false;
+  const img = h('img', { class: cls, src: p.image_url, alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer',
+    onerror: () => {
+      if (!viaProxy && p.id) { viaProxy = true; img.src = `/api/products/${p.id}/image`; return; }
+      img.replaceWith(h('span', { class: `${cls} noimg`, 'aria-hidden': 'true' }));
+    } });
+  return img;
+}
+
 const NAV = [['/', 'Danes', 'home'], ['/povprasevanja', 'Povpraševanja', 'bookmark'], ['/stranke', 'Stranke', 'users'], ['/dokumenti/racuni', 'Dokumenti', 'list'], ['/koledar', 'Koledar', 'bell'], ['/katalog', 'Katalog', 'disk'], ['/nastavitve', 'Nastavitve', 'settings']];
 let main;
 

@@ -1,6 +1,6 @@
 // VisionOne Field – ponudbe, delovni nalogi in računi
 import { h, clear, icon, get, post, put, del, toast, toastErr, modal, confirmDialog, field, select, toggle, emptyState, debounce } from './lib/core.js';
-import { F, money, dateSl, todayIso, head, go, reload, downscale } from './app.js';
+import { F, money, dateSl, todayIso, head, go, reload, downscale, productThumb } from './app.js';
 
 const SLUG = { ponudbe: 'quote', nalogi: 'workorder', racuni: 'invoice' };
 const SLUG_OF = { quote: 'ponudbe', workorder: 'nalogi', invoice: 'racuni' };
@@ -239,7 +239,7 @@ function productInput(line, onPick, disabled) {
     close();
     if (!items.length) return;
     box = h('div', { class: 'ac-list', role: 'listbox' }, items.map((p, i) => h('button', { type: 'button', role: 'option', onmousedown: e => { e.preventDefault(); pick(p); } },
-      h('span', {}, p.name, h('br'), h('small', {}, [p.sku, p.track_stock ? `zaloga ${p.stock} ${p.unit}` : null].filter(Boolean).join(' · '))), h('span', {}, money(p.price)))));
+      productThumb(p, 'pthumb-sm'), h('span', { class: 'ac-txt' }, p.name, h('br'), h('small', {}, [p.sku, p.track_stock ? `zaloga ${p.stock} ${p.unit}` : null].filter(Boolean).join(' · '))), h('span', {}, money(p.price)))));
     wrap.append(box);
   }, 200);
   inp.addEventListener('input', () => { line.description = inp.value; line.product_id = null; search(); });

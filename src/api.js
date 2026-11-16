@@ -318,13 +318,31 @@ api.delete('/api/files/:id', auth, async (req, res) => {
 });
 
 // ---------- katalog ----------
-const PROD_FIELDS = ['sku', 'name', 'category', 'brand', 'unit', 'purchase_price', 'price', 'vat', 'stock', 'track_stock', 'min_stock', 'equipment_type', 'description', 'active'];
+const PROD_FIELDS = ['sku', 'name', 'category', 'brand', 'unit', 'purchase_price', 'price', 'vat', 'stock', 'track_stock', 'min_stock', 'equipment_type', 'description', 'active', 'image_url'];
 api.get('/api/products', auth, async (req, res) => {
   const u = new URL(req.url, 'http://x').searchParams;
   const s = `%${u.get('q') || ''}%`;
   const cat = u.get('category');
   const limit = Math.min(Number(u.get('limit')) || 1000, 2000);
   sendJson(res, 200, await q.all(`SELECT * FROM products WHERE (name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR description LIKE ?) ${cat ? 'AND category=?' : ''} ${u.get('all') ? '' : 'AND active=1'} ORDER BY category, name LIMIT ${limit}`, s, s, s, s, s, ...(cat ? [cat] : [])));
+});
+// Slika izdelka prek našega strežnika – rezerva, če dobavitelj ne dovoli prikaza slike na drugi strani.
+api.get('/api/products/:id/image', auth, async (req, res) => {
+  const p = await q.get('SELECT image_url FROM products WHERE id=?', req.params.id);
+  let u;
+  try { u = new URL(p?.image_url || ''); } catch { throw new HttpError(404, 'Izdelek nima slike'); }
+  if (!/^https?:$/.test(u.protocol) || /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[|0\.)/.test(u.hostname) || /^\d+\.\d+\.\d+\.\d+$/.test(u.hostname)) throw new HttpError(400, 'Naslov slike ni dovoljen');
+  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VisionOneField/1.1)', Accept: 'image/*' }, signal: ctrl.signal });
+    const type = r.headers.get('content-type') || '';
+    if (!r.ok || !type.startsWith('image/')) throw new HttpError(404, 'Slike ni mogoče naložiti');
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length > 3e6) throw new HttpError(413, 'Slika je prevelika');
+    res.writeHead(200, { 'Content-Type': type, 'Content-Length': buf.length, 'Cache-Control': 'private, max-age=604800', 'X-Content-Type-Options': 'nosniff' });
+    res.end(buf);
+  } catch (e) { if (e instanceof HttpError) throw e; throw new HttpError(502, 'Slike ni mogoče naložiti'); }
+  finally { clearTimeout(t); }
 });
 api.post('/api/products', auth, async (req, res) => {
   const b = await readJson(req);

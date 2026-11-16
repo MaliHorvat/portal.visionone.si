@@ -1,7 +1,7 @@
 // VisionOne Field – koledar, katalog in nastavitve
 import { installPanel } from './pwa.js';
 import { h, clear, icon, get, post, put, del, toast, toastErr, modal, confirmDialog, field, select, toggle, formData, emptyState, debounce } from './lib/core.js';
-import { F, money, dateSl, timeSl, todayIso, head, go, reload, mapsUrl } from './app.js';
+import { F, money, dateSl, timeSl, todayIso, head, go, reload, mapsUrl, productThumb } from './app.js';
 
 // ======================= KOLEDAR =======================
 // Pravi koledar: mesec (mreža), teden ali dan (časovnica po urah) in seznam prihodnjih terminov.
@@ -264,9 +264,9 @@ export async function pageCatalog(page) {
     info.textContent = rows.length >= 1500 ? 'Prikazanih je prvih 1500 izdelkov – zožite iskanje ali izberite kategorijo.' : `${rows.length} izdelkov`;
     clear(tbody, rows.map(p => h('tr', { class: 'tap-row', style: { opacity: p.active ? 1 : 0.5 }, onclick: e => { if (!e.target.closest('a,button') && matchMedia('(max-width: 860px)').matches) productDialog(p); } },
       h('td', { class: 'mono hide-m' }, p.sku || ''),
-      h('td', {}, h('strong', {}, p.name), h('div', { class: 'muted', style: { fontSize: '12.5px' } },
+      h('td', {}, h('div', { class: 'prod-cell' }, productThumb(p), h('div', { class: 'prod-txt' }, h('strong', {}, p.name), h('div', { class: 'muted', style: { fontSize: '12.5px' } },
         [p.category, p.brand].filter(Boolean).join(' · '),
-        p.supplier === 'digitklik' ? h('span', {}, ' · ', h('a', { href: p.supplier_url, target: '_blank', rel: 'noopener' }, 'digitklik.si'), p.supplier_stock ? ` (zaloga ${p.supplier_stock})` : '') : null)),
+        p.supplier === 'digitklik' ? h('span', {}, ' · ', h('a', { href: p.supplier_url, target: '_blank', rel: 'noopener' }, 'digitklik.si'), p.supplier_stock ? ` (zaloga ${p.supplier_stock})` : '') : null)))),
       h('td', { class: 'num hide-m' }, money(p.purchase_price)),
       h('td', { class: 'num' }, money(p.price), h('div', { class: 'muted', style: { fontSize: '12px' } }, `/${p.unit}`)),
       h('td', { class: 'num hide-m' }, p.purchase_price > 0 && p.price > 0 ? `${Math.round(((p.price - p.purchase_price) / p.price) * 100)} %` : '–'),
@@ -351,7 +351,9 @@ function productDialog(p = {}) {
       field('Enota', h('input', { name: 'unit', value: p.unit || 'kos', list: 'units2' })), field('Nabavna cena (€)', h('input', { name: 'purchase_price', type: 'number', step: '0.01', value: p.purchase_price ?? 0 })),
       field('Prodajna cena brez DDV (€)', h('input', { name: 'price', type: 'number', step: '0.01', value: p.price ?? 0 })), field('DDV (%)', select([[22, '22 %'], [9.5, '9,5 %'], [5, '5 %'], [0, '0 %']], p.vat ?? 22, { name: 'vat' })),
       field('Zaloga', h('input', { name: 'stock', type: 'number', step: 'any', value: p.stock ?? 0 })), field('Opozori pri zalogi pod', h('input', { name: 'min_stock', type: 'number', step: 'any', value: p.min_stock ?? 0 })),
-      field('Vrsta opreme (za vpis na objekt)', select([['', '–'], ...Object.entries(F.meta.equipment_types)], p.equipment_type || '', { name: 'equipment_type' }))),
+      field('Vrsta opreme (za vpis na objekt)', select([['', '–'], ...Object.entries(F.meta.equipment_types)], p.equipment_type || '', { name: 'equipment_type' })),
+      field('Slika (spletni naslov)', h('input', { name: 'image_url', value: p.image_url || '', placeholder: 'https://…', inputmode: 'url' }), p.supplier ? 'Ob naslednjem uvozu se posodobi s strani dobavitelja.' : null)),
+    p.image_url ? h('div', { class: 'prod-preview' }, productThumb(p, 'pthumb-lg')) : null,
     h('datalist', { id: 'cats' }, ['Kamere', 'Snemalniki', 'Diski', 'Omrežje', 'Material', 'Napajanje', 'Storitve', 'Domofonija', 'Alarm'].map(c => h('option', { value: c }))),
     h('datalist', { id: 'units2' }, ['kos', 'ura', 'm', 'km', 'kpl', 'pavšal'].map(c => h('option', { value: c }))),
     (() => { const t = toggle(p.track_stock ?? 1, 'Vodi zalogo'); t.input.name = 'track_stock'; return t; })(),

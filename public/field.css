@@ -311,3 +311,15 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .eq-table tr.eq-group td { display: block; border-bottom: 1px solid var(--line); }
   .eq-search { max-width: none; }
 }
+
+/* ---------- slike izdelkov ---------- */
+.pthumb, .pthumb-sm, .pthumb-lg { display: block; flex: none; object-fit: contain; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); }
+.pthumb { width: 44px; height: 44px; }
+.pthumb-sm { width: 34px; height: 34px; }
+.pthumb-lg { width: 180px; height: 180px; padding: 6px; }
+.pthumb.noimg, .pthumb-sm.noimg, .pthumb-lg.noimg { background: var(--panel-2) linear-gradient(135deg, transparent 47%, var(--line) 47% 53%, transparent 53%); }
+.prod-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.prod-txt { min-width: 0; }
+.prod-preview { margin: 4px 0 12px; }
+.ac-list button { align-items: center; }
+.ac-list .ac-txt { flex: 1; min-width: 0; }

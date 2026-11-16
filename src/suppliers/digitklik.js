@@ -1,6 +1,6 @@
 // Uvoz kataloga z digitklik.si (Digital d.o.o.) – javni cenik, cene z DDV.
 // Kategorije preberemo iz sitemap.xml, izdelke iz seznama posamezne kategorije (category.php … range=0_5000).
-// Vljudno pajkanje: zaporedne zahteve z zamikom, brez slik in dolgih opisov (samo naziv, cena, zaloga, lastnosti).
+// Vljudno pajkanje: zaporedne zahteve z zamikom. Slik ne prenašamo, shranimo le naslov slike izdelka (prikaže jo brskalnik).
 
 export const BASE = 'https://digitklik.si';
 const UA = 'Mozilla/5.0 (compatible; VisionOneField/1.1; +https://portal.visionone.si) katalog-uvoz';
@@ -46,6 +46,25 @@ export function parseBreadcrumb(html) {
 
 export const categoryId = html => (/category\.php\?category=(\d+)/.exec(html) || [])[1] || null;
 
+/** Naslov slike izdelka iz kartice (src ali leni data-src); vrne absolutni https naslov ali null. */
+export function imageOf(card) {
+  const block = (/<div class="product_img">([\s\S]*?)<\/a>/.exec(card) || [])[1] || card;
+  for (const tag of block.match(/<img\b[^>]*>/gi) || []) {
+    if (!/p-image/.test(tag) && /gallery_icons|icon/i.test(tag)) continue;
+    for (const attr of ['data-src', 'data-original', 'data-lazy', 'src']) {
+      const v = (new RegExp(`\\b${attr}="([^"]+)"`, 'i').exec(tag) || [])[1];
+      if (!v || /^data:|loading|placeholder|blank\.(gif|png)/i.test(v)) continue;
+      try {
+        const u = new URL(decode(v).trim(), `${BASE}/`);
+        if (!/^https?:$/.test(u.protocol)) continue;
+        if (/(^|\.)digitklik\.si$/i.test(u.hostname)) u.protocol = 'https:';
+        return u.href.slice(0, 500);
+      } catch { /* neveljaven naslov */ }
+    }
+  }
+  return null;
+}
+
 /** Izdelki s strani seznama. Kot brskalnik najprej odstranimo HTML komentarje – v njih so skriti (neaktivni) izdelki. */
 export function parseProducts(html) {
   const out = new Map();
@@ -63,10 +82,11 @@ export function parseProducts(html) {
     const stock = text((/<p class="stock-style"[^>]*>([\s\S]*?)<\/p>/.exec(card) || [])[1]).replace(/^Zaloga\s*:\s*/i, '');
     const features = [...((/<div class="gallery_icons">([\s\S]*?)<\/div>/.exec(card) || [])[1] || '').matchAll(/\balt="([^"]*)"/g)]
       .map(m => decode(m[1]).trim()).filter(Boolean);
+    const image = imageOf(card);
     const flags = [];
     if (/class="over over_sale"/.test(card)) flags.push('akcija');
     if (/class="over over_new"/.test(card)) flags.push('novo');
-    out.set(id, { id, slug, url: `${BASE}/${slug}`, name: text(nameHtml), price: now, oldPrice: old && now && old > now ? old : null, stock, features, flags });
+    out.set(id, { id, slug, url: `${BASE}/${slug}`, name: text(nameHtml), image, price: now, oldPrice: old && now && old > now ? old : null, stock, features, flags });
   }
   return [...out.values()];
 }
@@ -132,6 +152,6 @@ export function toProduct(p, path, { margin = 0, vat = 22 } = {}) {
   return {
     sku: `DK-${p.id}`, name: p.name.slice(0, 480), category: categoryLabel(path).slice(0, 180), brand: guessBrand(p.name),
     unit: 'kos', purchase_price: net, price: sell, vat, track_stock: 0, equipment_type: guessType(path, p.name), description: desc,
-    supplier: 'digitklik', supplier_id: String(p.id), supplier_url: p.url, supplier_stock: p.stock || null, supplier_price: p.price,
+    supplier: 'digitklik', supplier_id: String(p.id), supplier_url: p.url, image_url: p.image || null, supplier_stock: p.stock || null, supplier_price: p.price,
   };
 }

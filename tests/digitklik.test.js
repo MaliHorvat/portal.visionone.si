@@ -87,6 +87,7 @@ test('uvoz cenika digitklik.si', async () => {
     assert.equal(cam.price, 52.61); // + 25 %
     assert.match(cam.description, /4 Megapiksli · PoE napajanje/);
     assert.match(cam.description, /zaloga 200\+/);
+    assert.equal(cam.image_url, 'https://digitklik.si/imgs/x.png'); // relativni naslov slike → absolutni
     assert.equal(prods.find(p => p.sku === 'DK-18472').purchase_price, 1000); // 1.220,00 z DDV
     assert.match(prods.find(p => p.sku === 'DK-14312').description, /cena na povpraševanje/);
     assert.ok(!prods.some(p => p.sku === 'DK-99999'));

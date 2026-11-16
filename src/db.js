@@ -155,6 +155,8 @@ const COLUMN_UPGRADES = [
   ['products', 'supplier_updated', { mysql: 'BIGINT NULL', sqlite: 'INTEGER' }],
   // tehnični podatki naprave glede na vrsto (ločljivost, objektiv, kanali, vrata …) kot JSON
   ['equipment', 'specs', { mysql: 'TEXT NULL', sqlite: 'TEXT' }],
+  // slika izdelka (naslov pri dobavitelju ali lastni URL)
+  ['products', 'image_url', { mysql: 'VARCHAR(500) NULL', sqlite: 'TEXT' }],
 ];
 // Indeksi, dodani po prvi objavi
 const INDEX_UPGRADES = [
@@ -410,8 +412,8 @@ export function decrypt(blob) {
  * prodajno ceno pa le, če je updatePrices. Vrne { inserted, updated }.
  */
 const SUPPLIER_COLS = ['sku', 'name', 'category', 'brand', 'unit', 'purchase_price', 'price', 'vat', 'track_stock', 'equipment_type', 'description',
-  'supplier', 'supplier_id', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'created_at'];
-const SUPPLIER_UPDATE = ['name', 'category', 'brand', 'purchase_price', 'description', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active'];
+  'supplier', 'supplier_id', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'created_at', 'image_url'];
+const SUPPLIER_UPDATE = ['name', 'category', 'brand', 'purchase_price', 'description', 'supplier_url', 'supplier_stock', 'supplier_price', 'supplier_updated', 'active', 'image_url'];
 export async function upsertSupplierProducts(rows, { updatePrices = false, runId = null } = {}) {
   if (!rows.length) return { inserted: 0, updated: 0 };
   const supplier = rows[0].supplier;
@@ -423,8 +425,8 @@ export async function upsertSupplierProducts(rows, { updatePrices = false, runId
   const tuple = `(${SUPPLIER_COLS.map(() => '?').join(',')})`;
   const upd = [...SUPPLIER_UPDATE, ...(updatePrices ? ['price'] : [])];
   const sql = DIALECT === 'mysql'
-    ? `INSERT INTO products (${SUPPLIER_COLS.map(col).join(',')}) VALUES ${rows.map(() => tuple).join(',')} ON DUPLICATE KEY UPDATE ${upd.map(c => `${col(c)}=VALUES(${col(c)})`).join(',')}`
-    : `INSERT INTO products (${SUPPLIER_COLS.map(col).join(',')}) VALUES ${rows.map(() => tuple).join(',')} ON CONFLICT(supplier, supplier_id) DO UPDATE SET ${upd.map(c => `${col(c)}=excluded.${col(c)}`).join(',')}`;
+    ? `INSERT INTO products (${SUPPLIER_COLS.map(col).join(',')}) VALUES ${rows.map(() => tuple).join(',')} ON DUPLICATE KEY UPDATE ${upd.map(c => c === 'image_url' ? `${col(c)}=COALESCE(VALUES(${col(c)}), ${col(c)})` : `${col(c)}=VALUES(${col(c)})`).join(',')}`
+    : `INSERT INTO products (${SUPPLIER_COLS.map(col).join(',')}) VALUES ${rows.map(() => tuple).join(',')} ON CONFLICT(supplier, supplier_id) DO UPDATE SET ${upd.map(c => c === 'image_url' ? `${col(c)}=COALESCE(excluded.${col(c)}, products.${col(c)})` : `${col(c)}=excluded.${col(c)}`).join(',')}`;
   await q.run(sql, ...vals);
   const updated = rows.filter(r => existing.has(String(r.supplier_id))).length;
   return { inserted: rows.length - updated, updated };
