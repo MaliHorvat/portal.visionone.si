@@ -407,6 +407,7 @@ async function digitklikDialog(onDone) {
       if (cancel) break;
       const r = await post('/api/import/digitklik/prices', opts);
       fixed += r.fixed;
+      if (r.diags?.length) errBox.textContent = `Cene ni bilo mogoče prebrati (podrobnosti za podporo):\n${r.diags.join('\n')}`;
       if (total == null) total = r.remaining + r.checked;
       setPct(Math.min(99, Math.round(((total - r.remaining) / Math.max(total, 1)) * 100)));
       status.textContent = `Dopolnjujem cene s strani izdelkov: ${total - r.remaining} / ${total}`;

@@ -156,8 +156,21 @@ export function parseProductPrice(html) {
 }
 
 export async function fetchProductPrice(url) {
-  if (!/^https:\/\/(www\.)?digitklik\.si\/izdelek_/.test(url || '')) return { price: null, oldPrice: null };
-  return parseProductPrice(await fetchText(url));
+  if (!/^https:\/\/(www\.)?digitklik\.si\/izdelek_/.test(url || '')) return { price: null, oldPrice: null, diag: 'neveljaven naslov izdelka' };
+  const html = await fetchText(url);
+  const r = parseProductPrice(html);
+  if (r.price == null) r.diag = describePage(html);
+  return r;
+}
+
+/** Kratek opis strani za iskanje napak, ko cene ni mogoče prebrati. */
+export function describePage(html) {
+  const s = String(html);
+  const title = text((/<title>([\s\S]*?)<\/title>/i.exec(s) || [])[1]).slice(0, 90);
+  const i = s.indexOf('price_old_new');
+  const around = i >= 0 ? text(s.slice(i, i + 600)).slice(0, 160) : '';
+  const euro = (text(s).match(/\d[\d.]*,\d{2}\s*€/g) || []).slice(0, 3).join(', ');
+  return `${s.length} B · naslov »${title}« · cenovni blok: ${i >= 0 ? `da (${around})` : 'ne'} · zneski na strani: ${euro || 'ni'}`;
 }
 
 export const categoryLabel = path => (path.length <= 1 ? path[0] || 'Digitklik' : `${path[0]} › ${path[path.length - 1]}`);
